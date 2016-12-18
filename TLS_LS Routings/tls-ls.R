@@ -1,53 +1,52 @@
-TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s0_dis, err)
+TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
 {
   # m - variables qty
   # n - equations qty
-  # mode - 
+  # mode - type of solution, 1 - SVD, 2 - eigen values
   # scaling - sort of scaling in case of TLS solution, bit mask: 1 - by rows, 2 - by columns, 3 - Frobenian
-  # ef - EIV qty
-  # In - equations
-  # y - observations
-  # X - solution
-  # E - discripency 
-  # S - Singular Values
-  # Corr - covariance matrix
-  # sigma - solution errors
-  # s0 - mean square deviation
-  # 
-  # err - error code
+  # ef - error-free variables qty
+  # In - equations, In(n,m)
+  # y - observations, y(n)
+  
+  # X - solution, X(m)
+  # E - discripency, E(n)
+  # S - Singular Values or eigen values, depends on mode, S(m+1)
+  # Corr - covariance matrix or corrilation matrix, Corr(m,m)
+  # s0 - mean square deviation of the model
+  # s0_dis - mean square deviation of the solution by discripency 
+  # s_X - solution errors, s_X(m)
+  # err - error code or condition number
   
   
   #---------------------------------------------------------------
   #     (TLS, МНК) в общем виде
   
-  #integer, intent(in) :: mode, scaling, ef, n, m
-  #doubleprecision, intent(in) :: In(n,m),y(n),p(n)
-  #doubleprecision, intent(out):: x(m), E(n), S(m+1), Corr(m,m), sigma(m), s0, s0_dis, err;  
+  #doubleprecision, allocatable :: a(:,:), b(:,:),U(:,:), V(:,:), dn(:,:), cn(:,:), 
+  #doubleprecision ee(m,m),c(m,m),d(m,m),d1(m,m)
   
-  #doubleprecision, allocatable :: a(:,:), b(:,:), y1(:), U(:,:), V(:,:), dn(:,:), cn(:,:), 
-  #doubleprecision, allocatable :: b11(:,:), b12(:,:), b21(:,:), b22(:,:), b_shur(:,:), b_inv(:,:)  
-  #doubleprecision, allocatable :: b12v(:), b21v(:)
-  #integer i,j, nef
-  #doubleprecision ee(m,m),c(m,m),d(m,m),d1(m,m),det,E1, b11s, Cov(m,m);
+  m <- dim(In)[2]
+  n <- dim(In)[1]
+  
+  Result <- list(X = vector("numeric", m), s0 = numeric(), s0_dis = numeric(), s_X = vector("numeric", m), err = numeric(), CondA = numeric(),
+                 Corr = matrix(0, m, m), Cov = matrix(0, m, m), E = vector("numeric", n), S = vector("numeric", m+1))
 
   
-  #complex(kind(1d0)) s_c(m+1) 
-  #complex(kind(1d0)), allocatable :: s_b(:)
+  Result$s0<-0; Result$s0_dis<-0;
   
-  if ((m>n) | (m==n) | (n<3) | (m<2))
+  if ((m>=n) | (n<3) | (m<2))
   { 
-    err<<- (-65535)
-    return;
+    print("Error! m >= n")
+    Result$err<- (-65535)
+    return(Result);
   }
   
-  
-  S<-vector("numeric", m+1) ; X<-vector("numeric", m); E<-vector("numeric", n); Corr<-matrix(0, m, m); sigma<-vector("numeric", m); s0<-0; s0_dis<-0;
   
   # ===================================================================
   # ========= вычисление сингулярных чисел матрицы исходных данных для оценки числа обусловленности  
   # ========= The Total Least Square Problem, p. 232
   # ===================================================================
   in_svd <- svd(In)  
+  Result$CondA <- in_svd$d[1]/in_svd$d[m]
 
   # =========== Подготовка исходных данных, вычисляем дополненную матрицу условных уравнений
   
@@ -67,6 +66,7 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
       
       if ((scaling==1) || (scaling==3))
       {
+        
         for (i in 1:n)
           dn[i,i] <- 1 / sqrt(sum((a[i,]^2)));
                               
@@ -98,9 +98,9 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
      a_svd <- svd(a); 
     
      #----  проверка решения
-     S <- a_svd$d  # вектор сингулярных чисел
-     aa <- a_svd$u %*% (diag(a_svd$d) %*% t(a_svd$v) );  
-     ee <- aa-a; 
+     Result$S <- a_svd$d  # вектор сингулярных чисел
+     #aa <- a_svd$u %*% (diag(a_svd$d) %*% t(a_svd$v) );  # проверка
+     #ee <- aa-a; 
      
      #----  вычисляем х
      x2 <-  a_svd$v[,m+1];  
@@ -109,21 +109,21 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
         x2 = cn %*% x2; 
      
      x2 = -1*x2/x2[m+1]
-     X = x2[1:m];
+     Result$X = x2[1:m];
      
      #---- Вычисление числа обусловленности
      #---- вот это надо проверить, Branham, Astronomical Data Reduction with TLS, p.655
-     err<- (in_svd$d[1]^2-a_svd$d[m+1]^2)/(in_svd$d[m]^2-a_svd$d[m+1]^2);
+     Result$err<- (in_svd$d[1]^2-a_svd$d[m+1]^2)/(in_svd$d[m]^2-a_svd$d[m+1]^2);
      
-     #----  вычисление дисперсию, The Total Least Squares Problem, 8.15
-     s0 <- a_svd$d[m+1] / sqrt(n+0.0);
+     #----  вычисление среднеквадратическое отклонение, The Total Least Squares Problem, 8.15
+     Result$s0 <- a_svd$d[m+1] / sqrt(n+0.0);
      
      #---- вычисление ковариационной матрицы, The Total Least Squares Problem, page 242, 8.47
      d <- matrix(0, m, m) ;
-     diag(d) <- n*a_svd$d[m+1]^2;
+     diag(d) <- a_svd$d[m+1]^2;
      d1 <- (t(In) %*% In) - d;
-     Cov <- solve(d1)
-     Cov <- (1+sum(X^2)) * s0^2 * Cov;
+     Result$Cov <- solve(d1)
+     Result$Cov <- (1+sum(X^2)) * a_svd$d[m+1]^2 * Result$Cov / n;
      
   } else if (mode == 2) {
   # ===================================================================
@@ -131,27 +131,28 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
   # ===================================================================
       ss <- t(a) %*% a;  # номальная система уравнений
   
-      if ((ef<1) || (ef>=m))# вариант польного TLS, все переменные содержат ошибки
+      if ((ef==0) || (ef>m))# вариант польного TLS, все переменные содержат ошибки
       {
+          #print("вариант польного TLS, все переменные содержат ошибки")
           nef <- m+1;
       
           s_c <- eigen(ss);
-          S <- s_c$val;
+          Result$S <- s_c$val;
           
-          if (S[m+1]<0) S[m+1] <- 0;
-          ee <- diag(rep(S[m+1], m))
+          if (Result$S[m+1]<0) Result$S[m+1] <- 0;
+          ee <- diag(rep(Result$S[m+1], m))
 
           #----  вычисление sigma_0, The Total Least Squares Problem, 8.15
-          s0 <- sqrt(S[m+1])/sqrt(n+0.0);
+          Result$s0 <- sqrt(Result$S[m+1])/sqrt(n+0.0);
           #---- Вычисление числа обусловленности
-          err<- (in_svd$d[1]^2-S[m+1])/(in_svd$d[m]^2-S[m+1]);
+          Result$err<- (in_svd$d[1]^2-Result$S[m+1])/(in_svd$d[m]^2-Result$S[m+1]);
           
           #---- неполное вычисление ковариационной матрицы, по аналогии с The Total Least Squares Problem, page 242, 8.47
           
           d <- matrix(0, m , m);
-          d <- diag(rep(S[m+1], m));
+          d <- diag(rep(Result$S[m+1], m));
           d1 <- t(In) %*% In - d;
-          Cov <- solve(d1);
+          Result$Cov <- solve(d1);
           
           
   #    этот частный случай (когда только первый столбец error-free) вошел в более общий, реализованный ниже. Код рабочий, на всякий случай оставляю
@@ -180,10 +181,19 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
   #!     s(m) = s_b(m);
   #!     deallocate(b21v, b12v, b22, b_shur, s_b);
   
+      } else if (ef==m) # вариант, когда все столбцы error-free
+      {
+        ee <- matrix(0, m, m);
+        
+        d1 <- t(In) %*% In;
+        Result$Cov <- solve(d1);
+        
+        Result$err<- (in_svd$d[1]^2)/(in_svd$d[m]^2);
+        
       } else {   #! вариант TLS-LS, когда первый ef-столбцов не содержат ошибки, а последние nef - содержат
           nef <- m+1-ef; 
-          
-          #allocate (b21(nef,ef), b12(ef,nef),b22(nef, nef), b_shur(nef, nef),b_inv(ef,ef), s_b(nef), b11(ef,ef));
+          #print("вариант TLS-LS")
+          #b21(nef,ef), b12(ef,nef),b22(nef, nef), b_shur(nef, nef),b_inv(ef,ef), s_b(nef), b11(ef,ef)
           
           b12 <- as.matrix(ss[1:ef,(ef+1):(m+1)]);
           if (ef == 1) b12 <- t(b12)
@@ -197,20 +207,13 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
           b_shur <- b22 - (b21 %*% b_inv) %*% b12;
           
           s_b <- eigen(b_shur)
-          
-          #ee <- matrix(0, m, m)
-          #for (i in ef+1:m)
-          #  ee(i,i) <- s_b$val[nef];
-          
+
           ee <- diag(c(rep(0, ef), rep(s_b$val[nef], m-ef)))
           
-          #S <- vector("numeric", m+1);
-          #for (i in 1:nef)
-          #  S[i] = s_b$val[i]
-          S[1:nef] <- s_b$val
+          Result$S[1:nef] <- s_b$val
           
           #----  вычисление sigma_0, по аналогии с The Total Least Squares Problem, 8.15, возможно не правильно, надо как-то проверить
-          s0 <- sqrt(S[nef])/sqrt(n+0.0);
+          Result$s0 <- sqrt(Result$S[nef])/sqrt(n+0.0);
           
           #---- неполное вычисление ковариационной матрицы, по аналогии с The Total Least Squares Problem, page 242, 8.47, возможно не правильно, надо как-то проверить
           
@@ -218,10 +221,10 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
           d <- diag(rep(s_b$val[nef], m));
           
           d1 <- t(In) %*% In - d;
-          Cov <- solve(d1);
+          Result$Cov <- solve(d1);
           
           #---- Вычисление числа обусловленности
-          err<- (in_svd$d[1]^2-S[nef])/(in_svd$d[m]^2-S[nef]);
+          Result$err<- (in_svd$d[1]^2-Result$S[nef])/(in_svd$d[m]^2-Result$S[nef]);
   
       }
   
@@ -230,41 +233,130 @@ TLS_Gen <- function (mode, scaling, ef, n, m, In, y, X, E, S, Corr, sigma, s0, s
     
     #---------  вычисление обратной матрицы
     d <- solve(c) 
-    ee <- c %*% d;  # проверка
+    #ee <- c %*% d;  # проверка
     
     #----   вычисление решения  
-    X <- as.vector(d %*% (t(a[,1:m]) %*% a[,m+1])); # с учетом масштабирования
+    Result$X <- as.vector(d %*% (t(a[,1:m]) %*% a[,m+1])); # с учетом масштабирования
     
     if ((scaling==2) || (scaling==3))
-        X = cn %*% x / cn(m+1,m+1); 
+      Result$X = cn %*% Result$X / cn(m+1,m+1); 
     
-    #---- заканчиваем вычисление корреляции
-    Cov = (1+sum(X^2)) * s0^2 * Cov;
+    #---- заканчиваем вычисление ковариационной матрицы по аналогии с TLS, надо переделать на решение по Брэнему
+    if (ef<m)
+      Result$Cov = (1+sum(Result$X^2)) * Result$s0^2 * Result$Cov;
     
   }
 
-
   #-------   Вычисление невязок
-  E <- y - In %*% X;
+  Result$E <- y - In %*% Result$X;
   
   #---- Вычисление среднеквадратического отклонения по невязкам 
-  s0_dis=sqrt(sum(E*E)/(n-m))
+  Result$s0_dis=sqrt(sum(Result$E*Result$E)/(n-m))
+  
+  if ((mode ==2 ) && (ef == m))
+    Result$s0 <- Result$s0_dis;
   
   #---- вычисление ошибок коэффициентов решения
-  sigma <- sqrt(diag(Cov))
+  Result$s_X <- Result$s0 * sqrt(diag(Result$Cov))
   
   
   #---- Вычисление корреляционной матрицы
-  Corr <- matrix(0, m, m)
+  Result$Corr <- matrix(0, m, m)
   for (i in 1:m)
     for (j in 1:m)
-      Corr[i,j]=Cov[i,j]/sqrt(Cov[i,i]*Cov[j,j])
+      Result$Corr[i,j]=Result$Cov[i,j]/sqrt(Result$Cov[i,i]*Result$Cov[j,j])
   
-  print(X);
-  print(s0);
-  print(s0_dis);
-  print(sigma);
-  print(err)
+  #print(X);
+  #print(s0);
+  #print(s0_dis);
+  #print(s_X);
+  #print(err)
   #print(Cov);
+  return(Result)
 
+}
+
+TLS_Gen_test <- function()
+{
+  scaling <- 0;
+  
+  m<-9; 
+  n<- 1000;
+  ef <- 4;
+  
+  S_0 <- c(rep(0.0, ef), rep(2, m-ef), 5);
+  In <- TLS_make_test_data(n, m, X_0, S_0); 
+  print(X_0);
+  print(S_0)
+  print(norm(t(In$A)%*%In$A, type="i")*norm(solve(t(In$A)%*%In$A), type = "i"))
+  print("---------")
+  
+  print("SVD solution:")
+  res <- TLS_Gen(In$A, In$B, mode = 1, scaling)
+  print(res$X)
+  print(X_0[1:m] - res$X)
+  print(res$s_X)
+  print(res$s0)
+  print(res$s0_dis)
+  print(sqrt(sum((In$B0 - In$A0 %*% res$X)^2)/(n-m)))
+  #print(res$Cov)
+  print(res$Corr)
+  print(res$err)
+  print("---------")
+  
+  print("Eigen value solution, TLS case, all variables consist erros:")
+  res <- TLS_Gen(In$A, In$B, mode = 2, scaling, ef = 0)
+  print(res$X)
+  print(X_0[1:m] - res$X)
+  print(res$s_X)
+  print(res$s0)
+  print(res$s0_dis)
+  print(sqrt(sum((In$B0 - In$A0 %*% res$X)^2)/(n-m)))
+  #print(res$Cov)
+  print(res$Corr)
+  print(res$err)
+  print("---------")
+  
+  print("Eigen value solution, TLS-LS case, known variables error-free")
+  res <- TLS_Gen(In$A, In$B, mode = 2, scaling, ef)
+  print(res$X)
+  print(X_0[1:m] - res$X)
+  print(res$s_X)
+  print(res$s0)
+  print(res$s0_dis)
+  print(sqrt(sum((In$B0 - In$A0 %*% res$X)^2)/(n-m)))
+  #print(res$Cov)
+  print(res$Corr)
+  print(res$err)
+  print("---------")
+  
+  print("OLS solution, all variables error-free:")
+  res <- TLS_Gen(In$A, In$B, mode = 2, scaling, m)
+  print(res$X)
+  print(X_0[1:m] - res$X)
+  print(res$s_X)
+  print(res$s0)
+  print(res$s0_dis)
+  print(sqrt(sum((In$B0 - In$A0 %*% res$X)^2)/(n-m)))
+  #print(res$Cov)
+  print(res$Corr)
+  print(res$err)
+  print("---------")
+  
+  print("OLS solution by R lm function:")
+  f <- lm(In$B ~ 0 +In$A[,1] + In$A[,2] + In$A[,3] + In$A[,4] + In$A[,5] + In$A[,6] + In$A[,7] + In$A[,8] + In$A[,9])
+  print(f$coefficients)
+  print(X_0[1:m] - f$coefficients)
+  print(sqrt(sum(f$residuals*f$residuals)/(n-m)))
+  print(sqrt(sum((In$B0 - In$A0 %*% f$coefficients)^2)/(n-m)))
+  print("---------")
+  
+  print("TLS solution by R prcomp function:")
+  r <- prcomp( ~ In$A + In$B )
+  x <- r$rotation[1:m,m+1]/(-1*r$rotation[m+1,m+1]);
+  print(x)
+  print(X_0[1:m] - x)
+  print(sqrt(sum((In$B - In$A %*% x)^2)/(n-m)))
+  print(sqrt(sum((In$B0 - In$A0 %*% x)^2)/(n-m)))
+  print("---------")
 }
