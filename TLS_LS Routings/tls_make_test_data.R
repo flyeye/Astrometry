@@ -14,23 +14,23 @@ TLS_make_test_data <- function (n, m, X, s0)
      #g <- 0;
   
      if (m>=10) 
-       equation[i, 10] <- 1;
+       equation[i, 10] <- 0;
      if (m>=9) 
-       equation[i, 9] <- sin(g*5)^4 
+       equation[i, 9] <- sin(g*7+pi/2)^7 
      if (m>=8)
-       equation[i, 8] <- sin(g*25)^2 
+       equation[i, 8] <- sin(g*17)^2 
      if (m>=7) 
        equation[i, 7] <- cos(g*100)^3
      if (m>=6) 
        equation[i, 6] <- 3*cos(g/10+pi/2)^5; 
      if (m>=5) 
-       equation[i, 5] <- sin(g*3-3*pi/2)^6;
+       equation[i, 5] <- sin(g*2-3*pi/2)^9;
      if (m>=4) 
        #equation[i, 4] <- 3*log(abs(g+20)); 
        equation[i, 4] <- sin(7*g);  
      if (m>=3)
        #equation[i, 3] <- -1*(g+1)^2; 
-       equation[i, 3] <- cos(6*g-3*pi/4);  
+       equation[i, 3] <- cos(11*g-3*pi/4);  
      if (m>=2)
        #equation[i, 2] <- 0.2*g;
        equation[i, 2] <- sin(g);  

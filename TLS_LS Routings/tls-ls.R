@@ -68,17 +68,34 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
       {
         
         for (i in 1:n)
-          dn[i,i] <- 1 / sqrt(sum((a[i,]^2)));
+          dn[i,i] <- 1 / sqrt(sum(a[i,]^2));
                               
         a <- dn %*% a;
       }
       
       # по столбцам
+      # для случая TLS-LS очевидно нужно нормировать не все столбцы, а только те, 
+      # что содержат ошибку (!!!ToDo)
       
       if ((scaling==2) || (scaling==3)) 
       {
-         for(i in 1:m+1)
-           cn[i,i] <- 1 / sqrt(sum((a[,i]^2)));
+        
+        # Брэмен пишет ссылаясь на Ван дер Валле (действительно, есть упоминия в книге), 
+        # дисперии ошибок разных переменных должны быть равны. Дисперсии мы не знаем, но 
+        # можно предположить, что дисперсия ошибки пропорциональна величине самой ошибки, 
+        # а значит наша задача нормировать матрицу условных уравнений так, чтобы величины 
+        # коэффициентов при разных переменных имели примерно одинаковую норму. 
+        # Предложенный ниже вариант работает. 
+        
+        c <- vector("numeric", m+1);
+        for(i in 1:(m+1)){
+           c[i] <- sqrt(sum(a[,i]^2))
+        }
+        c_0 <- mean(c)   
+                         
+        c <- c_0/c
+        
+        cn <- diag(c);
          
         a <- a %*% cn
       }
@@ -106,10 +123,10 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
      x2 <-  a_svd$v[,m+1];  
      
      if ((scaling==2) || (scaling==3)) 
-        x2 = cn %*% x2; 
+        x2 <- cn %*% x2; 
      
-     x2 = -1*x2/x2[m+1]
-     Result$X = x2[1:m];
+     x2 <- -1*x2/x2[m+1]
+     Result$X <- x2[1:m];
      
      #---- Вычисление числа обусловленности
      #---- вот это надо проверить, Branham, Astronomical Data Reduction with TLS, p.655
@@ -123,7 +140,7 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
      diag(d) <- a_svd$d[m+1]^2;
      d1 <- (t(In) %*% In) - d;
      Result$Cov <- solve(d1)
-     Result$Cov <- (1+sum(X^2)) * a_svd$d[m+1]^2 * Result$Cov / n;
+     Result$Cov <- (1+sum(Result$X^2)) * a_svd$d[m+1]^2 * Result$Cov / n;
      
   } else if (mode == 2) {
   # ===================================================================
@@ -239,7 +256,7 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
     Result$X <- as.vector(d %*% (t(a[,1:m]) %*% a[,m+1])); # с учетом масштабирования
     
     if ((scaling==2) || (scaling==3))
-      Result$X = cn %*% Result$X / cn(m+1,m+1); 
+      Result$X <- as.vector((cn[1:m, 1:m] %*% Result$X) / cn[m+1,m+1]); 
     
     #---- заканчиваем вычисление ковариационной матрицы по аналогии с TLS, надо переделать на решение по Брэнему
     if (ef<m)
@@ -278,17 +295,18 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
 
 TLS_Gen_test <- function()
 {
-  scaling <- 0;
+  scaling <- 2;
   
   m<-9; 
   n<- 1000;
   ef <- 4;
   
-  S_0 <- c(rep(0.0, ef), rep(2, m-ef), 5);
+  S_0 <- c(rep(0.0, ef), rep(0.5, m-ef), 0.1);
   In <- TLS_make_test_data(n, m, X_0, S_0); 
   print(X_0);
   print(S_0)
   print(norm(t(In$A)%*%In$A, type="i")*norm(solve(t(In$A)%*%In$A), type = "i"))
+  print(scaling)
   print("---------")
   
   print("SVD solution:")
