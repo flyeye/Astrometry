@@ -82,7 +82,7 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
         
         # Брэмен пишет ссылаясь на Ван дер Валле (действительно, есть упоминия в книге), 
         # дисперии ошибок разных переменных должны быть равны. Дисперсии мы не знаем, но 
-        # можно предположить, что дисперсия ошибки пропорциональна величине самой ошибки, 
+        # можно предположить, что дисперсия ошибки переменной пропорциональна величине самой переменой, 
         # а значит наша задача нормировать матрицу условных уравнений так, чтобы величины 
         # коэффициентов при разных переменных имели примерно одинаковую норму. 
         # Предложенный ниже вариант работает. 
@@ -300,11 +300,22 @@ TLS_Gen_test <- function()
   m<-9; 
   n<- 1000;
   ef <- 4;
+  X_0 <- c(-2, -1, 2, 1, 2, -1, 2, -6, +5, -3);
+  print(X_0);
   
   S_0 <- c(rep(0.0, ef), rep(0.5, m-ef), 0.1);
-  In <- TLS_make_test_data(n, m, X_0, S_0); 
-  print(X_0);
   print(S_0)
+  
+  In <- TLS_make_test_data(n, m, X_0, S_0); 
+  
+  TLS_Gen_Solve(In, n, m, ef, scaling)
+}
+
+TLS_Gen_Solve <- function(In, n, m, ef, scaling)
+{
+  
+  print(In$X_0);
+  print(In$S_0)
   print(norm(t(In$A)%*%In$A, type="i")*norm(solve(t(In$A)%*%In$A), type = "i"))
   print(scaling)
   print("---------")
@@ -312,7 +323,7 @@ TLS_Gen_test <- function()
   print("SVD solution:")
   res <- TLS_Gen(In$A, In$B, mode = 1, scaling)
   print(res$X)
-  print(X_0[1:m] - res$X)
+  print(In$X_0[1:m] - res$X)
   print(res$s_X)
   print(res$s0)
   print(res$s0_dis)
@@ -325,7 +336,7 @@ TLS_Gen_test <- function()
   print("Eigen value solution, TLS case, all variables consist erros:")
   res <- TLS_Gen(In$A, In$B, mode = 2, scaling, ef = 0)
   print(res$X)
-  print(X_0[1:m] - res$X)
+  print(In$X_0[1:m] - res$X)
   print(res$s_X)
   print(res$s0)
   print(res$s0_dis)
@@ -338,7 +349,7 @@ TLS_Gen_test <- function()
   print("Eigen value solution, TLS-LS case, known variables error-free")
   res <- TLS_Gen(In$A, In$B, mode = 2, scaling, ef)
   print(res$X)
-  print(X_0[1:m] - res$X)
+  print(In$X_0[1:m] - res$X)
   print(res$s_X)
   print(res$s0)
   print(res$s0_dis)
@@ -351,7 +362,7 @@ TLS_Gen_test <- function()
   print("OLS solution, all variables error-free:")
   res <- TLS_Gen(In$A, In$B, mode = 2, scaling, m)
   print(res$X)
-  print(X_0[1:m] - res$X)
+  print(In$X_0[1:m] - res$X)
   print(res$s_X)
   print(res$s0)
   print(res$s0_dis)
@@ -361,20 +372,22 @@ TLS_Gen_test <- function()
   print(res$err)
   print("---------")
   
-  print("OLS solution by R lm function:")
-  f <- lm(In$B ~ 0 +In$A[,1] + In$A[,2] + In$A[,3] + In$A[,4] + In$A[,5] + In$A[,6] + In$A[,7] + In$A[,8] + In$A[,9])
-  print(f$coefficients)
-  print(X_0[1:m] - f$coefficients)
-  print(sqrt(sum(f$residuals*f$residuals)/(n-m)))
-  print(sqrt(sum((In$B0 - In$A0 %*% f$coefficients)^2)/(n-m)))
-  print("---------")
-  
   print("TLS solution by R prcomp function:")
   r <- prcomp( ~ In$A + In$B )
   x <- r$rotation[1:m,m+1]/(-1*r$rotation[m+1,m+1]);
   print(x)
-  print(X_0[1:m] - x)
+  print(In$X_0[1:m] - x)
   print(sqrt(sum((In$B - In$A %*% x)^2)/(n-m)))
   print(sqrt(sum((In$B0 - In$A0 %*% x)^2)/(n-m)))
   print("---------")
+  
+  print("OLS solution by R lm function:")
+  #f <- lm(In$B ~ 0 + In$A[,1] + In$A[,2] + In$A[,3] + In$A[,4] + In$A[,5] + In$A[,6] + In$A[,7] + In$A[,8] + In$A[,9])
+  f <- lm(In$B ~ 0 + In$A[,1] + In$A[,2] + In$A[,3] + In$A[,4] + In$A[,5] + In$A[,6] + In$A[,7] + In$A[,8] + In$A[,9]  + In$A[,10]  + In$A[,11]  + In$A[,12])
+  print(f$coefficients)
+  print(In$X_0[1:m] - f$coefficients)
+  print(sqrt(sum(f$residuals*f$residuals)/(n-m)))
+  print(sqrt(sum((In$B0 - In$A0 %*% f$coefficients)^2)/(n-m)))
+  print("---------")
+  
 }
