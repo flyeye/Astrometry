@@ -1,3 +1,7 @@
+#-----------------------------------------------------------------
+# l, b - radians, r - parsec
+# mu_l, mu_b - "/year
+# k = 4.74 "km/sec*parsec"
 GetOM_R <- function (l_d,b_d,r)
 {
   l <- NISTdegTOradian(l_d)
@@ -20,7 +24,7 @@ GetOM_R <- function (l_d,b_d,r)
   
   result;
 }
-
+#-----------------------------------------------------------------
 GetOM_L <- function(l_d,b_d,r)
 {
   l <- NISTdegTOradian(l_d)
@@ -43,7 +47,7 @@ GetOM_L <- function(l_d,b_d,r)
   
   result;
 }
-
+#-----------------------------------------------------------------
 GetOM_B <- function(l_d,b_d,r)
 {
   l <- NISTdegTOradian(l_d)
@@ -66,12 +70,13 @@ GetOM_B <- function(l_d,b_d,r)
   
   result;
 }
-
+#-----------------------------------------------------------------
 GetOM_Default <- function ()
 {
    result <- c(10.3, 15.2, 8.0, -2, 1, -15, -1, 15, 0.5, -0.5, 0.5,-0.5);
    return(result)
 }
+#-----------------------------------------------------------------
 
 MakeTestStars <- function (n)
 {
@@ -83,7 +88,7 @@ MakeTestStars <- function (n)
   return(stars)
 }
 
-MakeTestOMCoef <- function(stars, n)
+MakeOMCoef <- function(stars, n)
 {
   a0 <- matrix(0, n*3, 12)
   for (i in 1:n)
@@ -104,7 +109,7 @@ Make_OM_Test <- function()
   stars <- MakeStars(n)
   
   #  calculate A0
-  a0 <- MakeTestOMCoef(stars, n)
+  a0 <- MakeOMCoef(stars, n)
   
   #  calculate B0
   OM_0 <- GetOM_Default()

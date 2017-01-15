@@ -1,7 +1,7 @@
-#Byte-by-byte Description of file: hip2.dat
-#--------------------------------------------------------------------------------
+# Byte-by-byte Description of file: hip2.dat
+# --------------------------------------------------------------------------------
 #  Bytes Format Units    Label   Explanations
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 #    1-  6  I6    ---      HIP     Hipparcos identifier
 #    8- 10  I3    ---      Sn      [0,159] Solution type new reduction (1)
 #    12  I1    ---      So      [0,5] Solution type old reduction (2)
@@ -29,7 +29,7 @@
 #    160-164  F5.3  mag    e_B-V     Formal error on colour index
 #    166-171  F6.3  mag      V-I     V-I colour index
 #    172-276 15F7.2 ---      UW      Upper-triangular weight matrix (G1)
---------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------
 #  Note (1): Solution type.
 #The solution type is a number 10xd+s consisting of two parts d and s:
 #  - s describes the type of solution adopted:
@@ -56,8 +56,18 @@
   
 
 # read_hip2 - function to read Hipparcos catalogue into the dataframe
+
 # path - path and file name of the Hipparcos catalogue
 read_hip2 <- function(path)
 {
-  pos <- fwf_positions(c(1, 30), c(10, 42), c("name", "ssn"))
+#  fwf_positions(c(1, 6), c(8,10), c(12,12), c(14,14), c(16,28), c(30,42), c(44,50), c(52,59), c(61,68), c(70,75), 
+ #               c(77,82), c(84,89), c(91,96), c(98,103), c(105,107), c(109,113), c(115,116), c(118,123), c(125,128), 
+#                c(130,136), c(138,143), c(145,149), c(151,151), c(153,158), c(160,164), c(166,171), 
+  hip_data <- read_fwf(path, col_positions = fwf_positions(c(1, 8,  12, 14, 16, 30, 44, 52, 61, 70, 77, 84, 91, 98,  105, 109, 115, 118, 125, 130, 138, 145, 151, 153, 160, 166),
+                                                           c(6, 10, 12, 14, 28, 42, 50, 59, 68, 75, 82, 89, 96, 103, 107, 113, 116, 123, 128, 136, 143, 149, 151, 158, 164, 171),
+                                                           c("HIP", "Sn", "So", "Nc", "RA", "DE", "Px", "pmRA", "pmDE", "e_RA", "e_DE", "e_Px", "e_pmRA", "e_pmDE", 
+                                                             "Ntr", "F2", "F1", "var", "ic", "Hpmag", "e_Hpmag", "sHp", "VA", "B_V", "e_B_V", "V_I")), 
+                       col_types = "iiiiddddddddddidididddiddd")
+  
+  return(hip_data)
 }
