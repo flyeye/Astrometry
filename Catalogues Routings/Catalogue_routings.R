@@ -1,7 +1,63 @@
+# -------------------------------------------------------------------------------
+# Переход от экваториальных координат, выраженных в радианах,
+# в новые галактические, выраженных в радианах. 
+# e - matrix, e[,1] - RA, e[,2] - DE, radians
+# -------------------------------------------------------------------------------
+get_galaxy <- function(e)
+{
+
+  Leo <- 4.936829261   # 282.85948083°
+  L0  <- 0.57477039907 # 32.931918056° 
+  si  <- 0.88998807641 # sin 62.871748611° 
+  ci  <- 0.45598379779 # cos 62.871748611° 
+
+  aa <- e[,1]-Leo;
+  sa <- sin(aa);   
+  ca <- cos(aa);
+  
+  sd<-sin(e[,2])  
+  cd<-cos(e[,2])
+  
+  
+  g <- cbind( (atan2(sd*si+cd*ci*sa,cd*ca)+L0), asin(sd*ci-cd*si*sa))
+  
+  g[(g[,1]<0),1] <- g[(g[,1]<0),1]+2*pi;
+  
+  return(g)
+}
+
+# -------------------------------------------------------------------------------
+# Перевод собственных движений из экваториальных в галактические
+#    pm.a = mu*cos(d)       GalPm.l = mu(l)*cos(l)  ?!!!
+#    pm.d = mu'             GalPm.b = mu(b)              }
+#    
+#  pm - собственные движения в экваториальной СК
+# -------------------------------------------------------------------------------
+get_galaxy_mu <- function(pm, gal, dec)
+{
+  
+  L0  <- 0.57477039907; # 32.931918056° 
+  si  <- 0.88998807641; # sin 62.871748611° 
+  ci  <- 0.45598379779; # cos 62.871748611° 
+
+  cd <- cos(dec);
+  sfi <- si*cos(gal[,1]-L0)/cd;
+  cfi <- (cos(gal[,2])*ci-sin(gal[,2])*si*sin(gal[,1]-L0))/cd;
+
+  GalPm <- cbind( (cfi*pm[,1]+sfi*pm[,2]), (-sfi*pm[,1]+cfi*pm[,2]))
+
+  return(GalPm)
+}
+
+
+#================================================================================
+#-------------------------   Hipparcos 2 Routings  ------------------------------
+# -------------------------------------------------------------------------------
+
 # Byte-by-byte Description of file: hip2.dat
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 #  Bytes Format Units    Label   Explanations
-# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 #    1-  6  I6    ---      HIP     Hipparcos identifier
 #    8- 10  I3    ---      Sn      [0,159] Solution type new reduction (1)
 #    12  I1    ---      So      [0,5] Solution type old reduction (2)
@@ -54,10 +110,10 @@
 #5 = VIM (variability-induced mover) solution
 #--------------------------------------------------------------------------------
   
-
+#--------------------------------------------------------------------------------
 # read_hip2 - function to read Hipparcos catalogue into the dataframe
-
 # path - path and file name of the Hipparcos catalogue
+#--------------------------------------------------------------------------------
 read_hip2 <- function(path)
 {
 #  fwf_positions(c(1, 6), c(8,10), c(12,12), c(14,14), c(16,28), c(30,42), c(44,50), c(52,59), c(61,68), c(70,75), 
@@ -70,4 +126,39 @@ read_hip2 <- function(path)
                        col_types = "iiiiddddddddddidididddiddd")
   
   return(hip_data)
+}
+
+read_hip2_default <- function()
+{
+  hip_path <- "X:/Data/Catalogues/Hipparcos 2/hip2.dat"
+  hip_data <- read_hip2(hip_path)
+}
+
+
+get_hip2_OB <- function(hip_data)
+{
+  hip1 <- hip_data %>% filter(Px > 0.5) %>% filter(Px < 4) %>% filter(B_V<0)
+  return(hip1)
+}
+
+hip2_eq2gal<-function(hip_data)
+{
+  gal <- get_galaxy(cbind(hip_data$RA, hip_data$DE))
+  hip_data <- hip_data %>% mutate(gl = gal[,1], gb = gal[,2])
+  gal_mu <- get_galaxy_mu(cbind(hip_data$pmRA, hip_data$pmDE), gal, hip_data$DE)
+  hip_data <- hip_data %>% mutate(pm_l = gal_mu[,1], pm_b = gal_mu[,2])
+  return(hip_data)
+}
+
+hip2_get_stars <- function(hip_data)
+{
+  stars <- matrix(0,nrow(hip_data), 6)
+  stars[,1] <- hip_data$gl*180/pi
+  stars[,2] <- hip_data$gb*180/pi
+  stars[,3] <- 1000/hip_data$Px
+  stars[,4] <- hip_data$pm_l
+  stars[,5] <- hip_data$pm_b
+  stars[,6] <- 0
+  
+  return(stars)
 }

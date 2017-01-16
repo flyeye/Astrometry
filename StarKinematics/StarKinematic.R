@@ -18,9 +18,9 @@ GetOM_R <- function (l_d,b_d,r)
   result[7] <- sin(2*b)*cos(l);                    #M13
   result[8] <- sin(2*b)*sin(l);                    #M23
   result[9] <- cos(b)*cos(b)*sin(2*l);            #M12
-  result[10] <- 0.5*cos(b)*cos(b)*cos(2*l);       #M11*
-  result[11] <- sin(b)*sin(b)-(1/3);               #x
-  result[12] <- 1;                                   #y
+  result[10] <- 0.5*cos(b)*cos(b)*cos(2*l);       #M11* = M11-M22
+  result[11] <- sin(b)*sin(b)-(1/3);               #x = M33-0.5*(M11+M22)
+  result[12] <- 1;                                   #y = 1/3(M11+M22+M33)
   
   result;
 }
@@ -70,13 +70,57 @@ GetOM_B <- function(l_d,b_d,r)
   
   result;
 }
+
 #-----------------------------------------------------------------
+# stars - matrix(n,3), where 
+MakeOMCoef <- function(stars, use_vr = TRUE)
+{
+  n <- nrow(stars)
+  
+  if (use_vr == TRUE)
+    a0 <- matrix(0, n*3, 12)
+  else 
+    a0 <- matrix(0, n*2, 12)
+  
+  for (i in 1:n)
+  {
+    a0[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3])
+    a0[n+i,] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3])
+    if (use_vr == TRUE)
+      a0[2*n+i,] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3])
+  }
+  
+  return(a0);
+}
+
+Calc_OM_Model <- function(stars, use_vr = TRUE, model = 1, scaling = 0, ef = 0)
+{
+  #  calculate equation of conditions
+  # l, b, px, mu_l, mu_b, vr
+  
+  a <- MakeOMCoef(stars, use_vr)
+  
+  if (use_vr == TRUE)
+    b <- rbind(stars[,4], stars[,5], stars[,6])
+  else 
+    b <- rbind(stars[,4], stars[,5])
+  
+  res <- TLS_Gen(a, b, mode, scaling, ef)
+  
+  return(res)
+}
+
+#=====================================================================
+#----------------------    Test functions    -------------------------
+#---------------------------------------------------------------------
+
 GetOM_Default <- function ()
 {
-   result <- c(10.3, 15.2, 8.0, -2, 1, -15, -1, 15, 0.5, -0.5, 0.5,-0.5);
-   return(result)
+  result <- c(10.3, 15.2, 8.0, -2, 1, -15, -1, 15, 0.5, -0.5, 0.5,-0.5);
+  return(result)
 }
-#-----------------------------------------------------------------
+
+#--------------------------------
 
 MakeTestStars <- function (n)
 {
@@ -84,32 +128,21 @@ MakeTestStars <- function (n)
   stars[,1]  <- runif(n, min = 0, max = 360)  # l
   stars[,2]  <- runif(n, min = -90, max = 90)  # b
   stars[,3]  <- runif(n, min = 0.1, max = 3)  # px
-   
+  
   return(stars)
 }
 
-MakeOMCoef <- function(stars, n)
-{
-  a0 <- matrix(0, n*3, 12)
-  for (i in 1:n)
-  {
-    a0[i,] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3])
-    a0[n+i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3])
-    a0[2*n+i,] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3])
-  }
-  
-  return(a0);
-}
+#--------------------------------
 
 Make_OM_Test <- function()
 {
   n <- 1000
   
   #  create stars
-  stars <- MakeStars(n)
+  stars <- MakeTestStars(n)
   
   #  calculate A0
-  a0 <- MakeOMCoef(stars, n)
+  a0 <- MakeOMCoef(stars)
   
   #  calculate B0
   OM_0 <- GetOM_Default()
@@ -125,7 +158,7 @@ Make_OM_Test <- function()
   noise[,3] <- rnorm(n, 0, s0[3])
   
   #  calculate A
-  a <- MakeTestOMCoef(stars+noise, n)
+  a <- MakeOMCoef(stars+noise)
   
   #  calculate B
   b<- vector("numeric", 3*n)
