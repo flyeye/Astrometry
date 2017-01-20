@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------
-# l, b - radians, r - parsec
+# l, b - degrees, r - parsec
 # mu_l, mu_b - "/year
 # k = 4.74 "km/sec*parsec"
 GetOM_R <- function (l_d,b_d,r)
@@ -73,6 +73,7 @@ GetOM_B <- function(l_d,b_d,r)
 
 #-----------------------------------------------------------------
 # stars - matrix(n,3), where 
+# stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
 MakeOMCoef <- function(stars, use_vr = TRUE)
 {
   n <- nrow(stars)
@@ -90,10 +91,13 @@ MakeOMCoef <- function(stars, use_vr = TRUE)
       a0[2*n+i,] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3])
   }
   
+  if (use_vr == FALSE)
+    a0 <- a0[,-12]
+  
   return(a0);
 }
 
-Calc_OM_Model <- function(stars, use_vr = TRUE, model = 1, scaling = 0, ef = 0)
+Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0)
 {
   #  calculate equation of conditions
   # l, b, px, mu_l, mu_b, vr
@@ -101,9 +105,9 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, model = 1, scaling = 0, ef = 0)
   a <- MakeOMCoef(stars, use_vr)
   
   if (use_vr == TRUE)
-    b <- rbind(stars[,4], stars[,5], stars[,6])
+    b <- matrix(rbind(stars[,4]*4.74, stars[,5]*4.74, stars[,6]), nrow(stars)*3, 1)  #*cos(stars[,2])
   else 
-    b <- rbind(stars[,4], stars[,5])
+    b <- matrix(rbind(stars[,4]*4.74, stars[,5]*4.74), nrow(stars)*2, 1)  #*cos(stars[,2])
   
   res <- TLS_Gen(a, b, mode, scaling, ef)
   
