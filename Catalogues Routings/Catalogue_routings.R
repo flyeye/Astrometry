@@ -182,7 +182,7 @@ hip2_test_OM <- function(hip_data)
 }
 
 # ===============================================================================
-# -------------------------   Tycho-2 2 Routings  -------------------------------
+# -------------------------    Tycho-2 Routings   -------------------------------
 # -------------------------------------------------------------------------------
 # Byte-by-byte description of file: catalog.dat
 # --------------------------------------------------------------------------------
@@ -363,4 +363,265 @@ tyc2_test_OM <- function(tyc2_data)
   tyc <- cat_eq2gal(get_tyc2_OB(tyc2_data))
   stars <- tyc2_get_stars(tyc)
   return(stars)
+}
+
+
+# ===============================================================================
+# -------------------   Tycho-2 Spectral Types Routings  ------------------------
+# -------------------------------------------------------------------------------
+# Byte-by-byte Description of file: catalog.dat
+# --------------------------------------------------------------------------------
+#   Bytes Format  Units   Label    Explanations
+# -------------- ------------------------------------------------------------------
+# 1-  3  A3     ---     ---      [TYC] Tycho-2 label
+# 5-  8  I4     ---     TYC1     First part of Tycho-2 identifier
+# 10- 14  I5     ---     TYC2     Second part of Tycho-2 identifier
+# 16      I1     ---     TYC3     Third part of Tycho-2 identifier
+# 18- 29  F12.8  deg     RAdeg    Right Ascension, J2000, decimal deg.
+# 31- 42  F12.8  deg     DEdeg    Declination, J2000, decimal deg.
+# 44- 49  F6.3   mag     VTmag    ?=99.99 Tycho-2 V_T_ magnitude
+# 51- 56  F6.3   mag     BTmag    ?=99.99 Tycho-2 B_T_ magnitude
+# 58- 60  A3     ---   r_SpType   Source of spectral type (2)
+# 62- 76  A15    ---     Name     Alternate designation for star (3)
+# 78- 83  F6.3   arcsec  Dist     Distance between Tycho object and spectral type match (4)
+# 85- 90  F6.2   mag     Mag      ?=99.99 Magnitude from SpType catalog (5)
+# 92      A1     ---   f_Mag      [VPBX*] Flag indicating type of magnitude (6)
+# 94      A1     ---     TClass   Temperature class (7)
+# 95      I1     ---     SClass   ? Temperature Subclass (7)
+# 97      I1     ---     LClass   ? Luminosity class in numeric form (7)
+# 99-103  I5     K       Teff     Effective temperature of the star, based on spectral type (G1)
+# 105-124  A20    ---     SpType   Spectral Type (1)
+# --------------------------------------------------------------------------------
+#   
+#   Note (1): This is the spectral type of the star, exactly as it appears
+# in the original spectral type catalog.
+# 
+# Note (2): This column contains a code for the catalog of origin of the
+# spectral type:
+#   mc1 = Michigan Catalog, Vol. 1, <III/31>
+#   mc2 = Michigan Catalog, Vol. 2, <III/51>
+#   mc3 = Michigan Catalog, Vol. 3, <III/80>
+#   mc4 = Michigan Catalog, Vol. 4, <III/133>
+#   mc5 = Michigan Catalog, Vol. 5, <III/214>
+#   j64 = Jaschek et al. 1964, <III/18>
+#   k83 = Kennedy 1983, <III/78>
+#   fI  = FK5, Part I, <I/149>
+#   fII = FK5, Part II, <I/175>
+#   ppN = PPM North, <I/146>
+#   ppS = PPM South, <I/193>
+#   sim = SIMBAD Astronomical Database
+# 
+# Note (3): This is an alternate designation for the star, other than
+# its Tycho-2 identifier. It is usually the designation for the star
+# that appeared in the spectral type catalog.
+# 
+# Note (4): This is the distance in arcsec between the Tycho-2 object
+# and the star from the spectral type catalog to which it was matched.
+# 
+# Note (5): This is the magnitude that appears in the spectral type catalog.
+# If no magnitude was included, it will have a value of 99.99.
+# 
+# Note (6): This indicates the type of magnitude that appears in the
+# spectral type catalog:
+#   V = visual
+# P = photographic
+# B = blue
+# X = unknown
+# * = no magnitude was included
+# 
+# Note (7):
+#   In the spectral type reformatting, it was necessary to "choose" a
+# concrete spectral type for those that were listed ambiguously, and
+# the rule adhered to was to take the first listing. For example, if a
+# spectral type was originally listed as K2/3 III, it will be K2 3,
+# where K is the temperature class, 2 is the subclass, and 3 is the
+# luminosity class.
+# 
+# Other examples: A9/F2 V, B2.5 V, and G8 IV/V in the original catalog
+# become A9 5, B2 5, and G8 4 in the reformatted spectral type
+# 
+# --------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+# read_tyc2sp - function to read Tycho-2 Spectral Type catalogue into the dataframe
+# path - path and file name of the Hipparcos catalogue
+# -------------------------------------------------------------------------------
+read_tyc2sp <- function(path)
+{
+  start_pos <- c(1, 5,  10, 16, 18, 31, 44, 51, 58, 62, 78, 85, 92, 94, 95, 
+                 97, 99, 105);
+  end_pos <- c(3, 8, 14, 16, 29, 42, 49, 56, 60, 76, 83, 90, 92, 94, 95, 97, 
+               103, 124);
+  var_names <- c("TYC","TYC1", "TYC2", "TYC3", "RA", "DE", "VT", "BT", "SpType_source", "Name", "T2SpDist", "Mag_sp", 
+                 "f_Mag_sp", "TClass", "SClass", "LClass", "Teff", "SpType");
+  types <- "ciiiddddccddcciiic";
+  
+  tyc2sp_data <- read_fwf(path, col_positions = fwf_positions(start_pos, end_pos, var_names), col_types = types)
+  
+  #tyc2sp_data[is.na(tyc2_data$pflag),4] <- "";
+  #tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>% 
+    #mutate(Px = 1, B_V = (0.850*(BT-VT)), Mag = (VT - 0.090*(BT-VT)), 
+     #      RA = RA*pi/180, DE = DE*pi/180) 
+  
+  # Spectral parallaxes calculation
+  
+  return(tyc2sp_data)
+}
+
+read_tyc2sp_default <- function()
+{
+  tyc2sp_path <- "X:/Data/Catalogues/Tycho-2 Spectral Type Catalogue/catalog.dat"
+  tyc2sp_data <- read_tyc2sp(tyc2sp_path)
+}
+
+
+get_tyc2sp_OB <- function(tyc2sp_data)
+{
+  tyc <- tyc2sp_data %>% filter(PxSp > 0.5) %>% filter(PxSp < 4)  %>% filter(B_V<0)
+  return(tyc)
+}
+
+
+# ===============================================================================
+# --------------------------------   TGAS Routings  -----------------------------
+# field description: https://gaia.esac.esa.int/documentation/GDR1/datamodel/Ch1/tgas_source.html
+# hip, (int), Hipparcos identifier
+# tycho2_id, (character, X-Y-Z) Tycho 2 identifier, no spaces, no zeros
+# solution_id, long 
+# source_id, long 
+# random_index, long
+# ref_epoch, (double, Time[Julian Years]) Reference epoch 
+# ra, (double, Angle[deg]) Right ascension 
+# ra_error,  (double, Angle[mas]) Standard error of right ascension
+# dec, (double, Angle[deg]) Declination 
+# dec_error, (double, Angle[mas]) Standard error of declination 
+# parallax, (double, Angle[mas] ) Parallax 
+# parallax_error, (double, Angle[mas] ) Standard error of parallax 
+# pmra, (double, Angular Velocity[mas/year] ) Proper motion in right ascension direction
+# pmra_error, (double, Angular Velocity[mas/year] ) Standard error of proper motion in right ascension direction 
+# pmdec, (double, Angular Velocity[mas/year] ) Proper motion in declination direction 
+# pmdec_error, (double, Angular Velocity[mas/year] ) Standard error of proper motion in declination direction
+# ra_dec_corr, double
+# ra_parallax_corr, double
+# ra_pmra_corr, double
+# ra_pmdec_corr, double
+# dec_parallax_corr, double 
+# dec_pmra_corr, double 
+# dec_pmdec_corr, double 
+# parallax_pmra_corr, double 
+# parallax_pmdec_corr, double 
+# pmra_pmdec_corr,double 
+# astrometric_n_obs_al, int
+# astrometric_n_obs_ac, int 
+# astrometric_n_good_obs_al,int 
+# astrometric_n_good_obs_ac, int 
+# astrometric_n_bad_obs_al, int 
+# astrometric_n_bad_obs_ac,int 
+# astrometric_delta_q, (float) Hipparcos/Gaia data discrepancy (Hipparcos subset of TGAS only)
+# astrometric_excess_noise, double
+# astrometric_excess_noise_sig, double 
+# astrometric_primary_flag, (boolean), Primary or seconday
+# astrometric_relegation_factor, float 
+# astrometric_weight_al, (float, Angle[mbabs-2]) Mean astrometric weight of the source 
+# astrometric_weight_ac,  (float, Angle[mbabs-2]) Mean astrometric weight of the source
+# astrometric_priors_used,  (int) Type of prior used in the astrometric solution
+# matched_observations,  (short) Amount of observations matched to this source
+# duplicated_source, (boolean) Source with duplicate sources
+# scan_direction_strength_k1, float 
+# scan_direction_strength_k2, float 
+# scan_direction_strength_k3, float 
+# scan_direction_strength_k4, float 
+# scan_direction_mean_k1, float 
+# scan_direction_mean_k2, float 
+# scan_direction_mean_k3, float 
+# scan_direction_mean_k4,float 
+# phot_g_n_obs,  (int) Number of observations contributing to G photometry
+# phot_g_mean_flux, (double, Flux[e-/s]) G-band mean flux 
+# phot_g_mean_flux_error, (double, Flux[e-/s]) Error on G-band mean flux 
+# phot_g_mean_mag, (double, Magnitude[mag]) G-band mean magnitude 
+# phot_variable_flag, (string, Dimensionless[see description]) Photometric variability flag
+# l, (double, Angle[deg]) Galactic longitude 
+# b, (double, Angle[deg]) Galactic latitude 
+# ecl_lon, (double, Angle[deg]) Ecliptic longitude 
+# ecl_lat, (double, Angle[deg]) Ecliptic latitude 
+# iccccddddddddddd___________________________________dddcdddd
+# iccccddddddddddddddddddddd______d______i__________idddcdddd
+
+read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
+{
+  
+  if (is_short == TRUE)
+  {
+     types <- "iccccddddddddddd___________________________________dddcdddd"; 
+  } else 
+  {
+     types <- "iccccddddddddddddddddddddd______d______i__________idddcdddd";
+  }
+  
+  tgas_data <- data.frame()
+  
+  to_read <- n;
+  readed <- 0;
+  gi <- 0;
+  
+  for (i in 0:15)
+  {
+    if (gi >= (start + n - 1))
+      break;
+    
+    s <- as.character(i);
+    if(nchar(s) == 1)
+      s <- paste0("0",s);
+    filename <- paste0(path, "TgasSource_000-000-0", s,".csv.gz")
+    print(paste0("reading: ", filename))
+    data <- read_csv(filename, col_names = TRUE, col_types = types)
+    readed <- nrow(data)
+    
+    if ((gi + readed) < start)
+    {
+      print("skip")
+      gi <- gi + readed
+      next;
+    }
+      
+    if(((start + n)>gi)&((start + n)<(gi+1+readed)))
+    {
+       print(paste("cut after", as.character(gi), as.character(readed)))
+       data <- data[-((start + n - gi):readed),]
+    }
+    if ((start>gi+1)&(start<=(gi+readed)))
+    {
+      print(paste("cut before", as.character(gi), as.character(readed)))
+      data <- data[-(1:(start - 1 - gi)),]
+    }
+    gi <- gi + readed
+
+    tgas_data <- rbind(tgas_data, data)
+    
+  }
+  
+  #tgas_data <- read_csv(filename, col_names = TRUE, col_types = types,  skip = start-1, n_max = n)
+  
+  #tyc2sp_data[is.na(tyc2_data$pflag),4] <- "";
+  #tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>% 
+  #mutate(Px = 1, B_V = (0.850*(BT-VT)), Mag = (VT - 0.090*(BT-VT)), 
+  #      RA = RA*pi/180, DE = DE*pi/180) 
+  
+  # Spectral parallaxes calculation
+  
+  
+  return(tgas_data)
+}
+
+read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
+{
+  tgas_path <- "X:/Data/Catalogues/TGAS/"
+  tgas_data <- read_tgas(tgas_path, start, n, is_short)
+  return (tgas_data)
+}
+
+# min_px, max_px - mas
+filter_tgs_px <- function(tgs, min_px, max_px)
+{
+  tgs <- tgs %>% filter(parallax > min_px) %>% filter(parallax < max_px)
+  return(tgs)
 }
