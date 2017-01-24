@@ -4,8 +4,8 @@
 # k = 4.74 "km/sec*parsec"
 GetOM_R <- function (l_d,b_d,r)
 {
-  l <- NISTdegTOradian(l_d)
-  b <- NISTdegTOradian(b_d)
+  l <- l_d*pi/180
+  b <- b_d*pi/180
   
   result <- vector("numeric", 12)
   
@@ -17,58 +17,58 @@ GetOM_R <- function (l_d,b_d,r)
   result[6] <- 0;
   result[7] <- sin(2*b)*cos(l);                    #M13
   result[8] <- sin(2*b)*sin(l);                    #M23
-  result[9] <- cos(b)*cos(b)*sin(2*l);            #M12
-  result[10] <- 0.5*cos(b)*cos(b)*cos(2*l);       #M11* = M11-M22
-  result[11] <- sin(b)*sin(b)-(1/3);               #x = M33-0.5*(M11+M22)
-  result[12] <- 1;                                   #y = 1/3(M11+M22+M33)
+  result[9] <- cos(b)*cos(b)*sin(2*l);             #M12 = A
+  result[10] <- cos(b)*cos(b)*cos(l)*cos(l);       #M11* = M11-M22
+  result[11] <- sin(b)*sin(b);                     #M33* = M33-M22
+  result[12] <- 1;                                 #M22
   
-  result;
+  return(result);
 }
 #-----------------------------------------------------------------
 GetOM_L <- function(l_d,b_d,r)
 {
-  l <- NISTdegTOradian(l_d)
-  b <- NISTdegTOradian(b_d)
+  l <- l_d*pi/180
+  b <- b_d*pi/180
   
   result <- vector("numeric", 12)
- 
+  
   result[1] <- sin(l)/r;                # U
   result[2] <- -cos(l)/r;               # V
   result[3] <- 0/r;                     # W
   result[4] <- -sin(b)*cos(l);          # W1
   result[5] <- -sin(b)*sin(l);          # W2
-  result[6] <- cos(b);                  # W3
+  result[6] <- cos(b);                  # W3 = B
   result[7] <- -sin(b)*sin(l);          # M13
   result[8] <- sin(b)*cos(l);           # M23
-  result[9] <- cos(b)*cos(2*l);         # M12
+  result[9] <- cos(b)*cos(2*l);         # M12 = A
   result[10] <- -0.5*cos(b)*sin(2*l);   # M11* = M11-M22
-  result[11] <- 0;                        # x = M33-0.5*(M11+M22)
-  result[12] <- 0;                        # y = 1/3(M11+M22+M33)
+  result[11] <- 0;                      # M33* = M33-M22
+  result[12] <- 0;                      # M22
   
-  result;
+  return(result);
 }
 #-----------------------------------------------------------------
 GetOM_B <- function(l_d,b_d,r)
 {
-  l <- NISTdegTOradian(l_d)
-  b <- NISTdegTOradian(b_d)
+  l <- l_d*pi/180
+  b <- b_d*pi/180
   
   result <- vector("numeric", 12)
+   
+  result[1] <- cos(l)*sin(b)/r;             # X
+  result[2] <- sin(l)*sin(b)/r;             # Y
+  result[3] <- -cos(b)/r;                   # Z
+  result[4] <- sin(l);                      # W1
+  result[5] <- -cos(l);                     # W2 
+  result[6] <- 0;                           # W3 = B
+  result[7] <- cos(2*b)*cos(l);             # M13
+  result[8] <- cos(2*b)*sin(l);             # M23
+  result[9] <- -0.5*sin(2*b)*sin(2*l);      # M12 = A
+  result[10] <- -0.5*sin(2*b)*cos(l)*cos(l);# M11* = M11-M22
+  result[11] <- 0.5*sin(2*b);               # M33* = M33-M22
+  result[12] <- 0;                          # M22
   
-  result[1] <- cos(l)*sin(b)/r;
-  result[2] <- sin(l)*sin(b)/r;
-  result[3] <- -cos(b)/r;
-  result[4] <- sin(l);
-  result[5] <- -cos(l);
-  result[6] <- 0;
-  result[7] <- cos(2*b)*cos(l);             #M13
-  result[8] <- cos(2*b)*sin(l);             #M23
-  result[9] <- -0.5*sin(2*b)*sin(2*l);      #M12
-  result[10] <- -0.25*sin(2*b)*cos(2*l);    #M11
-  result[11] <- 0.5*sin(2*b);               #x
-  result[12] <- 0;                          #y
-  
-  result;
+  return(result);
 }
 
 #-----------------------------------------------------------------
@@ -105,11 +105,22 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0)
   a <- MakeOMCoef(stars, use_vr)
   
   if (use_vr == TRUE)
-    b <- matrix(rbind(stars[,4]*4.74, stars[,5]*4.74, stars[,6]), nrow(stars)*3, 1)  #*cos(stars[,2])
+    b <- matrix(rbind(stars[,4]*4.74, stars[,5]*4.74, stars[,6]), nrow(stars)*3, 1) 
   else 
-    b <- matrix(rbind(stars[,4]*4.74, stars[,5]*4.74), nrow(stars)*2, 1)  #*cos(stars[,2])
+    b <- matrix(rbind(stars[,4]*4.74, stars[,5]*4.74), nrow(stars)*2, 1)  
   
-  res <- TLS_Gen(a, b, mode, scaling, ef)
+  #b <- rowSums(t(t(a)*GetOM_Default()))
+  
+  res <- TLS_Gen(a, b, mode, scaling, ef);
+  
+  if (use_vr == TRUE)
+  {
+    names(res$X) <- c("U", "V", "W","W1", "W2", "W3(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
+  }
+  else 
+  {
+    names(res$X) <- c("U", "V", "W","W1", "W2", "W3(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
+  }
   
   return(res)
 }

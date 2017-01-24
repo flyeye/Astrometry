@@ -148,7 +148,8 @@ read_hip2_default <- function()
 
 get_hip2_OB <- function(hip_data)
 {
-  hip1 <- hip_data %>% filter(Px > 0.5) %>% filter(Px < 4)  %>% filter(B_V<0)
+  hip1 <- hip_data %>% filter(Px > 0.5) %>% filter(Px < 1.5)  %>% filter(B_V<0.75)
+  print(paste("stars in sample:", nrow(hip1)))
   return(hip1)
 }
 
@@ -167,7 +168,7 @@ hip2_get_stars <- function(hip_data)
   stars[,1] <- hip_data$gl*180/pi
   stars[,2] <- hip_data$gb*180/pi
   stars[,3] <- (1/hip_data$Px)    #kPc
-  stars[,4] <- hip_data$pm_l
+  stars[,4] <- hip_data$pm_l*cos(hip_data$gb)
   stars[,5] <- hip_data$pm_b
   stars[,6] <- 0
   
@@ -341,7 +342,8 @@ read_tyc2_default <- function(start = 1, n = Inf)
 
 get_tyc2_OB <- function(tyc2_data)
 {
-  tyc <- tyc2_data %>% filter(Px > 0.5) %>% filter(Px < 4)  %>% filter(B_V<0)
+  tyc <- tyc2_data %>% filter(Px > 0.5) %>% filter(Px < 4)  %>% filter(B_V>1.5)
+  print(paste("stars in sample:", nrow(tyc)))
   return(tyc)
 }
 
@@ -552,9 +554,18 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
   if (is_short == TRUE)
   {
      types <- "iccccddddddddddd___________________________________dddcdddd"; 
+     var_names <- c("HIP","TYC2","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
+                    "gPx","parallax_error","pmRA","pmra_error","pmDE","pmdec_error","Gm_flux","phot_g_mean_flux_error",
+                    "Gm_mag","phot_variable_flag","l","b","ecl_lon","ecl_lat");
   } else 
   {
      types <- "iccccddddddddddddddddddddd______d______i__________idddcdddd";
+     var_names <- c("HIP","TYC2","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
+                    "gPx","parallax_error","pmRA","pmra_error","pmDE","pmdec_error","ra_dec_corr","ra_parallax_corr","ra_pmra_corr",
+                    "ra_pmdec_corr","dec_parallax_corr","dec_pmra_corr","dec_pmdec_corr","parallax_pmra_corr","parallax_pmdec_corr",
+                    "pmra_pmdec_corr","astrometric_n_obs_al","astrometric_n_obs_ac","astrometric_n_good_obs_al","astrometric_n_good_obs_ac",
+                    "astrometric_n_bad_obs_al","astrometric_n_bad_obs_ac","astrometric_delta_q","astrometric_priors_used",
+                    "phot_g_n_obs","Gm_flux","phot_g_mean_flux_error","Gm_mag","phot_variable_flag","l","b","ecl_lon","ecl_lat");
   }
   
   tgas_data <- data.frame()
@@ -573,7 +584,7 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
       s <- paste0("0",s);
     filename <- paste0(path, "TgasSource_000-000-0", s,".csv.gz")
     print(paste0("reading: ", filename))
-    data <- read_csv(filename, col_names = TRUE, col_types = types)
+    data <- read_csv(filename, col_names = var_names, col_types = types, skip = 1)
     readed <- nrow(data)
     
     if ((gi + readed) < start)
@@ -599,15 +610,8 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
     
   }
   
-  #tgas_data <- read_csv(filename, col_names = TRUE, col_types = types,  skip = start-1, n_max = n)
-  
-  #tyc2sp_data[is.na(tyc2_data$pflag),4] <- "";
-  #tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>% 
-  #mutate(Px = 1, B_V = (0.850*(BT-VT)), Mag = (VT - 0.090*(BT-VT)), 
-  #      RA = RA*pi/180, DE = DE*pi/180) 
-  
-  # Spectral parallaxes calculation
-  
+  tgas_data <- tgas_data %>% mutate(RA = RA*pi/180, DE = DE*pi/180) 
+
   
   return(tgas_data)
 }
@@ -622,6 +626,27 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
 # min_px, max_px - mas
 filter_tgs_px <- function(tgs, min_px, max_px)
 {
-  tgs <- tgs %>% filter(parallax > min_px) %>% filter(parallax < max_px)
+  tgs <- tgs %>% filter(Px > min_px) %>% filter(Px < max_px)
+  print(paste("stars in sample:", nrow(tgs)))
   return(tgs)
+}
+
+tgas_get_stars <- function(tgas_data)
+{
+  stars <- matrix(0,nrow(tgas_data), 6)
+  stars[,1] <- tgas_data$gl*180/pi
+  stars[,2] <- tgas_data$gb*180/pi
+  stars[,3] <- (1/tgas_data$Px)    #kPc
+  stars[,4] <- tgas_data$pm_l
+  stars[,5] <- tgas_data$pm_b
+  stars[,6] <- 0
+  
+  return(stars)
+}
+
+tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf)
+{
+  tgas_ <- cat_eq2gal(filter_tgs_px(tgas_data, min_px, max_px))
+  stars <- tgas_get_stars(tgas_)
+  return(stars)
 }
