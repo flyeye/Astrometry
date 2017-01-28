@@ -1,67 +1,4 @@
 # ===============================================================================
-# --------------------    Astrometric routings    -------------------------------
-# -------------------------------------------------------------------------------
-# Переход от экваториальных координат, выраженных в радианах,
-# в новые галактические, выраженных в радианах. 
-# e - matrix, e[,1] - RA, e[,2] - DE, radians
-# -------------------------------------------------------------------------------
-get_galaxy <- function(e)
-{
-
-  Leo <- 4.936829261   # 282.85948083°
-  L0  <- 0.57477039907 # 32.931918056° 
-  si  <- 0.88998807641 # sin 62.871748611° 
-  ci  <- 0.45598379779 # cos 62.871748611° 
-
-  aa <- e[,1]-Leo;
-  sa <- sin(aa);   
-  ca <- cos(aa);
-  
-  sd<-sin(e[,2])  
-  cd<-cos(e[,2])
-  
-  g <- cbind( (atan2(sd*si+cd*ci*sa,cd*ca)+L0), asin(sd*ci-cd*si*sa))
-  
-  g[(g[,1]<0),1] <- g[(g[,1]<0),1]+2*pi;
-  
-  return(g)
-}
-
-# -------------------------------------------------------------------------------
-# Перевод собственных движений из экваториальных в галактические
-#    pm.a = mu*cos(d)       GalPm.l = mu(l)*cos(l)  ?!!!
-#    pm.d = mu'             GalPm.b = mu(b)              }
-#    
-#  pm - собственные движения в экваториальной СК
-# -------------------------------------------------------------------------------
-get_galaxy_mu <- function(pm, gal, dec)
-{
-  
-  L0  <- 0.57477039907; # 32.931918056° 
-  si  <- 0.88998807641; # sin 62.871748611° 
-  ci  <- 0.45598379779; # cos 62.871748611° 
-
-  cd <- cos(dec);
-  sfi <- si*cos(gal[,1]-L0)/cd;
-  cfi <- (cos(gal[,2])*ci-sin(gal[,2])*si*sin(gal[,1]-L0))/cd;
-
-  GalPm <- cbind( (cfi*pm[,1]+sfi*pm[,2]), (-sfi*pm[,1]+cfi*pm[,2]))
-
-  return(GalPm)
-}
-
-# -------------------------------------------------------------------------------
-cat_eq2gal<-function(cat_data)
-{
-  gal <- get_galaxy(cbind(cat_data$RA, cat_data$DE))
-  cat_data <- cat_data %>% mutate(gl = gal[,1], gb = gal[,2])
-  gal_mu <- get_galaxy_mu(cbind(cat_data$pmRA, cat_data$pmDE), gal, cat_data$DE)
-  cat_data <- cat_data %>% mutate(pm_l = gal_mu[,1], pm_b = gal_mu[,2])
-  return(cat_data)
-}
-
-
-# ===============================================================================
 # -------------------------   Hipparcos 2 Routings  -----------------------------
 # -------------------------------------------------------------------------------
 
@@ -165,10 +102,10 @@ get_hip2_OB <- function(hip_data)
 hip2_get_stars <- function(hip_data)
 {
   stars <- matrix(0,nrow(hip_data), 6)
-  stars[,1] <- hip_data$gl*180/pi
-  stars[,2] <- hip_data$gb*180/pi
+  stars[,1] <- hip_data$gl
+  stars[,2] <- hip_data$gb
   stars[,3] <- (1/hip_data$Px)    #kPc
-  stars[,4] <- hip_data$pm_l*cos(hip_data$gb)
+  stars[,4] <- hip_data$pm_l #*cos(hip_data$gb)
   stars[,5] <- hip_data$pm_b
   stars[,6] <- 0
   
@@ -177,8 +114,10 @@ hip2_get_stars <- function(hip_data)
 
 hip2_test_OM <- function(hip_data)
 {
-   hip <- cat_eq2gal(get_hip2_OB(hip_data))
-   stars <- hip2_get_stars(hip)
+   hip_ <- get_hip2_OB(hip_data)
+   #hip$pmRA <- hip$pmRA*cos(hip$DE)
+   hip_ <- cat_eq2gal(hip_)
+   stars <- hip2_get_stars(hip_)
    return(stars)
 }
 
@@ -326,9 +265,14 @@ read_tyc2 <- function(path, start = 1, n = Inf, is_short = TRUE)
                               col_types = types, skip = start-1, n_max = n)
   
   tyc2_data[is.na(tyc2_data$pflag),4] <- "";
-  tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>% 
-                             mutate(Px = 1, B_V = (0.850*(BT-VT)), Mag = (VT - 0.090*(BT-VT)), 
-                                    RA = RA*pi/180, DE = DE*pi/180) 
+  tyc2_data <- tyc2_data %>% filter(pflag != "X") %>% filter(pflag != "P")
+  
+  tyc2_data <- tyc2_data %>% mutate(Px = 1, 
+                                    B_V = (0.850*(BT-VT)), 
+                                    Mag = (VT - 0.090*(BT-VT)), 
+                                    RA = RA*pi/180, 
+                                    DE = DE*pi/180, 
+                                    TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
   
   return(tyc2_data)  
 }
@@ -342,16 +286,16 @@ read_tyc2_default <- function(start = 1, n = Inf)
 
 get_tyc2_OB <- function(tyc2_data)
 {
-  tyc <- tyc2_data %>% filter(Px > 0.5) %>% filter(Px < 4)  %>% filter(B_V>1.5)
-  print(paste("stars in sample:", nrow(tyc)))
-  return(tyc)
+  tyc_ <- tyc2_data %>% filter(B_V>-0.5) %>% filter(B_V<0) %>% filter(Mag>9) %>% filter(Mag<11) # %>% filter(Px > 0.5) %>% filter(Px < 4)
+  print(paste("stars in sample:", nrow(tyc_)))
+  return(tyc_)
 }
 
 tyc2_get_stars <- function(tyc2_data)
 {
   stars <- matrix(0,nrow(tyc2_data), 6)
-  stars[,1] <- tyc2_data$gl*180/pi
-  stars[,2] <- tyc2_data$gb*180/pi
+  stars[,1] <- tyc2_data$gl
+  stars[,2] <- tyc2_data$gb
   stars[,3] <- (1/tyc2_data$Px)    #kPc
   stars[,4] <- tyc2_data$pm_l
   stars[,5] <- tyc2_data$pm_b
@@ -362,9 +306,9 @@ tyc2_get_stars <- function(tyc2_data)
 
 tyc2_test_OM <- function(tyc2_data)
 {
-  tyc <- cat_eq2gal(get_tyc2_OB(tyc2_data))
-  stars <- tyc2_get_stars(tyc)
-  return(stars)
+  tyc_ <- cat_eq2gal(get_tyc2_OB(tyc2_data))
+  stars_ <- tyc2_get_stars(tyc_)
+  return(stars_)
 }
 
 
@@ -458,6 +402,8 @@ read_tyc2sp <- function(path)
   types <- "ciiiddddccddcciiic";
   
   tyc2sp_data <- read_fwf(path, col_positions = fwf_positions(start_pos, end_pos, var_names), col_types = types)
+  
+  tyc2sp_data <- tyc2sp_data %>% mutate(TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
   
   #tyc2sp_data[is.na(tyc2_data$pflag),4] <- "";
   #tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>% 
@@ -554,13 +500,13 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
   if (is_short == TRUE)
   {
      types <- "iccccddddddddddd___________________________________dddcdddd"; 
-     var_names <- c("HIP","TYC2","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
+     var_names <- c("HIP","TYC","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
                     "gPx","parallax_error","pmRA","pmra_error","pmDE","pmdec_error","Gm_flux","phot_g_mean_flux_error",
                     "Gm_mag","phot_variable_flag","l","b","ecl_lon","ecl_lat");
   } else 
   {
      types <- "iccccddddddddddddddddddddd______d______i__________idddcdddd";
-     var_names <- c("HIP","TYC2","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
+     var_names <- c("HIP","TYC","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
                     "gPx","parallax_error","pmRA","pmra_error","pmDE","pmdec_error","ra_dec_corr","ra_parallax_corr","ra_pmra_corr",
                     "ra_pmdec_corr","dec_parallax_corr","dec_pmra_corr","dec_pmdec_corr","parallax_pmra_corr","parallax_pmdec_corr",
                     "pmra_pmdec_corr","astrometric_n_obs_al","astrometric_n_obs_ac","astrometric_n_good_obs_al","astrometric_n_good_obs_ac",
@@ -610,6 +556,8 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
     
   }
   
+  print(paste("Total records in catalogue:"), nrow(tgas_data))
+  
   tgas_data <- tgas_data %>% mutate(RA = RA*pi/180, DE = DE*pi/180) 
 
   
@@ -626,7 +574,10 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
 # min_px, max_px - mas
 filter_tgs_px <- function(tgs, min_px, max_px)
 {
-  tgs <- tgs %>% filter(Px > min_px) %>% filter(Px < max_px)
+  tgs <- tgs %>% filter(gPx > min_px) %>% filter(gPx < max_px) %>%
+                 filter(!is.na(B_V)) %>% filter(B_V>1) %>% 
+                 filter(!is.na(M)) %>% filter(M<2)  
+  
   print(paste("stars in sample:", nrow(tgs)))
   return(tgs)
 }
@@ -634,9 +585,9 @@ filter_tgs_px <- function(tgs, min_px, max_px)
 tgas_get_stars <- function(tgas_data)
 {
   stars <- matrix(0,nrow(tgas_data), 6)
-  stars[,1] <- tgas_data$gl*180/pi
-  stars[,2] <- tgas_data$gb*180/pi
-  stars[,3] <- (1/tgas_data$Px)    #kPc
+  stars[,1] <- tgas_data$gl
+  stars[,2] <- tgas_data$gb
+  stars[,3] <- (1/tgas_data$gPx)    #kPc
   stars[,4] <- tgas_data$pm_l
   stars[,5] <- tgas_data$pm_b
   stars[,6] <- 0
@@ -649,4 +600,50 @@ tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf)
   tgas_ <- cat_eq2gal(filter_tgs_px(tgas_data, min_px, max_px))
   stars <- tgas_get_stars(tgas_)
   return(stars)
+}
+
+# ------------------------------------------------------------------------------
+#                                TGAS expanded
+# ------------------------------------------------------------------------------
+
+make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
+{
+   tyc2_data <- tyc2_data %>% mutate( TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
+   
+   tyc2sp_data <- tyc2sp_data %>% mutate(TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
+   
+   # из Tycho-2: Mag, B-V
+   tgas_data <- tgas_data %>% left_join(tyc2_data[ , names(tyc2_data) %in% c("TYC", "Mag", "B_V")], by = "TYC")
+   
+   # из Tycho-2 Spectral Type: LClass, TClass, TSubClass
+   tgas_data <- tgas_data %>% left_join(tyc2_sp_data[ , names(tyc2_sp_data) %in% c("TYC", "TClass", "SClass", "LClass", "SpType")], by = "TYC")
+   
+   # из Hipparcos`а: hPx
+   tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px")], by = "HIP")
+   
+   # Лучевую скорость откуда то
+   
+   # вычислить M = m + 5 + 5 lg(px).
+   tgas_data <- tgas_data %>% mutate(M = NA)
+   tgas_data$M[tgas_data$gPx>0] <- tgas_data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(tgas_data$gPx[tgas_data$gPx>0]/1000)
+   
+   # вычислить M с учетом межзвездного поглащения
+   
+   # вычислить спектральный параллакс
+   
+}
+
+# -----------------------------------------------------------------------------
+#                                    Diagrams
+# -----------------------------------------------------------------------------
+HRDiagram <- function(data)
+{
+  hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
+  #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse()
+  
+  g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse(breaks=seq(10,-10,by=-2), minor_breaks=seq(10,-10,by=-1), limits = c(10,-10)) + scale_x_continuous(breaks=seq(-1,3,by=1), minor_breaks=seq(-1,3,by=0.5), limits = c(-1,3)) + xlab("B-V") + ylab("M") + ggtitle("Hertzsprung–Russell")  
+  
+  ggsave("TGAS Hertzsprung-Russell_2.png", width = 10, height = 10)
+  
+  return(g)
 }

@@ -260,7 +260,7 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
     
     #---- заканчиваем вычисление ковариационной матрицы по аналогии с TLS, надо переделать на решение по Брэнему
     if (ef<m)
-      Result$Cov = (1+sum(Result$X^2)) * Result$s0^2 * Result$Cov;
+      Result$Cov <- (1+sum(Result$X^2)) * Result$s0^2 * Result$Cov;
     
   }
 
@@ -268,9 +268,9 @@ TLS_Gen <- function (In, y, mode = 1, scaling = 0, ef = 0)
   Result$E <- y - In %*% Result$X;
   
   #---- Вычисление среднеквадратического отклонения по невязкам 
-  Result$s0_dis=sqrt(sum(Result$E*Result$E)/(n-m))
+  Result$s0_dis <- sqrt(sum(Result$E*Result$E)/(n-m))
   
-  if ((mode ==2 ) && (ef == m))
+  if ((mode == 2 ) && (ef == m))
     Result$s0 <- Result$s0_dis;
   
   #---- вычисление ошибок коэффициентов решения
