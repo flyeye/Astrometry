@@ -173,14 +173,15 @@ GetOM_B <- function( l, b, r)
 #-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
-MakeOMCoef <- function(stars, use_vr = TRUE)
+# model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского
+MakeOMCoef <- function(stars, use_vr = TRUE, model = 1)
 {
   n <- nrow(stars)
   
   if (use_vr == TRUE)
     a0 <- matrix(0, n*3, 12)
   else 
-    a0 <- matrix(0, n*2, 12)
+    a0 <- matrix(0, n*2, 12) 
   
   for (i in 1:n)
   {
@@ -190,18 +191,35 @@ MakeOMCoef <- function(stars, use_vr = TRUE)
       a0[(2*n+i),] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3])
   }
   
-  if (use_vr == FALSE)
-    a0 <- a0[,-12]
+  if (model == 1)
+  {
+    if(use_vr == FALSE)  
+      a0 <- a0[,-12] 
+  }  else if (model == 2)
+  {
+    a0 <- a0[,c(-4, -5, -7, -8, -10:-12)] 
+  } else if (model == 3)
+  {
+    a0 <- a0[,1:3] 
+  }
+  
   
   return(a0);
 }
 
-Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0)
+
+# вычисление параметров заданной кинематической модели
+# stars - матрица положений и скоростей звезд (l, b, px, mu_l, mu_b, v_r)
+# use_vr - флаг использовать лучевые скорости или нет для модели Огородникова-Милна
+# mode - способ решения, 1 - TLS через SVD, 2 TLS-LS через собственные числа, см. TLS_Gen()
+# scaling - способ масштабирования, см. TLS_Gen()
+# ef - количество переменных, не содержащих ошибки, см. TLS_Gen
+# model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского
+Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, model = 1)
 {
   #  calculate equation of conditions
   # l, b, px, mu_l, mu_b, vr
-  
-  a <- MakeOMCoef(stars, use_vr)
+  a <- MakeOMCoef(stars, use_vr, model)
   
   n <- nrow(stars)
   
@@ -222,13 +240,22 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0)
   
   res <- TLS_Gen(a, b, mode, scaling, ef);
   
-  if (use_vr == TRUE)
+  if (model == 1)
   {
-    names(res$X) <- c("U", "V", "W","W1", "W2", "W3(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
-  }
-  else 
+    if (use_vr == TRUE)
+    {
+      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
+    }
+    else 
+    {
+      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
+    }
+  } else if (model == 2)
   {
-    names(res$X) <- c("U", "V", "W","W1", "W2", "W3(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
+    names(res$X) <- c("U", "V", "W", "Wz(B)", "M12(A)")
+  } else if(model == 3)
+  {
+    names(res$X) <- c("U", "V", "W")
   }
   
   return(res)
