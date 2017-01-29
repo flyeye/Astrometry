@@ -501,13 +501,13 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
   {
      types <- "iccccddddddddddd___________________________________dddcdddd"; 
      var_names <- c("HIP","TYC","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
-                    "gPx","parallax_error","pmRA","pmra_error","pmDE","pmdec_error","Gm_flux","phot_g_mean_flux_error",
+                    "gPx","parallax_error","gpmRA","pmra_error","gpmDE","pmdec_error","Gm_flux","phot_g_mean_flux_error",
                     "Gm_mag","phot_variable_flag","l","b","ecl_lon","ecl_lat");
   } else 
   {
      types <- "iccccddddddddddddddddddddd______d______i__________idddcdddd";
      var_names <- c("HIP","TYC","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
-                    "gPx","parallax_error","pmRA","pmra_error","pmDE","pmdec_error","ra_dec_corr","ra_parallax_corr","ra_pmra_corr",
+                    "gPx","parallax_error","gpmRA","pmra_error","gpmDE","pmdec_error","ra_dec_corr","ra_parallax_corr","ra_pmra_corr",
                     "ra_pmdec_corr","dec_parallax_corr","dec_pmra_corr","dec_pmdec_corr","parallax_pmra_corr","parallax_pmdec_corr",
                     "pmra_pmdec_corr","astrometric_n_obs_al","astrometric_n_obs_ac","astrometric_n_good_obs_al","astrometric_n_good_obs_ac",
                     "astrometric_n_bad_obs_al","astrometric_n_bad_obs_ac","astrometric_delta_q","astrometric_priors_used",
@@ -602,6 +602,38 @@ tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf)
   return(stars)
 }
 
+tgas_calc_OM_seq <- function()
+{
+  res <- matrix(0, 10, 11)
+  err <- matrix(0, 10, 11)
+  par <- matrix(0, 10, 4)
+  sol <- matrix(0, 10, 3)
+  colnames(par) <- c("min_px","max_px","qty","<px>")
+  
+  for (i in 1:10)
+  {
+    par[i,1] = 0.1 + 0.25*i
+    par[i,2] = 0.35 + 0.25*i
+    
+    
+    stars <- stars <- tgas_test_OM(tgas, min_px = par[i,1], max_px = par[i,2])
+    par[i,3] <- nrow(stars)
+    par[i,4] <- mean(stars[,3])
+    res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
+    res[i, ] <- res_tgas$X
+    err[i, ] <- res_tgas$s_X
+    sol[i, ] <- res_tgas$X[1:3]/par[i,4]
+    print(par[i,])
+    print(res_tgas$X)
+    print(res_tgas$s_X)
+  }
+  colnames(res) <- names(res_tgas$X)
+  colnames(err) <- names(res_tgas$X)
+
+  return(list(X = res, S_X = err, Sol = sol, Parameters = par))
+}
+
+
 # ------------------------------------------------------------------------------
 #                                TGAS expanded
 # ------------------------------------------------------------------------------
@@ -613,7 +645,11 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
    tyc2sp_data <- tyc2sp_data %>% mutate(TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
    
    # èç Tycho-2: Mag, B-V
-   tgas_data <- tgas_data %>% left_join(tyc2_data[ , names(tyc2_data) %in% c("TYC", "Mag", "B_V")], by = "TYC")
+   names(tyc2_data)[7] <- "tyc_pmRA"
+   names(tyc2_data)[8] <- "tyc_pmDE"
+   
+   tgas_data <- tgas_data %>% left_join(tyc2_data[ , names(tyc2_data) %in% c("TYC", "Mag", "B_V", "tyc_pmRA", "tyc_pmDE")], by = "TYC")
+   
    
    # èç Tycho-2 Spectral Type: LClass, TClass, TSubClass
    tgas_data <- tgas_data %>% left_join(tyc2_sp_data[ , names(tyc2_sp_data) %in% c("TYC", "TClass", "SClass", "LClass", "SpType")], by = "TYC")
@@ -636,14 +672,53 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
 # -----------------------------------------------------------------------------
 #                                    Diagrams
 # -----------------------------------------------------------------------------
-HRDiagram <- function(data)
+HRDiagram <- function(data, photometric = "TGAS")
 {
-  hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
+  if (photometric == "TYCHO")
+  {
+    data <- data %>% mutate(M = NA)
+    s <- (data$gPx>0) & (!is.na(data$Mag))
+    data$M[s] <- data$Mag[s] + 5 + 5*log10(data$gPx[s]/1000)
+    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
+  } else 
+  {
+    data <- tgas_data %>% mutate(M = NA)
+    data$M[tgas_data$gPx>0] <- data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(data$gPx[tgas_data$gPx>0]/1000)
+    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
+  }
+  
   #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse()
   
-  g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse(breaks=seq(10,-10,by=-2), minor_breaks=seq(10,-10,by=-1), limits = c(10,-10)) + scale_x_continuous(breaks=seq(-1,3,by=1), minor_breaks=seq(-1,3,by=0.5), limits = c(-1,3)) + xlab("B-V") + ylab("M") + ggtitle("Hertzsprung–Russell")  
+  g <- ggplot() + 
+          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + 
+          scale_y_reverse(breaks=seq(10,-10,by=-2), minor_breaks=seq(10,-10,by=-1), limits = c(10,-10)) + 
+          scale_x_continuous(breaks=seq(-1,3,by=1), minor_breaks=seq(-1,3,by=0.5), limits = c(-1,3)) + 
+          xlab("B-V") + ylab("M") + ggtitle("Hertzsprung–Russell")  
   
-  ggsave("TGAS Hertzsprung-Russell_2.png", width = 10, height = 10)
+  ggsave("TGAS Hertzsprung-Russell.png", width = 10, height = 10)
   
+  return(g)
+}
+
+
+draw_OM <- function(res)
+{
+  g <- ggplot() + scale_y_continuous(breaks=seq(-15,18,by=3), minor_breaks=seq(-15,18,by=1), limits = c(-15,16)) + 
+    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) + 
+    xlab("<px>, kPc") + ylab("O-M") +ggtitle("Ogorodnikov-Miln Model") + 
+    scale_colour_manual("Parameters",  breaks = colnames(res$X),
+                        values = c("green", "blue", "red", "brown", "orange", "black", "yellow", "#AA8833", "grey", "#CC6666", "#CCFF66")) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1.5) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1.5) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11])) + 
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
   return(g)
 }
