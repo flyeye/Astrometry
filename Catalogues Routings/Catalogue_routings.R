@@ -595,14 +595,26 @@ tgas_get_stars <- function(tgas_data)
   return(stars)
 }
 
-tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf)
+tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf, src = "TGAS")
 {
-  tgas_ <- cat_eq2gal(filter_tgs_px(tgas_data, min_px, max_px))
+  tgas_ <- filter_tgs_px(tgas_data, min_px, max_px);
+  if (src == "TGAS")
+  {
+    tgas_$pmRA <- tgas_$gpmRA
+    tgas_$pmDE <- tgas_$gpmDE
+    tgas_ <- cat_eq2gal(tgas_)  
+  } else if(src == "TYCHO")
+  {
+    tgas_$pmRA <- tgas_$tyc_pmRA
+    tgas_$pmDE <- tgas_$tyc_pmDE
+    tgas_ <- cat_eq2gal(tgas_)  
+  }
+  
   stars <- tgas_get_stars(tgas_)
   return(stars)
 }
 
-tgas_calc_OM_seq <- function()
+tgas_calc_OM_seq <- function(src = "TGAS")
 {
   res <- matrix(0, 10, 11)
   err <- matrix(0, 10, 11)
@@ -616,7 +628,7 @@ tgas_calc_OM_seq <- function()
     par[i,2] = 0.35 + 0.25*i
     
     
-    stars <- stars <- tgas_test_OM(tgas, min_px = par[i,1], max_px = par[i,2])
+    stars <- stars <- tgas_test_OM(tgas, min_px = par[i,1], max_px = par[i,2], src = src)
     par[i,3] <- nrow(stars)
     par[i,4] <- mean(stars[,3])
     res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
@@ -682,43 +694,109 @@ HRDiagram <- function(data, photometric = "TGAS")
     hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
   } else 
   {
-    data <- tgas_data %>% mutate(M = NA)
-    data$M[tgas_data$gPx>0] <- data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(data$gPx[tgas_data$gPx>0]/1000)
+    data <- data %>% mutate(M = NA)
+    data$M[data$gPx>0] <- data$Gm_mag[data$gPx>0] + 5 + 5*log10(data$gPx[data$gPx>0]/1000)
     hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
   }
   
   #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse()
   
   g <- ggplot() + 
-          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + 
-          scale_y_reverse(breaks=seq(10,-10,by=-2), minor_breaks=seq(10,-10,by=-1), limits = c(10,-10)) + 
-          scale_x_continuous(breaks=seq(-1,3,by=1), minor_breaks=seq(-1,3,by=0.5), limits = c(-1,3)) + 
+          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1, shape = ".") + 
+          scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) + 
+          scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) + 
           xlab("B-V") + ylab("M") + ggtitle("Hertzsprung–Russell")  
   
-  ggsave("TGAS Hertzsprung-Russell.png", width = 10, height = 10)
+  ggsave("Hertzsprung-Russell.png", width = 10, height = 10)
   
   return(g)
 }
 
 
-draw_OM <- function(res)
+draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(-15,18,by=3), minor_breaks=seq(-15,18,by=1), limits = c(-15,16)) + 
-    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) + 
-    xlab("<px>, kPc") + ylab("O-M") +ggtitle("Ogorodnikov-Miln Model") + 
-    scale_colour_manual("Parameters",  breaks = colnames(res$X),
-                        values = c("green", "blue", "red", "brown", "orange", "black", "yellow", "#AA8833", "grey", "#CC6666", "#CCFF66")) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1.5) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1.5) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11])) + 
+  g <- ggplot() 
+  g <- g + scale_y_continuous(breaks=seq(-18,18,by=3), minor_breaks=seq(-18,18,by=1), limits = c(-17,17)) + 
+    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3))
+  
+  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
+    scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
+                        values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "green", "#0072B2", "#D55E00", "#CC79A7")) +
+    #geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
+    #geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
+    #geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,4] - res$S_X[,4], ymax = res$X[,4] + res$S_X[,4], colour = colnames(res$X)[4])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,5] - res$S_X[,5], ymax = res$X[,5] + res$S_X[,5], colour = colnames(res$X)[5])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,6] - res$S_X[,6], ymax = res$X[,6] + res$S_X[,6], colour = colnames(res$X)[6])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,7] - res$S_X[,7], ymax = res$X[,7] + res$S_X[,7], colour = colnames(res$X)[7])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,8] - res$S_X[,8], ymax = res$X[,8] + res$S_X[,8], colour = colnames(res$X)[8])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,9] - res$S_X[,9], ymax = res$X[,9] + res$S_X[,9], colour = colnames(res$X)[9])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +     
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +     
     geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
   return(g)
 }
+
+
+draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
+{
+  g <- ggplot() 
+  
+  g <- g + scale_y_continuous(breaks=seq(-1.5,2.5,by=0.5), minor_breaks=seq(-1.5,2.5,by=0.25), limits = c(-1.5,2.5)) + 
+    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) 
+  
+  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
+    scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
+                        values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "green", "#0072B2", "#D55E00", "#CC79A7")) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) + 
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+  return(g)
+}
+
+draw_OM_Solar <- function(res, title = "Solar motion")
+{
+  g <- ggplot() + scale_y_continuous(breaks=seq(0,12,by=1), minor_breaks=seq(0,12,by=0.5), limits = c(-0.5,11)) + 
+    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) + 
+    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
+    scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
+                        values = c("green", "blue", "brown")) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,1] - res$S_X[,1], ymax = res$X[,1] + res$S_X[,1], colour = colnames(res$X)[1])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,2] - res$S_X[,2], ymax = res$X[,2] + res$S_X[,2], colour = colnames(res$X)[2])) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,3] - res$S_X[,3], ymax = res$X[,3] + res$S_X[,3], colour = colnames(res$X)[3])) + 
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+  return(g)
+}
+
+
+draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
+{
+  g <- ggplot() + scale_y_continuous(breaks=seq(-1,2,by=0.25), minor_breaks=seq(-1,2,by=0.125), limits = c(-0.5,2)) + 
+    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) + 
+    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
+    scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
+                        values = c("green", "blue", "brown")) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) + 
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+  return(g)
+}
+
