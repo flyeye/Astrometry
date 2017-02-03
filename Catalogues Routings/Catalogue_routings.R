@@ -424,7 +424,7 @@ read_tyc2sp_default <- function()
 
 get_tyc2sp_OB <- function(tyc2sp_data)
 {
-  tyc <- tyc2sp_data %>% filter(PxSp > 0.5) %>% filter(PxSp < 4)  %>% filter(B_V<0)
+  tyc <- tyc2sp_data %>% filter(PxSp > 0.5) %>% filter(PxSp < 4)  %>% filter( B_V<0 )
   return(tyc)
 }
 
@@ -572,11 +572,12 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
 }
 
 # min_px, max_px - mas
-filter_tgs_px <- function(tgs, min_px, max_px)
+filter_tgs_px <- function(tgs, px = c(-Inf,Inf), bv = c(-Inf,Inf), Mg = c(-Inf,Inf))
 {
-  tgs <- tgs %>% filter(gPx > min_px) %>% filter(gPx < max_px) %>%
-                 filter(!is.na(B_V)) %>% filter(B_V>1) %>% 
-                 filter(!is.na(M)) %>% filter(M<2)  
+  tgs <- tgs %>% filter(!is.na(B_V) & !is.na(M)) %>% 
+                 filter( (gPx > px[1]) & (gPx < px[2])) %>%
+                 filter( (B_V>bv[1]) & (B_V<bv[2]) ) %>%
+                 filter( (M>Mg[1]) & (M<Mg[2]))  
   
   print(paste("stars in sample:", nrow(tgs)))
   return(tgs)
@@ -595,9 +596,9 @@ tgas_get_stars <- function(tgas_data)
   return(stars)
 }
 
-tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf, src = "TGAS")
+tgas_test_OM <- function(tgas_data, src = "TGAS", ...)
 {
-  tgas_ <- filter_tgs_px(tgas_data, min_px, max_px);
+  tgas_ <- filter_tgs_px(tgas_data, ...);
   if (src == "TGAS")
   {
     tgas_$pmRA <- tgas_$gpmRA
@@ -614,21 +615,21 @@ tgas_test_OM <- function(tgas_data, min_px = 0, max_px = inf, src = "TGAS")
   return(stars)
 }
 
-tgas_calc_OM_seq <- function(src = "TGAS")
+tgas_calc_OM_seq <- function(src_ = "TGAS", start = 0, step = 0.2, q = 10, ...)
 {
-  res <- matrix(0, 10, 11)
-  err <- matrix(0, 10, 11)
-  par <- matrix(0, 10, 4)
-  sol <- matrix(0, 10, 3)
+  res <- matrix(0, q, 11)
+  err <- matrix(0, q, 11)
+  par <- matrix(0, q, 4)
+  sol <- matrix(0, q, 3)
   colnames(par) <- c("min_px","max_px","qty","<px>")
   
-  for (i in 1:10)
+  for (i in 1:q)
   {
-    par[i,1] = 0.1 + 0.25*i
-    par[i,2] = 0.35 + 0.25*i
+    par[i,1] = start+step*i
+    par[i,2] = start+step*(i+1)
     
     
-    stars <- stars <- tgas_test_OM(tgas, min_px = par[i,1], max_px = par[i,2], src = src)
+    stars <- stars <- tgas_test_OM(tgas, src = src_, px = c(par[i,1], par[i,2]), ...)
     par[i,3] <- nrow(stars)
     par[i,4] <- mean(stars[,3])
     res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
@@ -645,6 +646,26 @@ tgas_calc_OM_seq <- function(src = "TGAS")
   return(list(X = res, S_X = err, Sol = sol, Parameters = par))
 }
 
+tgas_calc_OM_RG <- function()
+{
+  res_tgas  <- tgas_calc_OM_seq(start = 0.1, step = 0.1, q = 23, bv = c(0.75, 1.75), Mg = c(-1, 2))
+  draw_OM(res_tgas, title = "Ogorodnikov-Miln Model, TGAS proper motions")
+  ggsave("OM-Px-TGAS_02.png", width = 10, height = 10)
+  draw_OM_Solar(res_tgas, title = "Ogorodnikov-Miln Model, TGAS proper motions, Solar motion")
+  ggsave("Solar-Px_TGAS.png", width = 10, height = 10)
+  res_tgas_s  <- tgas_calc_OM_seq(src_ = "TYCHO", start = 0.1, step = 0.1, q = 23, bv = c(0.75, 1.75), Mg = c(-1, 2))
+  draw_OM(res_tgas_s, title = "Ogorodnikov-Miln Model, TYCHO proper motions")
+  ggsave("OM-Px-TYCHO_02.png", width = 10, height = 10)
+  draw_OM_Solar(res_tgas_s, "Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion")
+  ggsave("Solar-Px_TYCHO_02.png", width = 10, height = 10)
+  res2 <- res_tgas
+  res2$X <- res_tgas$X - res_tgas_s$X
+  draw_OM_diff(res2, title = "Ogorodnikov-Miln Model, difference TGAS-TYCHO")
+  ggsave("OM-Px-TGAS-TYCHO_02.png", width = 10, height = 10)
+  draw_OM_Solar_diff(res2, title = "Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions")
+  ggsave("Solar-PX_TGAS-TYCHO_02.png", width = 10, height = 10)
+  
+}
 
 # ------------------------------------------------------------------------------
 #                                TGAS expanded
@@ -684,7 +705,7 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
 # -----------------------------------------------------------------------------
 #                                    Diagrams
 # -----------------------------------------------------------------------------
-HRDiagram <- function(data, photometric = "TGAS")
+HRDiagram <- function(data, photometric = "TGAS", title = "Hertzsprung–Russell")
 {
   if (photometric == "TYCHO")
   {
@@ -696,16 +717,18 @@ HRDiagram <- function(data, photometric = "TGAS")
   {
     data <- data %>% mutate(M = NA)
     data$M[data$gPx>0] <- data$Gm_mag[data$gPx>0] + 5 + 5*log10(data$gPx[data$gPx>0]/1000)
-    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
+    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)], LC = data$LClass[!is.na(data$M)]))
   }
   
   #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse()
   
   g <- ggplot() + 
-          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1, shape = ".") + 
+          #scale_colour_manual("L Class",  breaks = colnames(c(1,2,3,4,5)),
+           #           values = c("blue", "brown", "red", "yellow", "green")) +
+          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = 0.5, na.rm = TRUE, size = 0.1, shape = ".") +  #color=hrdata$LC,
           scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) + 
           scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) + 
-          xlab("B-V") + ylab("M") + ggtitle("Hertzsprung–Russell")  
+          xlab("B-V") + ylab("M") + ggtitle(title)  
   
   ggsave("Hertzsprung-Russell.png", width = 10, height = 10)
   
@@ -713,11 +736,28 @@ HRDiagram <- function(data, photometric = "TGAS")
 }
 
 
+draw_HR_TGAS_T2Sp <- function()
+{
+  HRDiagram(tgas_, title = "Hertzsprung–Russell")
+  ggsave("HR-TGAS-T2sp.png", width = 10, height = 10)
+  HRDiagram(filter(tgas_, LClass == 1), title = "Hertzsprung–Russell L1 class")
+  ggsave("HR-TGAS-T2sp-L1.png", width = 10, height = 10)
+  HRDiagram(filter(tgas_, LClass == 2), title = "Hertzsprung–Russell L2 class")
+  ggsave("HR-TGAS-T2sp-L2.png", width = 10, height = 10)
+  HRDiagram(filter(tgas_, LClass == 3), title = "Hertzsprung–Russell L3 class")
+  ggsave("HR-TGAS-T2sp-L3.png", width = 10, height = 10)
+  HRDiagram(filter(tgas_, LClass == 4), title = "Hertzsprung–Russell L4 class")
+  ggsave("HR-TGAS-T2sp-L4.png", width = 10, height = 10)
+  HRDiagram(filter(tgas_, LClass == 5), title = "Hertzsprung–Russell L5 class")
+  ggsave("HR-TGAS-T2sp-L5.png", width = 10, height = 10)
+}
+
 draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
 {
   g <- ggplot() 
   g <- g + scale_y_continuous(breaks=seq(-18,18,by=3), minor_breaks=seq(-18,18,by=1), limits = c(-17,17)) + 
-    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3))
+    #scale_x_continuous(breaks=seq(0.25,4,by=0.25), minor_breaks=seq(0.25,4,by=0.125), limits = c(0.25,4))
+    scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
   
   g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
@@ -741,7 +781,7 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
     geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +     
     geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) + 
     geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +     
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
@@ -750,8 +790,8 @@ draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
 {
   g <- ggplot() 
   
-  g <- g + scale_y_continuous(breaks=seq(-1.5,2.5,by=0.5), minor_breaks=seq(-1.5,2.5,by=0.25), limits = c(-1.5,2.5)) + 
-    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) 
+  g <- g + scale_y_continuous(breaks=seq(-3,5,by=0.5), minor_breaks=seq(-3,5,by=0.25), limits = c(-3,5)) + 
+    scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.2,4)) 
   
   g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
@@ -764,14 +804,14 @@ draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
     geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
     geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) + 
     geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) + 
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
 draw_OM_Solar <- function(res, title = "Solar motion")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(0,12,by=1), minor_breaks=seq(0,12,by=0.5), limits = c(-0.5,11)) + 
-    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) + 
+  g <- ggplot() + scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) + 
+    scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) + 
     xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
@@ -781,22 +821,22 @@ draw_OM_Solar <- function(res, title = "Solar motion")
     geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,2] - res$S_X[,2], ymax = res$X[,2] + res$S_X[,2], colour = colnames(res$X)[2])) + 
     geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) + 
     geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,3] - res$S_X[,3], ymax = res$X[,3] + res$S_X[,3], colour = colnames(res$X)[3])) + 
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
 
-draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
+draw_OM_Solar_diff <- function(res, title = "Solar motion")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(-1,2,by=0.25), minor_breaks=seq(-1,2,by=0.125), limits = c(-0.5,2)) + 
-    scale_x_continuous(breaks=seq(0,2,by=0.5), minor_breaks=seq(0,2.3,by=0.1), limits = c(0.25,2.3)) + 
+  g <- ggplot() + scale_y_continuous(breaks=seq(-2,7,by=0.5), minor_breaks=seq(-2,7,by=0.25), limits = c(-2,7)) + 
+    scale_x_continuous(breaks=seq(0,4,by=0.5), minor_breaks=seq(0,4,by=0.1), limits = c(0.25,4)) + 
     xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
     geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) + 
     geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
     geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) + 
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,10)))
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
