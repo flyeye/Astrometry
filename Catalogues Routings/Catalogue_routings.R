@@ -751,13 +751,18 @@ make_ucac4_df <- function()
   return(res)
 }
 
-read_ucac4_rec <- function(con, num, id = NULL)
+read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
 {
   res <- make_ucac4_df()
 
   #t1 <- system.time(  
   for (i in 1:num)
   {
+    if (!is.null(index))
+    {
+      seek(con, where = (index[i]-1)*78, rw = "read")
+    }
+    
     res[i,1:2] <- readBin(con, "integer", n = 2L, size = 4)
     res[i,3:4] <- readBin(con, "integer", n = 2L, size = 2)
     res[i,5:12] <- readBin(con, "integer", n = 8L, size = 1) 
@@ -809,7 +814,7 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
   
   if(is_tyc_only)
   {
-  
+    cat("Reading UCAC<->Tycho-2 indexes... \n")
     start_pos <- c(1, 14,  24);
     end_pos <- c(12, 22, 32);
     var_names <- c("TYC", "uc4_index", "uc4_id");
@@ -822,12 +827,9 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     TYC1 <- substr(u4xt_index$TYC, 1, 4)
     TYC2 <- substr(u4xt_index$TYC, 6, 10)
     TYC3 <- substr(u4xt_index$TYC, 12, 12)
-    u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3)) 
-    u4xt_id <- u4xt_index$uc4_id;
-  } else
-  {
-    u4xt_id <- NULL;
-  }
+    u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3), 
+                         nzone = uc4_index %/% 1000000, sindex = uc4_index %% 1000000) 
+  } 
   
   ucac4_data <- make_ucac4_df()
   ucac4_data <- mutate(ucac4_data, TYC = NULL)
@@ -854,6 +856,7 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
       stop("catalogue file not found!")
     }
     
+    
     zone_size <- file.size(filename) %/% 78
     if ((gi + zone_size) < start)
     {
@@ -863,28 +866,37 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     }
     
     connection <- file(filename, "rb")
-    data <- read_ucac4_rec(connection, zone_size, u4xt_id)
-    readed <- nrow(data)
-    close(connection)
-    cat("adding:", readed, "\n")
+    if (is_tyc_only)
+    {
+      zone <- filter(u4xt_index, nzone == i)
+      #print(zone$sindex)
+      data <- read_ucac4_rec(connection, nrow(zone), index = zone$sindex)
+      #data <- read_ucac4_rec(connection, zone_size, id = zone$uc4_id)
+    } else
+    {
+      data <- read_ucac4_rec(connection, zone_size)
+    }
     
-    if(((start + n)>gi)&((start + n)<(gi+1+readed)))
-    {
-      cat(paste("cut after", as.character(gi), as.character(readed)), "\n")
-      data <- data[-((start + n - gi):readed),]
-    }
-    if ((start>gi+1)&(start<=(gi+readed)))
-    {
-      cat(paste("cut before", as.character(gi), as.character(readed)), "\n")
-      data <- data[-(1:(start - 1 - gi)),]
-    }
+    readed <- zone_size #nrow(data)
+    close(connection)
+    
+    cat("adding:", nrow(data), "\n")
+    #if(((start + n)>gi)&((start + n)<(gi+1+readed)))
+    #{
+    #  cat(paste("cut after", as.character(gi), as.character(readed)), "\n")
+    #  data <- data[-((start + n - gi):readed),]
+    #}
+    #if ((start>gi+1)&(start<=(gi+readed)))
+    #{
+    #  cat(paste("cut before", as.character(gi), as.character(readed)), "\n")
+    #  data <- data[-(1:(start - 1 - gi)),]
+    #}
     gi <- gi + readed
     
-    # преобразовать нужные столбцы
     
     if (is_tyc_only)
     {
-        # отфильтровать не Tycho звезды 
+     
       data <- data %>% left_join(u4xt_index[ , names(u4xt_index) %in% c("TYC", "uc4_id")], by = "uc4_id")
       
       data <- data[!(is.na(data$TYC)),]
@@ -919,35 +931,35 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
    
    tyc2sp_data <- tyc2sp_data %>% mutate(TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
    
-   # из Tycho-2: Mag, B-V
+   # ?? Tycho-2: Mag, B-V
    names(tyc2_data)[7] <- "tyc_pmRA"
    names(tyc2_data)[8] <- "tyc_pmDE"
    
    tgas_data <- tgas_data %>% left_join(tyc2_data[ , names(tyc2_data) %in% c("TYC", "Mag", "B_V", "tyc_pmRA", "tyc_pmDE")], by = "TYC")
    
    
-   # из Tycho-2 Spectral Type: LClass, TClass, TSubClass
+   # ?? Tycho-2 Spectral Type: LClass, TClass, TSubClass
    tgas_data <- tgas_data %>% left_join(tyc2_sp_data[ , names(tyc2_sp_data) %in% c("TYC", "TClass", "SClass", "LClass", "SpType")], by = "TYC")
    
-   # из Hipparcos`а: hPx
+   # ?? Hipparcos`?: hPx
    tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px")], by = "HIP")
    
-   # Ћучевую скорость откуда то
+   # ??????? ???????? ?????? ??
    
-   # вычислить M = m + 5 + 5 lg(px).
+   # ????????? M = m + 5 + 5 lg(px).
    tgas_data <- tgas_data %>% mutate(M = NA)
    tgas_data$M[tgas_data$gPx>0] <- tgas_data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(tgas_data$gPx[tgas_data$gPx>0]/1000)
    
-   # вычислить M с учетом межзвездного поглащени€
+   # ????????? M ? ?????? ???????????? ??????????
    
-   # вычислить спектральный параллакс
+   # ????????? ???????????? ?????????
    
 }
 
 # -----------------------------------------------------------------------------
 #                                    Diagrams
 # -----------------------------------------------------------------------------
-HRDiagram <- function(data, photometric = "TGAS", title = "HertzsprungЦRussell")
+HRDiagram <- function(data, photometric = "TGAS", title = "Hertzsprung?Russell")
 {
   if (photometric == "TYCHO")
   {
@@ -980,17 +992,17 @@ HRDiagram <- function(data, photometric = "TGAS", title = "HertzsprungЦRussell")
 
 draw_HR_TGAS_T2Sp <- function()
 {
-  HRDiagram(tgas_, title = "HertzsprungЦRussell")
+  HRDiagram(tgas_, title = "Hertzsprung?Russell")
   ggsave("HR-TGAS-T2sp.png", width = 10, height = 10)
-  HRDiagram(filter(tgas_, LClass == 1), title = "HertzsprungЦRussell L1 class")
+  HRDiagram(filter(tgas_, LClass == 1), title = "Hertzsprung?Russell L1 class")
   ggsave("HR-TGAS-T2sp-L1.png", width = 10, height = 10)
-  HRDiagram(filter(tgas_, LClass == 2), title = "HertzsprungЦRussell L2 class")
+  HRDiagram(filter(tgas_, LClass == 2), title = "Hertzsprung?Russell L2 class")
   ggsave("HR-TGAS-T2sp-L2.png", width = 10, height = 10)
-  HRDiagram(filter(tgas_, LClass == 3), title = "HertzsprungЦRussell L3 class")
+  HRDiagram(filter(tgas_, LClass == 3), title = "Hertzsprung?Russell L3 class")
   ggsave("HR-TGAS-T2sp-L3.png", width = 10, height = 10)
-  HRDiagram(filter(tgas_, LClass == 4), title = "HertzsprungЦRussell L4 class")
+  HRDiagram(filter(tgas_, LClass == 4), title = "Hertzsprung?Russell L4 class")
   ggsave("HR-TGAS-T2sp-L4.png", width = 10, height = 10)
-  HRDiagram(filter(tgas_, LClass == 5), title = "HertzsprungЦRussell L5 class")
+  HRDiagram(filter(tgas_, LClass == 5), title = "Hertzsprung?Russell L5 class")
   ggsave("HR-TGAS-T2sp-L5.png", width = 10, height = 10)
 }
 
