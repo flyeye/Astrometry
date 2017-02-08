@@ -667,6 +667,248 @@ tgas_calc_OM_RG <- function()
   
 }
 
+# ===============================================================================
+# --------------------------------   UCAC4 Routings  ----------------------------
+# col byte item   fmt unit       explanation                            notes
+# -------------------------------------------------------------------------------
+# 1  1- 3 ra     I*4 mas        right ascension at  epoch J2000.0 (ICRS) (1)
+# 2  5- 8 spd    I*4 mas        south pole distance epoch J2000.0 (ICRS) (1)
+# 3  9-10 magm   I*2 millimag   UCAC fit model magnitude                 (2)
+# 4 11-12 maga   I*2 millimag   UCAC aperture  magnitude                 (2)
+# 5 13    sigmag I*1 1/100 mag  error of UCAC magnitude                  (3)
+# 6 14    objt   I*1            object type                              (4)
+# 7 15    cdf    I*1            combined double star flag                (5)
+#         15 bytes
+# 8 16    sigra  I*1 mas        s.e. at central epoch in RA (*cos Dec)   (6)
+# 9 17    sigdc  I*1 mas        s.e. at central epoch in Dec             (6)
+# 10 18    na1    I*1            total # of CCD images of this star
+# 11 19    nu1    I*1            # of CCD images used for this star       (7)
+# 12 20    cu1    I*1            # catalogs (epochs) used for proper motions
+#         5 bytes
+# 13 21-22 cepra  I*2 0.01 yr    central epoch for mean RA, minus 1900
+# 14 23-24 cepdc  I*2 0.01 yr    central epoch for mean Dec,minus 1900
+# 15 25-26 pmrac  I*2 0.1 mas/yr proper motion in RA*cos(Dec)             (8)
+# 16 27-28 pmdc   I*2 0.1 mas/yr proper motion in Dec
+# 17 29    sigpmr I*1 0.1 mas/yr s.e. of pmRA * cos Dec                   (9)
+# 18 30    sigpmd I*1 0.1 mas/yr s.e. of pmDec                            (9)
+#        10 bytes
+# 19 31-34 pts_key I*4           2MASS unique star identifier            (10)
+# 20 35-36 j_m    I*2 millimag   2MASS J  magnitude
+# 21 37-38 h_m    I*2 millimag   2MASS H  magnitude
+# 22 39-40 k_m    I*2 millimag   2MASS K_s magnitude
+# 23 41    icqflg I*1            2MASS cc_flg*10 + ph_qual flag for J    (11)
+# 24 42     (2)   I*1            2MASS cc_flg*10 + ph_qual flag for H    (11)
+# 25 43     (3)   I*1            2MASS cc_flg*10 + ph_qual flag for K_s  (11)
+# 26 44    e2mpho I*1 1/100 mag  error 2MASS J   magnitude               (12)
+# 27 45     (2)   I*1 1/100 mag  error 2MASS H   magnitude               (12)
+# 28 46     (3)   I*1 1/100 mag  error 2MASS K_s magnitude               (12)
+#        16 bytes
+# 29 47-48 apasm  I*2 millimag   B magnitude from APASS                  (13)
+# 30 49-50  (2)   I*2 millimag   V magnitude from APASS                  (13)
+# 31 51-52  (3)   I*2 millimag   g magnitude from APASS                  (13)
+# 32 53-54  (4)   I*2 millimag   r magnitude from APASS                  (13)
+# 33 55-56  (5)   I*2 millimag   i magnitude from APASS                  (13)
+# 34 57    apase  I*1 1/100 mag  error of B magnitude from APASS         (14)
+# 35 58     (2)   I*1 1/100 mag  error of V magnitude from APASS         (14)
+# 36 59     (3)   I*1 1/100 mag  error of g magnitude from APASS         (14)
+# 37 60     (4)   I*1 1/100 mag  error of r magnitude from APASS         (14)
+# 38 61     (5)   I*1 1/100 mag  error of i magnitude from APASS         (14)
+# 39 62    gcflg  I*1            Yale SPM g-flag*10  c-flag              (15)
+#        16 bytes
+# 40 63-66 icf(1) I*4            FK6-Hipparcos-Tycho source flag         (16)
+# 41       icf(2) ..             AC2000       catalog match flag         (17)
+# 42       icf(3) ..             AGK2 Bonn    catalog match flag         (17)
+# 43       icf(4) ..             AKG2 Hamburg catalog match flag         (17)
+# 44       icf(5) ..             Zone Astrog. catalog match flag         (17)
+# 45       icf(6) ..             Black Birch  catalog match flag         (17)
+# 46       icf(7) ..             Lick Astrog. catalog match flag         (17)
+# 47       icf(8) ..             NPM  Lick    catalog match flag         (17)
+# 48       icf(9) ..             SPM  YSJ1    catalog match flag         (17)
+#          4 bytes
+# 49 67    leda   I*1            LEDA galaxy match flag                  (18)
+# 50 68    x2m    I*1            2MASS extend.source flag                (19)
+# 51 69-72 rnm    I*4            unique star identification number       (20)
+# 52 73-74 zn2    I*2            zone number of UCAC2 (0 = no match)     (21)
+# 53 75-78 rn2    I*4            running record number along UCAC2 zone  (21)
+#           12 bytes
+# ---------------------------------------------------------------------------
+#          78 = total number of bytes per star record
+
+
+make_ucac4_df <- function()
+{
+  res <-data.frame(ra = integer(0), spd = integer(0), u_magm = integer(0), u_maga = integer(0), smag = integer(0), 
+                   objt=integer(0), cdf=integer(0), sigra=integer(0), sigdc=integer(0), 
+                   na1=integer(0), nu1=integer(0),cu1=integer(0), 
+                   cepra=integer(0), cepdc=integer(0), pmrac=integer(0), pmdc=integer(0), sigpmra=integer(0), sigpmdc=integer(0), 
+                   pts_key=integer(0), j_m=integer(0), h_m=integer(0), k_m=integer(0), 
+                   icqflag_1=integer(0),icqflag_2=integer(0), icqflag_3=integer(0), 
+                   e2mpho_1=integer(0), e2mpho_2=integer(0),  e2mpho_3=integer(0), 
+                   apasm_b=integer(0), apasm_v=integer(0), apasm_g=integer(0), apasm_r=integer(0), apasm_i=integer(0), 
+                   eapasm_b=integer(0), eapasm_v=integer(0), eapasm_g=integer(0), eapasm_r=integer(0), eapasm_i=integer(0),
+                   gcflg=integer(0), icf=integer(0), leda=integer(0), x2m=integer(0), uc4_id=integer(0), zn2=integer(0), rn2=integer(0),
+                   isHIP = character(0)) 
+  return(res)
+}
+
+read_ucac4_rec <- function(con, num, id = NULL)
+{
+  res <- make_ucac4_df()
+
+  #t1 <- system.time(  
+  for (i in 1:num)
+  {
+    res[i,1:2] <- readBin(con, "integer", n = 2L, size = 4)
+    res[i,3:4] <- readBin(con, "integer", n = 2L, size = 2)
+    res[i,5:12] <- readBin(con, "integer", n = 8L, size = 1) 
+    res[i,13:16] <- readBin(con, "integer", n = 4L, size = 2) 
+    res[i,17:18] <- readBin(con, "integer", n = 2L, size = 1) 
+    res[i,19] <- readBin(con, "integer", n = 1L, size = 4) 
+    res[i,20:22] <- readBin(con, "integer", n = 3L, size = 2) 
+    res[i,23:28] <- readBin(con, "integer", n = 6L, size = 1) 
+    res[i,29:33] <- readBin(con, "integer", n = 5L, size = 2) 
+    res[i,34:38] <- readBin(con, "integer", n = 5L, size = 1) 
+    res[i,39] <- readBin(con, "integer", n = 1L, size = 1)
+    res[i,40] <- readBin(con, "integer", n = 1L, size = 4) 
+    res[i,41:42] <- readBin(con, "integer", n = 2L, size = 1) 
+    res[i,43] <- readBin(con, "integer", n = 1L, size = 4) 
+    res[i,44] <- readBin(con, "integer", n = 1L, size = 2) 
+    res[i,45] <- readBin(con, "integer", n = 1L, size = 4) 
+  } 
+  #)
+  
+  #cat(t1,"\n")
+  #t2 <- system.time({
+  if( !is.null(id))
+  {
+    res <- res %>% filter(uc4_id %in% id)
+  }
+  
+  res <- mutate(res, ra = ra / 3600000, spd = (spd/3600000) - 90, u_magm = u_magm/1000, u_maga = u_magm/1000, 
+                sigra = sigra +128, sigdc = sigdc +128, sigpmra = sigpmra + 128, sigpmdc = sigpmdc + 128, 
+                j_m = j_m/1000, h_m = h_m/1000, k_m = k_m/1000, cepra = cepra /100, cepdc = cepdc /100, 
+                eapasm_b = eapasm_b/100, eapasm_v = eapasm_v /100, eapasm_g = eapasm_g/100, eapasm_r = eapasm_r/100, eapasm_i = eapasm_i/100)
+  res$apasm_b[res$apasm_b!=20000] <- res$apasm_b[res$apasm_b!=20000] / 1000;
+  res$apasm_b[res$apasm_b==20000] <- NA;
+  res$apasm_v[res$apasm_v!=20000] <- res$apasm_v[res$apasm_v!=20000] / 1000;
+  res$apasm_v[res$apasm_v==20000] <- NA;
+  res$apasm_g[res$apasm_g!=20000] <- res$apasm_g[res$apasm_g!=20000] / 1000;
+  res$apasm_g[res$apasm_g==20000] <- NA;
+  res$apasm_r[res$apasm_r!=20000] <- res$apasm_r[res$apasm_r!=20000] / 1000;
+  res$apasm_r[res$apasm_r==20000] <- NA;
+  res$apasm_i[res$apasm_i!=20000] <- res$apasm_i[res$apasm_i!=20000] / 1000;
+  res$apasm_i[res$apasm_i==20000] <- NA;
+  res <- mutate(res, isHIP = substr(as.character(icf), 1, 1))
+  #})
+  #cat(t2,"\n")
+  return(res)
+}
+
+read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
+{
+  
+  if(is_tyc_only)
+  {
+  
+    start_pos <- c(1, 14,  24);
+    end_pos <- c(12, 22, 32);
+    var_names <- c("TYC", "uc4_index", "uc4_id");
+    types <- "cii";
+    
+    filename <- paste0(path, "u4i/u4xtycho")
+    u4xt_index <- read_fwf(filename, col_positions = fwf_positions(start_pos, end_pos, var_names),
+                           col_types = types)
+  
+    TYC1 <- substr(u4xt_index$TYC, 1, 4)
+    TYC2 <- substr(u4xt_index$TYC, 6, 10)
+    TYC3 <- substr(u4xt_index$TYC, 12, 12)
+    u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3)) 
+    u4xt_id <- u4xt_index$uc4_id;
+  } else
+  {
+    u4xt_id <- NULL;
+  }
+  
+  ucac4_data <- make_ucac4_df()
+  ucac4_data <- mutate(ucac4_data, TYC = NULL)
+  
+  to_read <- n;
+  readed <- 0;
+  gi <- 0;
+  
+  for (i in 1:900)
+  {
+    if (gi >= (start + n - 1))
+      break;
+    
+    s <- as.character(i);
+    if(nchar(s) == 1){
+      s <- paste0("00",s)
+    } else if(nchar(s) == 2)
+      s <- paste0("0",s);
+    filename <- paste0(path, "u4b/","z", s)
+    cat(paste0("reading: ", filename), "\n")
+    
+    if ( !file.exists(filename))
+    {
+      stop("catalogue file not found!")
+    }
+    
+    zone_size <- file.size(filename) %/% 78
+    if ((gi + zone_size) < start)
+    {
+      print("skip")
+      gi <- gi + zone_size
+      next;
+    }
+    
+    connection <- file(filename, "rb")
+    data <- read_ucac4_rec(connection, zone_size, u4xt_id)
+    readed <- nrow(data)
+    close(connection)
+    cat("adding:", readed, "\n")
+    
+    if(((start + n)>gi)&((start + n)<(gi+1+readed)))
+    {
+      cat(paste("cut after", as.character(gi), as.character(readed)), "\n")
+      data <- data[-((start + n - gi):readed),]
+    }
+    if ((start>gi+1)&(start<=(gi+readed)))
+    {
+      cat(paste("cut before", as.character(gi), as.character(readed)), "\n")
+      data <- data[-(1:(start - 1 - gi)),]
+    }
+    gi <- gi + readed
+    
+    # преобразовать нужные столбцы
+    
+    if (is_tyc_only)
+    {
+        # отфильтровать не Tycho звезды 
+      data <- data %>% left_join(u4xt_index[ , names(u4xt_index) %in% c("TYC", "uc4_id")], by = "uc4_id")
+      
+      data <- data[!(is.na(data$TYC)),]
+      cat("filtered (TYC records):", nrow(data), "\n")
+    }
+    
+    ucac4_data <- rbind(ucac4_data, data)
+    
+    cat("Total records in catalogue:", nrow(ucac4_data), "\n") 
+    
+  }
+  
+  
+  return(ucac4_data)
+}
+  
+  read_ucac4_default <- function(start = 1, n = Inf, is_tyc_only = TRUE)
+  {
+    ucac4_path <- "X:/Data/Catalogues/UCAC4/"
+    ucac4_data <- read_ucac4(ucac4_path, start, n, is_tyc_only)
+    return (ucac4_data)
+  }
+
+
 # ------------------------------------------------------------------------------
 #                                TGAS expanded
 # ------------------------------------------------------------------------------
@@ -759,7 +1001,7 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
     #scale_x_continuous(breaks=seq(0.25,4,by=0.25), minor_breaks=seq(0.25,4,by=0.125), limits = c(0.25,4))
     scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
   
-  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
+  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 51
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
                         values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "green", "#0072B2", "#D55E00", "#CC79A7")) +
     #geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
