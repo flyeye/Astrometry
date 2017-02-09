@@ -599,6 +599,7 @@ tgas_get_stars <- function(tgas_data)
 tgas_test_OM <- function(tgas_data, src = "TGAS", ...)
 {
   tgas_ <- filter_tgs_px(tgas_data, ...);
+  tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
   if (src == "TGAS")
   {
     tgas_$pmRA <- tgas_$gpmRA
@@ -609,6 +610,9 @@ tgas_test_OM <- function(tgas_data, src = "TGAS", ...)
     tgas_$pmRA <- tgas_$tyc_pmRA
     tgas_$pmDE <- tgas_$tyc_pmDE
     tgas_ <- cat_eq2gal(tgas_)  
+  } else
+  {
+    print("Error! Please select proper motions!")
   }
   
   stars <- tgas_get_stars(tgas_)
@@ -629,7 +633,7 @@ tgas_calc_OM_seq <- function(src_ = "TGAS", start = 0, step = 0.2, q = 10, ...)
     par[i,2] = start+step*(i+1)
     
     
-    stars <- stars <- tgas_test_OM(tgas, src = src_, px = c(par[i,1], par[i,2]), ...)
+    stars <- tgas_test_OM(tgas, src = src_, px = c(par[i,1], par[i,2]), ...)
     par[i,3] <- nrow(stars)
     par[i,4] <- mean(stars[,3])
     res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
@@ -646,24 +650,42 @@ tgas_calc_OM_seq <- function(src_ = "TGAS", start = 0, step = 0.2, q = 10, ...)
   return(list(X = res, S_X = err, Sol = sol, Parameters = par))
 }
 
-tgas_calc_OM_RG <- function()
+tgas_calc_OM_RG <- function(start = 0.1, step = 0.1, q = 23)
 {
-  res_tgas  <- tgas_calc_OM_seq(start = 0.1, step = 0.1, q = 23, bv = c(0.75, 1.75), Mg = c(-1, 2))
-  draw_OM(res_tgas, title = "Ogorodnikov-Miln Model, TGAS proper motions")
-  ggsave("OM-Px-TGAS_02.png", width = 10, height = 10)
-  draw_OM_Solar(res_tgas, title = "Ogorodnikov-Miln Model, TGAS proper motions, Solar motion")
-  ggsave("Solar-Px_TGAS.png", width = 10, height = 10)
-  res_tgas_s  <- tgas_calc_OM_seq(src_ = "TYCHO", start = 0.1, step = 0.1, q = 23, bv = c(0.75, 1.75), Mg = c(-1, 2))
-  draw_OM(res_tgas_s, title = "Ogorodnikov-Miln Model, TYCHO proper motions")
-  ggsave("OM-Px-TYCHO_02.png", width = 10, height = 10)
-  draw_OM_Solar(res_tgas_s, "Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion")
-  ggsave("Solar-Px_TYCHO_02.png", width = 10, height = 10)
+  #TGAS photometry
+  #ph <- "TGAS"
+  #BV <- c(0.75, 1.75)
+  #MG <- c(-1, 2)
+  
+  #APASS photometry
+  ph <- "APASS"
+  BV <- c(0.75, 1.5)
+  MG <- c(0.5, 2.5) 
+  
+  res_tgas  <- tgas_calc_OM_seq(start = start, step = step, q = q, bv = BV, Mg = MG)
+  
+  draw_OM(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions. Photometry:", ph))
+  ggsave(paste0("OM-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
+  
+  draw_OM_Solar(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions, Solar motion. Photometr:", ph))
+  ggsave(paste0("Solar-Px_TGAS-",ph,".png"), width = 10, height = 10)
+  
+  res_tgas_s  <- tgas_calc_OM_seq(src_ = "TYCHO", start = start, step = step, q = q, bv = BV, Mg = MG)
+  
+  draw_OM(res_tgas_s, title = paste("Ogorodnikov-Miln Model, TYCHO proper motions. Photometry:", ph))
+  ggsave(paste0("OM-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
+  
+  draw_OM_Solar(res_tgas_s, paste("Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion. Photometry:",ph))
+  ggsave(paste0("Solar-Px_TYCHO_02-",ph,".png"), width = 10, height = 10)
+  
   res2 <- res_tgas
   res2$X <- res_tgas$X - res_tgas_s$X
-  draw_OM_diff(res2, title = "Ogorodnikov-Miln Model, difference TGAS-TYCHO")
-  ggsave("OM-Px-TGAS-TYCHO_02.png", width = 10, height = 10)
-  draw_OM_Solar_diff(res2, title = "Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions")
-  ggsave("Solar-PX_TGAS-TYCHO_02.png", width = 10, height = 10)
+  
+  draw_OM_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO. Photometry:", ph))
+  ggsave(paste0("OM-Px-TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
+  
+  draw_OM_Solar_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions. Photometry:",ph))
+  ggsave(paste0("Solar-PX_TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
   
 }
 
@@ -823,10 +845,16 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     filename <- paste0(path, "u4i/u4xtycho")
     u4xt_index <- read_fwf(filename, col_positions = fwf_positions(start_pos, end_pos, var_names),
                            col_types = types)
-  
-    TYC1 <- substr(u4xt_index$TYC, 1, 4)
-    TYC2 <- substr(u4xt_index$TYC, 6, 10)
-    TYC3 <- substr(u4xt_index$TYC, 12, 12)
+    
+    
+    u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==1] <- paste0(" ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==1])
+    u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==2] <- paste0("  ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==2])
+    u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==3] <- paste0("   ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==3])
+    
+    
+    TYC1 <- as.integer(substr(u4xt_index$TYC, 1, 4))
+    TYC2 <- as.integer(substr(u4xt_index$TYC, 6, 10))
+    TYC3 <- as.integer(substr(u4xt_index$TYC, 12, 12))
     u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3), 
                          nzone = uc4_index %/% 1000000, sindex = uc4_index %% 1000000) 
   } 
@@ -936,6 +964,7 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
    names(tyc2_data)[8] <- "tyc_pmDE"
    
    tgas_data <- tgas_data %>% left_join(tyc2_data[ , names(tyc2_data) %in% c("TYC", "Mag", "B_V", "tyc_pmRA", "tyc_pmDE")], by = "TYC")
+   tgas_data <- tgas_data %>% mutate(tyc_m  = Mag, tyc_bv = B_V)
    
    
    # ?? Tycho-2 Spectral Type: LClass, TClass, TSubClass
@@ -944,11 +973,18 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
    # ?? Hipparcos`?: hPx
    tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px")], by = "HIP")
    
-   # ??????? ???????? ?????? ??
+   tgas <- tgas %>% left_join(ucac[ , names(ucac) %in% c("TYC", "u_magm", "u_maga", "smag", "objt", "cdf", 
+                                                         "j_m", "h_m", "k_m", "pts_key",
+                                                         "apasm_b", "apasm_v", "apasm_g", "apasm_r", "apasm_i", "uc4_id")], by = "TYC")
    
    # ????????? M = m + 5 + 5 lg(px).
    tgas_data <- tgas_data %>% mutate(M = NA)
-   tgas_data$M[tgas_data$gPx>0] <- tgas_data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(tgas_data$gPx[tgas_data$gPx>0]/1000)
+   
+   #tgas_data$M[tgas_data$gPx>0] <- tgas_data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(tgas_data$gPx[tgas_data$gPx>0]/1000)
+   
+   index <-(data$gPx>0)&(!is.na(data$apasm_v)) 
+   data$M[index] <- data$apasm_v[index] + 5 + 5*log10(data$gPx[index]/1000)
+  
    
    # ????????? M ? ?????? ???????????? ??????????
    
@@ -967,7 +1003,14 @@ HRDiagram <- function(data, photometric = "TGAS", title = "Hertzsprung?Russell")
     s <- (data$gPx>0) & (!is.na(data$Mag))
     data$M[s] <- data$Mag[s] + 5 + 5*log10(data$gPx[s]/1000)
     hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
-  } else 
+  } else if (photometric == "APAS")
+  {
+    data <- data %>% mutate(M = NA)
+    index <-(data$gPx>0)&(!is.na(data$apasm_v)) 
+    data$M[index] <- data$apasm_v[index] + 5 + 5*log10(data$gPx[index]/1000)
+    hrdata <- data.frame(cbind( M = data$M[index], B_V = (data$apasm_b[index]-data$apasm_v[index]), LC = data$LClass[!is.na(data$M)]))
+  }
+  else 
   {
     data <- data %>% mutate(M = NA)
     data$M[data$gPx>0] <- data$Gm_mag[data$gPx>0] + 5 + 5*log10(data$gPx[data$gPx>0]/1000)
@@ -979,7 +1022,7 @@ HRDiagram <- function(data, photometric = "TGAS", title = "Hertzsprung?Russell")
   g <- ggplot() + 
           #scale_colour_manual("L Class",  breaks = colnames(c(1,2,3,4,5)),
            #           values = c("blue", "brown", "red", "yellow", "green")) +
-          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = 0.5, na.rm = TRUE, size = 0.1, shape = ".") +  #color=hrdata$LC,
+          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = 0.05, na.rm = TRUE, size = 0.1, shape = ".") +  #color=hrdata$LC,
           scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) + 
           scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) + 
           xlab("B-V") + ylab("M") + ggtitle(title)  
@@ -1011,9 +1054,10 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
   g <- ggplot() 
   g <- g + scale_y_continuous(breaks=seq(-18,18,by=3), minor_breaks=seq(-18,18,by=1), limits = c(-17,17)) + 
     #scale_x_continuous(breaks=seq(0.25,4,by=0.25), minor_breaks=seq(0.25,4,by=0.125), limits = c(0.25,4))
-    scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
+    scale_x_continuous(breaks=seq(0.25,2.25,by=0.25), minor_breaks=seq(0.25,2.25,by=0.125), limits = c(0.25,2.25))
+    #scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
   
-  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 51
+  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
                         values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "green", "#0072B2", "#D55E00", "#CC79A7")) +
     #geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
@@ -1044,8 +1088,9 @@ draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
 {
   g <- ggplot() 
   
-  g <- g + scale_y_continuous(breaks=seq(-3,5,by=0.5), minor_breaks=seq(-3,5,by=0.25), limits = c(-3,5)) + 
-    scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.2,4)) 
+  g <- g + scale_y_continuous(breaks=seq(-6,7,by=0.5), minor_breaks=seq(-6,7,by=0.25), limits = c(-6,7)) + 
+    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.2,4)) 
+    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.2,2.5)) 
   
   g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
@@ -1065,7 +1110,8 @@ draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
 draw_OM_Solar <- function(res, title = "Solar motion")
 {
   g <- ggplot() + scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) + 
-    scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) + 
+    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) + 
+    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) + 
     xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
