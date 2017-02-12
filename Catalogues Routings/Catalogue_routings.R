@@ -1,4 +1,17 @@
 # ===============================================================================
+# ---------------------------------  libraries ----------------------------------
+attach_libs <- function()
+{
+  library("readr", lib.loc="~/R/win-library/3.3")
+  library("readxl", lib.loc="~/R/win-library/3.3")
+  library("tidyverse", lib.loc="~/R/win-library/3.3")
+  library("xlsx", lib.loc="~/R/win-library/3.3")
+  library("stargazer", lib.loc="~/R/win-library/3.3")
+  library("scales", lib.loc="~/R/win-library/3.3")
+}
+
+
+# ===============================================================================
 # -------------------------   Hipparcos 2 Routings  -----------------------------
 # -------------------------------------------------------------------------------
 
@@ -57,22 +70,22 @@
 #4 = orbital binary as resolved in the published catalog
 #5 = VIM (variability-induced mover) solution
 #--------------------------------------------------------------------------------
-  
+
 #--------------------------------------------------------------------------------
 # read_hip2 - function to read Hipparcos catalogue into the dataframe
 # path - path and file name of the Hipparcos catalogue
 #--------------------------------------------------------------------------------
 read_hip2 <- function(path)
 {
-#  fwf_positions(c(1, 6), c(8,10), c(12,12), c(14,14), c(16,28), c(30,42), c(44,50), c(52,59), c(61,68), c(70,75), 
- #               c(77,82), c(84,89), c(91,96), c(98,103), c(105,107), c(109,113), c(115,116), c(118,123), c(125,128), 
-#                c(130,136), c(138,143), c(145,149), c(151,151), c(153,158), c(160,164), c(166,171), 
+#  fwf_positions(c(1, 6), c(8,10), c(12,12), c(14,14), c(16,28), c(30,42), c(44,50), c(52,59), c(61,68), c(70,75),
+ #               c(77,82), c(84,89), c(91,96), c(98,103), c(105,107), c(109,113), c(115,116), c(118,123), c(125,128),
+#                c(130,136), c(138,143), c(145,149), c(151,151), c(153,158), c(160,164), c(166,171),
   hip_data <- read_fwf(path, col_positions = fwf_positions(c(1, 8,  12, 14, 16, 30, 44, 52, 61, 70, 77, 84, 91, 98,  105, 109, 115, 118, 125, 130, 138, 145, 151, 153, 160, 166),
                                                            c(6, 10, 12, 14, 28, 42, 50, 59, 68, 75, 82, 89, 96, 103, 107, 113, 116, 123, 128, 136, 143, 149, 151, 158, 164, 171),
-                                                           c("HIP", "Sn", "So", "Nc", "RA", "DE", "Px", "pmRA", "pmDE", "e_RA", "e_DE", "e_Px", "e_pmRA", "e_pmDE", 
-                                                             "Ntr", "F2", "F1", "var", "ic", "Mag", "e_Mag", "sHp", "VA", "B_V", "e_B_V", "V_I")), 
+                                                           c("HIP", "Sn", "So", "Nc", "RA", "DE", "Px", "pmRA", "pmDE", "e_RA", "e_DE", "e_Px", "e_pmRA", "e_pmDE",
+                                                             "Ntr", "F2", "F1", "var", "ic", "Mag", "e_Mag", "sHp", "VA", "B_V", "e_B_V", "V_I")),
                        col_types = "iiiiddddddddddidididddiddd")
-  
+
   return(hip_data)
 }
 
@@ -108,7 +121,7 @@ hip2_get_stars <- function(hip_data)
   stars[,4] <- hip_data$pm_l #*cos(hip_data$gb)
   stars[,5] <- hip_data$pm_b
   stars[,6] <- 0
-  
+
   return(stars)
 }
 
@@ -142,7 +155,7 @@ hip2_test_OM <- function(hip_data)
 # 71- 75   F4.1,1X  mas/yr  e_pmDE    [0.2,10.3]? s.e. of proper motion in Dec(5)
 # 76- 83   F7.2,1X  yr      mepRA     [1915.95,1992.53]? mean epoch of RA (4)
 # 84- 91   F7.2,1X  yr      mepDE     [1911.94,1992.01]? mean epoch of Dec (4)
-# 92- 94   I2,1X    ---     Num       [2,36]? Number of positions used 
+# 92- 94   I2,1X    ---     Num       [2,36]? Number of positions used
 # 95- 98   F3.1,1X  ---     g_mRA     [0.0,9.9]? Goodness of fit for mean RA (6)
 # 99-102   F3.1,1X  ---     g_mDE     [0.0,9.9]? Goodness of fit for mean Dec (6)
 # 103-106   F3.1,1X  ---     g_pmRA    [0.0,9.9]? Goodness of fit for pmRA (6)
@@ -166,61 +179,61 @@ hip2_test_OM <- function(hip_data)
 # --------------------------------------------------------------------------------
 #   Note (1): The TYC identifier is constructed from the GSC region number
 # (TYC1), the running number within the region (TYC2) and a component
-# identifier (TYC3) which is normally 1. Some non-GSC running numbers 
-# were constructed for the first Tycho Catalogue and for Tycho-2. 
-# The recommended star designation contains a hyphen between the 
+# identifier (TYC3) which is normally 1. Some non-GSC running numbers
+# were constructed for the first Tycho Catalogue and for Tycho-2.
+# The recommended star designation contains a hyphen between the
 # TYC numbers, e.g. TYC 1-13-1.
 # Note (2):
 #   ' ' = normal mean position and proper motion.
 # 'P' = the mean position, proper motion, etc., refer to the photo-
-#   centre of two Tycho-2 entries, where the BT magnitudes 
+#   centre of two Tycho-2 entries, where the BT magnitudes
 # were used in weighting the positions.
 # 'X' = no mean position, no proper motion.
 # Note (3):
-#   The mean position is a weighted mean for the catalogues 
+#   The mean position is a weighted mean for the catalogues
 # contributing to the proper motion determination. This mean has
-# then been brought to epoch 2000.0 by the computed proper motion. 
+# then been brought to epoch 2000.0 by the computed proper motion.
 # See Note(2) for details. Tycho-2 is one of the several catalogues
-# used to determine the mean position and proper motion. The 
+# used to determine the mean position and proper motion. The
 # observed Tycho-2 position is given in the fields RAdeg and DEdeg.
 # Note (4):
 #   The mean epochs are given in Julian years.
 # Note (5):
 #   The errors are based on error models.
 # Note (6):
-#   This goodness of fit is the ratio of the scatter-based and the 
+#   This goodness of fit is the ratio of the scatter-based and the
 # model-based error. It is only defined when Num > 2. Values
 # exceeding 9.9 are truncated to 9.9.
 # Note (7):
-#   Blank when no magnitude is available. Either BT or VT is always 
+#   Blank when no magnitude is available. Either BT or VT is always
 # given. Approximate Johnson photometry may be obtained as:
 #   V   = VT -0.090*(BT-VT)
 # B-V = 0.850*(BT-VT)
 # Consult Sect 1.3 of Vol 1 of "The Hipparcos and Tycho Catalogues",
 # ESA SP-1200, 1997, for details.
 # Note (8):
-#   Distance in units of 100 mas to the nearest entry in the Tycho-2 
-# main catalogue or supplement. The distance is computed for the 
+#   Distance in units of 100 mas to the nearest entry in the Tycho-2
+# main catalogue or supplement. The distance is computed for the
 # epoch 1991.25. A value of 999 (i.e. 99.9 arcsec) is given if the
 # distance exceeds 99.9 arcsec.
 # Note (9):
 #   ' ' = no Tycho-1 star was found within 0.8 arcsec (quality 1-8)
 # or 2.4 arcsec (quality 9).
-# 'T' = this is a Tycho-1 star. The Tycho-1 identifier is given in the 
+# 'T' = this is a Tycho-1 star. The Tycho-1 identifier is given in the
 # beginning of the record. For Tycho-1 stars, resolved in
 # Tycho-2 as a close pair, both components are flagged as
 # a Tycho-1 star and the Tycho-1 TYC3 is assigned to the
 # brightest (VT) component.
 # The HIP-only stars given in Tycho-1 are not flagged as Tycho-1 stars.
 # Note (10):
-#   The CCDM component identifiers for double or multiple Hipparcos 
-# stars contributing to this Tycho-2 entry. For photocentre 
+#   The CCDM component identifiers for double or multiple Hipparcos
+# stars contributing to this Tycho-2 entry. For photocentre
 # solutions, all components within 0.8 arcsec contribute. For double
-# star solutions any unresolved component within 0.8 arcsec 
-# contributes. For single star solutions, the predicted signal from 
-# close stars were normally subtracted in the analysis of the photon 
-# counts and such stars therefore do not contribute to the solution.  
-# The components are given in lexical order. 
+# star solutions any unresolved component within 0.8 arcsec
+# contributes. For single star solutions, the predicted signal from
+# close stars were normally subtracted in the analysis of the photon
+# counts and such stars therefore do not contribute to the solution.
+# The components are given in lexical order.
 # Note (11):
 #   ' ' = normal treatment, close stars were subtracted when possible.
 # 'D' = double star treatment. Two stars were found. The companion is
@@ -239,42 +252,42 @@ hip2_test_OM <- function(hip_data)
 read_tyc2 <- function(path, start = 1, n = Inf, is_short = TRUE)
 {
   if (is_short == TRUE){
-    start_pos <- c(1, 6,  12, 14, 16, 29, 42, 50, 58, 62, 66, 71, 76, 84, 92, 
+    start_pos <- c(1, 6,  12, 14, 16, 29, 42, 50, 58, 62, 66, 71, 76, 84, 92,
                    111, 118, 124, 131, 137, 141, 143, 201, 203);
-    end_pos <- c(4, 10, 12, 14, 27, 40, 48, 56, 60, 64, 69, 74, 82, 90, 93, 116, 
+    end_pos <- c(4, 10, 12, 14, 27, 40, 48, 56, 60, 64, 69, 74, 82, 90, 93, 116,
                  122, 129, 135, 139, 141, 147, 201, 205);
-    var_names <- c("TYC1", "TYC2", "TYC3", "pflag", "RA", "DE", "pmRA", "pmDE", "e_RA", "e_DE", "e_pmRA", "e_pmDE", 
+    var_names <- c("TYC1", "TYC2", "TYC3", "pflag", "RA", "DE", "pmRA", "pmDE", "e_RA", "e_DE", "e_pmRA", "e_pmDE",
                    "mepRA", "mepDE", "Num", "BT", "e_BT", "VT", "e_VT", "prox", "TYC", "HIP", "posflg", "Corr");
     types <- "iiicddddiiddddiddddicicd";
   }
-  else   
+  else
   {
-    start_pos <- c(1, 6,  12, 14, 16, 29, 42, 50, 58, 62, 66, 71, 76, 84, 92, 95, 99, 103, 107, 
+    start_pos <- c(1, 6,  12, 14, 16, 29, 42, 50, 58, 62, 66, 71, 76, 84, 92, 95, 99, 103, 107,
                    111, 118, 124, 131, 137, 141, 143, 149, 153, 166, 179, 184, 189, 195, 201, 203);
-    end_pos <- c(4, 10, 12, 14, 27, 40, 48, 56, 60, 64, 69, 74, 82, 90, 93, 97, 101, 105, 109, 116, 
+    end_pos <- c(4, 10, 12, 14, 27, 40, 48, 56, 60, 64, 69, 74, 82, 90, 93, 97, 101, 105, 109, 116,
                122, 129, 135, 139, 141, 147, 151, 164, 177, 182, 187, 193, 199, 201, 205);
-    var_names <- c("TYC1", "TYC2", "TYC3", "pflag", "RA", "DE", "pmRA", "pmDE", "e_RA", "e_DE", "e_pmRA", "e_pmDE", 
-                 "mepRA", "mepDE", "Num", "g_RA", "g_DE", "g_pmRA", "g_pmDE", "BT", "e_BT", "VT", "e_VT", "prox", 
+    var_names <- c("TYC1", "TYC2", "TYC3", "pflag", "RA", "DE", "pmRA", "pmDE", "e_RA", "e_DE", "e_pmRA", "e_pmDE",
+                 "mepRA", "mepDE", "Num", "g_RA", "g_DE", "g_pmRA", "g_pmDE", "BT", "e_BT", "VT", "e_VT", "prox",
                  "TYC", "HIP", "CCDM", "oRA", "oDE", "epRA", "epDE", "e_oRA", "e_oDE", "posflg", "Corr");
     types <- "iiicddddiiddddiddddddddicicddddddcd";
   }
-    
+
   tyc2_data <- read_fwf(path, col_positions = fwf_positions(start_pos,
                                                             end_pos,
                                                             var_names),
                               col_types = types, skip = start-1, n_max = n)
-  
+
   tyc2_data[is.na(tyc2_data$pflag),4] <- "";
   tyc2_data <- tyc2_data %>% filter(pflag != "X") %>% filter(pflag != "P")
-  
-  tyc2_data <- tyc2_data %>% mutate(Px = 1, 
-                                    B_V = (0.850*(BT-VT)), 
-                                    Mag = (VT - 0.090*(BT-VT)), 
-                                    RA = RA*pi/180, 
-                                    DE = DE*pi/180, 
+
+  tyc2_data <- tyc2_data %>% mutate(Px = 1,
+                                    B_V = (0.850*(BT-VT)),
+                                    Mag = (VT - 0.090*(BT-VT)),
+                                    RA = RA*pi/180,
+                                    DE = DE*pi/180,
                                     TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
-  
-  return(tyc2_data)  
+
+  return(tyc2_data)
 }
 
 read_tyc2_default <- function(start = 1, n = Inf)
@@ -300,7 +313,7 @@ tyc2_get_stars <- function(tyc2_data)
   stars[,4] <- tyc2_data$pm_l
   stars[,5] <- tyc2_data$pm_b
   stars[,6] <- 0
-  
+
   return(stars)
 }
 
@@ -338,10 +351,10 @@ tyc2_test_OM <- function(tyc2_data)
 # 99-103  I5     K       Teff     Effective temperature of the star, based on spectral type (G1)
 # 105-124  A20    ---     SpType   Spectral Type (1)
 # --------------------------------------------------------------------------------
-#   
+#
 #   Note (1): This is the spectral type of the star, exactly as it appears
 # in the original spectral type catalog.
-# 
+#
 # Note (2): This column contains a code for the catalog of origin of the
 # spectral type:
 #   mc1 = Michigan Catalog, Vol. 1, <III/31>
@@ -356,17 +369,17 @@ tyc2_test_OM <- function(tyc2_data)
 #   ppN = PPM North, <I/146>
 #   ppS = PPM South, <I/193>
 #   sim = SIMBAD Astronomical Database
-# 
+#
 # Note (3): This is an alternate designation for the star, other than
 # its Tycho-2 identifier. It is usually the designation for the star
 # that appeared in the spectral type catalog.
-# 
+#
 # Note (4): This is the distance in arcsec between the Tycho-2 object
 # and the star from the spectral type catalog to which it was matched.
-# 
+#
 # Note (5): This is the magnitude that appears in the spectral type catalog.
 # If no magnitude was included, it will have a value of 99.99.
-# 
+#
 # Note (6): This indicates the type of magnitude that appears in the
 # spectral type catalog:
 #   V = visual
@@ -374,7 +387,7 @@ tyc2_test_OM <- function(tyc2_data)
 # B = blue
 # X = unknown
 # * = no magnitude was included
-# 
+#
 # Note (7):
 #   In the spectral type reformatting, it was necessary to "choose" a
 # concrete spectral type for those that were listed ambiguously, and
@@ -382,10 +395,10 @@ tyc2_test_OM <- function(tyc2_data)
 # spectral type was originally listed as K2/3 III, it will be K2 3,
 # where K is the temperature class, 2 is the subclass, and 3 is the
 # luminosity class.
-# 
+#
 # Other examples: A9/F2 V, B2.5 V, and G8 IV/V in the original catalog
 # become A9 5, B2 5, and G8 4 in the reformatted spectral type
-# 
+#
 # --------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------
 # read_tyc2sp - function to read Tycho-2 Spectral Type catalogue into the dataframe
@@ -393,25 +406,25 @@ tyc2_test_OM <- function(tyc2_data)
 # -------------------------------------------------------------------------------
 read_tyc2sp <- function(path)
 {
-  start_pos <- c(1, 5,  10, 16, 18, 31, 44, 51, 58, 62, 78, 85, 92, 94, 95, 
+  start_pos <- c(1, 5,  10, 16, 18, 31, 44, 51, 58, 62, 78, 85, 92, 94, 95,
                  97, 99, 105);
-  end_pos <- c(3, 8, 14, 16, 29, 42, 49, 56, 60, 76, 83, 90, 92, 94, 95, 97, 
+  end_pos <- c(3, 8, 14, 16, 29, 42, 49, 56, 60, 76, 83, 90, 92, 94, 95, 97,
                103, 124);
-  var_names <- c("TYC","TYC1", "TYC2", "TYC3", "RA", "DE", "VT", "BT", "SpType_source", "Name", "T2SpDist", "Mag_sp", 
+  var_names <- c("TYC","TYC1", "TYC2", "TYC3", "RA", "DE", "VT", "BT", "SpType_source", "Name", "T2SpDist", "Mag_sp",
                  "f_Mag_sp", "TClass", "SClass", "LClass", "Teff", "SpType");
   types <- "ciiiddddccddcciiic";
-  
+
   tyc2sp_data <- read_fwf(path, col_positions = fwf_positions(start_pos, end_pos, var_names), col_types = types)
-  
+
   tyc2sp_data <- tyc2sp_data %>% mutate(TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
-  
+
   #tyc2sp_data[is.na(tyc2_data$pflag),4] <- "";
-  #tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>% 
-    #mutate(Px = 1, B_V = (0.850*(BT-VT)), Mag = (VT - 0.090*(BT-VT)), 
-     #      RA = RA*pi/180, DE = DE*pi/180) 
-  
+  #tyc2_data <- tyc2_data %>% filter(tyc2_data$pflag != "X") %>%
+    #mutate(Px = 1, B_V = (0.850*(BT-VT)), Mag = (VT - 0.090*(BT-VT)),
+     #      RA = RA*pi/180, DE = DE*pi/180)
+
   # Spectral parallaxes calculation
-  
+
   return(tyc2sp_data)
 }
 
@@ -434,76 +447,76 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # field description: https://gaia.esac.esa.int/documentation/GDR1/datamodel/Ch1/tgas_source.html
 # hip, (int), Hipparcos identifier
 # tycho2_id, (character, X-Y-Z) Tycho 2 identifier, no spaces, no zeros
-# solution_id, long 
-# source_id, long 
+# solution_id, long
+# source_id, long
 # random_index, long
-# ref_epoch, (double, Time[Julian Years]) Reference epoch 
-# ra, (double, Angle[deg]) Right ascension 
+# ref_epoch, (double, Time[Julian Years]) Reference epoch
+# ra, (double, Angle[deg]) Right ascension
 # ra_error,  (double, Angle[mas]) Standard error of right ascension
-# dec, (double, Angle[deg]) Declination 
-# dec_error, (double, Angle[mas]) Standard error of declination 
-# parallax, (double, Angle[mas] ) Parallax 
-# parallax_error, (double, Angle[mas] ) Standard error of parallax 
+# dec, (double, Angle[deg]) Declination
+# dec_error, (double, Angle[mas]) Standard error of declination
+# parallax, (double, Angle[mas] ) Parallax
+# parallax_error, (double, Angle[mas] ) Standard error of parallax
 # pmra, (double, Angular Velocity[mas/year] ) Proper motion in right ascension direction
-# pmra_error, (double, Angular Velocity[mas/year] ) Standard error of proper motion in right ascension direction 
-# pmdec, (double, Angular Velocity[mas/year] ) Proper motion in declination direction 
+# pmra_error, (double, Angular Velocity[mas/year] ) Standard error of proper motion in right ascension direction
+# pmdec, (double, Angular Velocity[mas/year] ) Proper motion in declination direction
 # pmdec_error, (double, Angular Velocity[mas/year] ) Standard error of proper motion in declination direction
 # ra_dec_corr, double
 # ra_parallax_corr, double
 # ra_pmra_corr, double
 # ra_pmdec_corr, double
-# dec_parallax_corr, double 
-# dec_pmra_corr, double 
-# dec_pmdec_corr, double 
-# parallax_pmra_corr, double 
-# parallax_pmdec_corr, double 
-# pmra_pmdec_corr,double 
+# dec_parallax_corr, double
+# dec_pmra_corr, double
+# dec_pmdec_corr, double
+# parallax_pmra_corr, double
+# parallax_pmdec_corr, double
+# pmra_pmdec_corr,double
 # astrometric_n_obs_al, int
-# astrometric_n_obs_ac, int 
-# astrometric_n_good_obs_al,int 
-# astrometric_n_good_obs_ac, int 
-# astrometric_n_bad_obs_al, int 
-# astrometric_n_bad_obs_ac,int 
+# astrometric_n_obs_ac, int
+# astrometric_n_good_obs_al,int
+# astrometric_n_good_obs_ac, int
+# astrometric_n_bad_obs_al, int
+# astrometric_n_bad_obs_ac,int
 # astrometric_delta_q, (float) Hipparcos/Gaia data discrepancy (Hipparcos subset of TGAS only)
 # astrometric_excess_noise, double
-# astrometric_excess_noise_sig, double 
+# astrometric_excess_noise_sig, double
 # astrometric_primary_flag, (boolean), Primary or seconday
-# astrometric_relegation_factor, float 
-# astrometric_weight_al, (float, Angle[mbabs-2]) Mean astrometric weight of the source 
+# astrometric_relegation_factor, float
+# astrometric_weight_al, (float, Angle[mbabs-2]) Mean astrometric weight of the source
 # astrometric_weight_ac,  (float, Angle[mbabs-2]) Mean astrometric weight of the source
 # astrometric_priors_used,  (int) Type of prior used in the astrometric solution
 # matched_observations,  (short) Amount of observations matched to this source
 # duplicated_source, (boolean) Source with duplicate sources
-# scan_direction_strength_k1, float 
-# scan_direction_strength_k2, float 
-# scan_direction_strength_k3, float 
-# scan_direction_strength_k4, float 
-# scan_direction_mean_k1, float 
-# scan_direction_mean_k2, float 
-# scan_direction_mean_k3, float 
-# scan_direction_mean_k4,float 
+# scan_direction_strength_k1, float
+# scan_direction_strength_k2, float
+# scan_direction_strength_k3, float
+# scan_direction_strength_k4, float
+# scan_direction_mean_k1, float
+# scan_direction_mean_k2, float
+# scan_direction_mean_k3, float
+# scan_direction_mean_k4,float
 # phot_g_n_obs,  (int) Number of observations contributing to G photometry
-# phot_g_mean_flux, (double, Flux[e-/s]) G-band mean flux 
-# phot_g_mean_flux_error, (double, Flux[e-/s]) Error on G-band mean flux 
-# phot_g_mean_mag, (double, Magnitude[mag]) G-band mean magnitude 
+# phot_g_mean_flux, (double, Flux[e-/s]) G-band mean flux
+# phot_g_mean_flux_error, (double, Flux[e-/s]) Error on G-band mean flux
+# phot_g_mean_mag, (double, Magnitude[mag]) G-band mean magnitude
 # phot_variable_flag, (string, Dimensionless[see description]) Photometric variability flag
-# l, (double, Angle[deg]) Galactic longitude 
-# b, (double, Angle[deg]) Galactic latitude 
-# ecl_lon, (double, Angle[deg]) Ecliptic longitude 
-# ecl_lat, (double, Angle[deg]) Ecliptic latitude 
+# l, (double, Angle[deg]) Galactic longitude
+# b, (double, Angle[deg]) Galactic latitude
+# ecl_lon, (double, Angle[deg]) Ecliptic longitude
+# ecl_lat, (double, Angle[deg]) Ecliptic latitude
 # iccccddddddddddd___________________________________dddcdddd
 # iccccddddddddddddddddddddd______d______i__________idddcdddd
 
 read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
 {
-  
+
   if (is_short == TRUE)
   {
-     types <- "iccccddddddddddd___________________________________dddcdddd"; 
+     types <- "iccccddddddddddd___________________________________dddcdddd";
      var_names <- c("HIP","TYC","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
                     "gPx","parallax_error","gpmRA","pmra_error","gpmDE","pmdec_error","Gm_flux","phot_g_mean_flux_error",
                     "Gm_mag","phot_variable_flag","l","b","ecl_lon","ecl_lat");
-  } else 
+  } else
   {
      types <- "iccccddddddddddddddddddddd______d______i__________idddcdddd";
      var_names <- c("HIP","TYC","solution_id","source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error",
@@ -513,18 +526,18 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
                     "astrometric_n_bad_obs_al","astrometric_n_bad_obs_ac","astrometric_delta_q","astrometric_priors_used",
                     "phot_g_n_obs","Gm_flux","phot_g_mean_flux_error","Gm_mag","phot_variable_flag","l","b","ecl_lon","ecl_lat");
   }
-  
+
   tgas_data <- data.frame()
-  
+
   to_read <- n;
   readed <- 0;
   gi <- 0;
-  
+
   for (i in 0:15)
   {
     if (gi >= (start + n - 1))
       break;
-    
+
     s <- as.character(i);
     if(nchar(s) == 1)
       s <- paste0("0",s);
@@ -532,14 +545,14 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
     print(paste0("reading: ", filename))
     data <- read_csv(filename, col_names = var_names, col_types = types, skip = 1)
     readed <- nrow(data)
-    
+
     if ((gi + readed) < start)
     {
       print("skip")
       gi <- gi + readed
       next;
     }
-      
+
     if(((start + n)>gi)&((start + n)<(gi+1+readed)))
     {
        print(paste("cut after", as.character(gi), as.character(readed)))
@@ -553,14 +566,14 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
     gi <- gi + readed
 
     tgas_data <- rbind(tgas_data, data)
-    
-  }
-  
-  print(paste("Total records in catalogue:"), nrow(tgas_data))
-  
-  tgas_data <- tgas_data %>% mutate(RA = RA*pi/180, DE = DE*pi/180) 
 
-  
+  }
+
+  print(paste("Total records in catalogue:"), nrow(tgas_data))
+
+  tgas_data <- tgas_data %>% mutate(RA = RA*pi/180, DE = DE*pi/180)
+
+
   return(tgas_data)
 }
 
@@ -572,70 +585,168 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
 }
 
 # min_px, max_px - mas
-filter_tgs_px <- function(tgs, px = c(-Inf,Inf), bv = c(-Inf,Inf), Mg = c(-Inf,Inf))
+filter_tgs_px <- function(tgs, px = c(-Inf,Inf), e_px = Inf, bv = c(-Inf,Inf), Mg = c(-Inf,Inf))
 {
-  tgs <- tgs %>% filter(!is.na(B_V) & !is.na(M)) %>% 
+  print(bv)
+  print(Mg)
+  print(px)
+  print(e_px)
+  tgs <- tgs %>% filter(!is.na(B_V) & !is.na(M)) %>%
                  filter( (gPx > px[1]) & (gPx < px[2])) %>%
                  filter( (B_V>bv[1]) & (B_V<bv[2]) ) %>%
-                 filter( (M>Mg[1]) & (M<Mg[2]))  
-  
+                 filter( (M>Mg[1]) & (M<Mg[2])) %>%
+                 filter( (parallax_error/gPx) < e_px )
+
   print(paste("stars in sample:", nrow(tgs)))
   return(tgs)
 }
 
-tgas_get_stars <- function(tgas_data)
+tgas_get_stars <- function(tgas_data, src = "TGAS")
 {
   stars <- matrix(0,nrow(tgas_data), 6)
   stars[,1] <- tgas_data$gl
   stars[,2] <- tgas_data$gb
   stars[,3] <- (1/tgas_data$gPx)    #kPc
-  stars[,4] <- tgas_data$pm_l
-  stars[,5] <- tgas_data$pm_b
-  stars[,6] <- 0
-  
-  return(stars)
-}
-
-tgas_test_OM <- function(tgas_data, src = "TGAS", ...)
-{
-  tgas_ <- filter_tgs_px(tgas_data, ...);
-  tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
   if (src == "TGAS")
   {
-    tgas_$pmRA <- tgas_$gpmRA
-    tgas_$pmDE <- tgas_$gpmDE
-    tgas_ <- cat_eq2gal(tgas_)  
+    stars[,4] <- tgas_data$gpm_l
+    stars[,5] <- tgas_data$gpm_b
   } else if(src == "TYCHO")
   {
-    tgas_$pmRA <- tgas_$tyc_pmRA
-    tgas_$pmDE <- tgas_$tyc_pmDE
-    tgas_ <- cat_eq2gal(tgas_)  
+    stars[,4] <- tgas_data$tpm_l
+    stars[,5] <- tgas_data$tpm_b
   } else
   {
-    print("Error! Please select proper motions!")
+    stars[,4] <- tgas_data$pm_l
+    stars[,5] <- tgas_data$pm_b
   }
-  
-  stars <- tgas_get_stars(tgas_)
+  stars[,6] <- 0
+
   return(stars)
 }
 
-tgas_calc_OM_seq <- function(src_ = "TGAS", start = 0, step = 0.2, q = 10, ...)
+tgas_calc_gpm <- function(tgas_)
 {
+  
+  tgas_$pmRA <- tgas_$gpmRA
+  tgas_$pmDE <- tgas_$gpmDE
+  tgas_ <- cat_eq2gal(tgas_)
+  tgas_ <- mutate(tgas_, gpm_l = pm_l, gpm_b = pm_b)
+  
+  tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
+  tgas_$pmRA <- tgas_$tyc_pmRA
+  tgas_$pmDE <- tgas_$tyc_pmDE
+  tgas_ <- cat_eq2gal(tgas_)
+  tgas_ <- mutate(tgas_, tpm_l = pm_l, tpm_b = pm_b)
+  
+  return(tgas_)
+}
+
+min_M <- function(bv)
+{
+  m <- numeric(length(bv))
+  
+  i1 <- bv < 0.8
+  m[i1] <- 5.7 * bv[i1] - 1.22222;
+  
+  i2 <- (bv>=0.8)&(bv<1.0)
+  m[i2] <- (13 * bv[i2] - 7)
+  
+  i3 <- (bv>=1.0)&(bv<1.5)
+  m[i3] <- (4 * bv[i3] + 2)
+  
+  i4 <- (bv>=1.5)
+  m[i4] <- (10 * bv[i4] - 7)
+  
+  return(m)
+}
+
+max_M <- function(bv)
+{
+  m <- numeric(length(bv))
+  
+  i1 <- bv < 0.5
+  m[i1] <- 6.3333333 * bv[i1] + 2.4333333;
+  
+  i2 <- (bv>=0.5)&(bv<1.3)
+  m[i2] <- (4.25 * bv[i2] + 3.475)
+  
+  i3 <- (bv>=1.3)
+  m[i3] <- (20 * bv[i3] - 17)
+  
+  return (m)
+}
+
+
+is_main_sequence <- function(bv, M)
+{
+  return( (M<max_M(bv)) & (M>min_M(bv)))
+}
+
+tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, ...)
+{
+  if (!is.null(distance))
+    q <- nrow(distance)
   res <- matrix(0, q, 11)
   err <- matrix(0, q, 11)
-  par <- matrix(0, q, 4)
+  par <- matrix(0, q, 5)
   sol <- matrix(0, q, 3)
-  colnames(par) <- c("min_px","max_px","qty","<px>")
-  
+  colnames(sol) <- c("X", "Y", "Z")
+
   for (i in 1:q)
   {
-    par[i,1] = start+step*i
-    par[i,2] = start+step*(i+1)
-    
-    
-    stars <- tgas_test_OM(tgas, src = src_, px = c(par[i,1], par[i,2]), ...)
+    if (!is.null(distance))
+    {
+      par[i, 1] <- distance[i,1]
+      par[i, 2] <- distance[i,2]
+    } else {
+      par[i,1] <- start+step*i
+      par[i,2] <- start+step*(i+1)
+    }
+
+    if (px_type!="ANGLE")
+    {
+      px_ = c(1/par[i,2], 1/par[i,1])
+      colnames(par) <- c("min_r","max_r","number of stars","mean_r", "px_err")
+    } else
+    {
+      px_ = c(par[i,1], par[i,2])
+      colnames(par) <- c("min_px","max_px","number of stars","mean_px", "px_err")
+    }
+
+    cat("filtering...", "\n")
+    tgas_sample <- filter_tgs_px(tgas_, px = px_, ...);
+    if (nrow(tgas_sample)==0)
+    {
+      par[i,3] <- 0
+      par[i,4] <- 0
+      par[i,5] <- 0
+      res[i, ] <- c(rep(0, 11))
+      err[i, ] <- c(rep(0, 11))
+      sol[i, ] <- c(rep(0, 3))
+      next()
+    }
+    cat("EQ to GAL converting...", "\n")
+    tgas_sample <- tgas_calc_gpm(tgas_sample)
+
+    if(!is.null(save))
+    {
+      cat("Saving...", "\n")
+      tgas_sample <- mutate(tgas_sample, R = 1/gPx)
+      s <- paste0(save, "_", src_, "_", par[i,1], "-",par[i,2])
+      #write_csv(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v), paste0(s, "_sample.csv"), col_names = TRUE)
+      x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
+      write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
+      HRDiagram(tgas_sample, save = s)
+    }
+
+    cat("Equation of condition forming...", "\n")
+    stars <- tgas_get_stars(tgas_sample, src_)
+
     par[i,3] <- nrow(stars)
     par[i,4] <- mean(stars[,3])
+    par[i,5] <- mean(tgas_sample$parallax_error)
+    cat("Solution calculation...", "\n")
     res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
     res[i, ] <- res_tgas$X
     err[i, ] <- res_tgas$s_X
@@ -645,48 +756,97 @@ tgas_calc_OM_seq <- function(src_ = "TGAS", start = 0, step = 0.2, q = 10, ...)
     print(res_tgas$s_X)
   }
   colnames(res) <- names(res_tgas$X)
-  colnames(err) <- names(res_tgas$X)
+  colnames(err) <- names(res_tgas$s_X)
 
+  if(!is.null(save))
+  {
+    s_ <- paste0(save, "_", src_)
+    
+    #write_csv(as.data.frame(res), paste0(s_,"-X.csv"), col_names = TRUE)
+    #write_csv(as.data.frame(err), paste0(s_,"-eX.csv"), col_names = TRUE)
+    #write_csv(as.data.frame(sol), paste0(s_,"-Sol.csv"), col_names = TRUE)
+    #write_csv(as.data.frame(par), paste0(s_,"-par.csv"), col_names = TRUE)
+
+    #write_lines(stargazer(res, type = "text"), paste0(s_,"-X.txt"), append = FALSE)
+    #write_lines(stargazer(err, type = "text"), paste0(s_,"-eX.txt"), append = FALSE)
+    #write_lines(stargazer(sol, type = "text"), paste0(s_,"-Sol.txt"), append = FALSE)
+    #write_lines(stargazer(par, type = "text"), paste0(s_,"-par.txt"), append = FALSE)
+
+    #write_lines(stargazer(res, type = "latex"), paste0(s_,"-X.tex"), append = FALSE)
+    #write_lines(stargazer(err, type = "latex"), paste0(s_,"-eX.tex"), append = FALSE)
+    #write_lines(stargazer(sol, type = "latex"), paste0(s_,"-Sol.tex"), append = FALSE)
+    #write_lines(stargazer(par, type = "latex"), paste0(s_,"-par.tex"), append = FALSE)
+
+    output <- cbind(res[,1], err[,1], res[,2], err[,2], res[,3], err[,3], res[,4], err[,4], res[,5], err[,5], res[,6], err[,6], 
+                    res[,7], err[,7], res[,8], err[,8], res[,9], err[,9], res[,10], err[,10], res[,11], err[,11], par[,1:5])
+    print(output)
+    colnames(output)[1:22]<-c(colnames(res)[1], colnames(err)[1], colnames(res)[2], colnames(err)[2], colnames(res)[3], colnames(err)[3],
+                              colnames(res)[4], colnames(err)[4], colnames(res)[5], colnames(err)[5], colnames(res)[6], colnames(err)[6],
+                              colnames(res)[7], colnames(err)[7], colnames(res)[8], colnames(err)[8], colnames(res)[9], colnames(err)[9],
+                              colnames(res)[10], colnames(err)[10], colnames(res)[11], colnames(err)[11])    
+    write.xlsx2(x = output, file = paste0(s_,".xls"), sheetName = "Solution")
+    #write.xlsx2(x = res, file = paste0(s_,".xls"), sheetName = "Solution")
+    #write.xlsx2(x = err, file = paste0(s_,".xls"), sheetName = "Errors", append = TRUE)
+    #write.xlsx2(x = sol, file = paste0(s_,".xls"), sheetName = "Solar motion", append = TRUE)
+    #write.xlsx2(x = par, file = paste0(s_,".xls"), sheetName = "Parameters", append = TRUE)
+  }
   return(list(X = res, S_X = err, Sol = sol, Parameters = par))
 }
 
-tgas_calc_OM_RG <- function(start = 0.1, step = 0.1, q = 23)
+tgas_calc_OM_comparing_PM <- function(tgas_ = tgas, start = 0.1, step = 0.1, q = 30)
 {
   #TGAS photometry
   #ph <- "TGAS"
   #BV <- c(0.75, 1.75)
   #MG <- c(-1, 2)
-  
+
   #APASS photometry
   ph <- "APASS"
-  BV <- c(0.75, 1.5)
-  MG <- c(0.5, 2.5) 
+  #BV <- c(0.8, 2.5)
+  #MG <- c(-1.5, 2.5)
+  #e_Px <- 1
+  #SaveTo <- "RG/RG"
   
-  res_tgas  <- tgas_calc_OM_seq(start = start, step = step, q = q, bv = BV, Mg = MG)
+  BV <- c(-Inf, Inf)
+  MG <- c(-Inf, Inf)
+  e_Px <- 0.5
+  SaveTo <- "MS/MS"
   
+  #distance_ <- matrix(0, nrow = 20, ncol = 2)
+  #distance_[,1] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3)
+  #distance_[,2] <- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3, 4)
+  
+  distance_ <- matrix(0, nrow = 15, ncol = 2)
+  distance_[,1] <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75)
+  distance_[,2] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0)
+
+  tgas_ <- tgas_apply_APASS(tgas_)
+  
+  res_tgas  <- tgas_calc_OM_seq(tgas_, start = start, step = step, q = q, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
+
   draw_OM(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions. Photometry:", ph))
-  ggsave(paste0("OM-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
-  
+  ggsave(paste0(SaveTo, "OM-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
+
   draw_OM_Solar(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions, Solar motion. Photometr:", ph))
-  ggsave(paste0("Solar-Px_TGAS-",ph,".png"), width = 10, height = 10)
-  
-  res_tgas_s  <- tgas_calc_OM_seq(src_ = "TYCHO", start = start, step = step, q = q, bv = BV, Mg = MG)
-  
+  ggsave(paste0(SaveTo, "Solar-Px_TGAS-",ph,".png"), width = 10, height = 10)
+
+  res_tgas_s  <- tgas_calc_OM_seq(tgas_, src_ = "TYCHO", start = start, step = step, q = q, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
+
   draw_OM(res_tgas_s, title = paste("Ogorodnikov-Miln Model, TYCHO proper motions. Photometry:", ph))
-  ggsave(paste0("OM-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
-  
+  ggsave(paste0(SaveTo, "OM-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
+
   draw_OM_Solar(res_tgas_s, paste("Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion. Photometry:",ph))
-  ggsave(paste0("Solar-Px_TYCHO_02-",ph,".png"), width = 10, height = 10)
-  
+  ggsave(paste0(SaveTo, "Solar-Px_TYCHO_02-",ph,".png"), width = 10, height = 10)
+
   res2 <- res_tgas
   res2$X <- res_tgas$X - res_tgas_s$X
-  
+
   draw_OM_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO. Photometry:", ph))
-  ggsave(paste0("OM-Px-TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
-  
+  ggsave(paste0(SaveTo, "OM-Px-TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
+
   draw_OM_Solar_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions. Photometry:",ph))
-  ggsave(paste0("Solar-PX_TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
-  
+  ggsave(paste0(SaveTo, "Solar-PX_TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
+
 }
 
 # ===============================================================================
@@ -759,17 +919,17 @@ tgas_calc_OM_RG <- function(start = 0.1, step = 0.1, q = 23)
 
 make_ucac4_df <- function()
 {
-  res <-data.frame(ra = integer(0), spd = integer(0), u_magm = integer(0), u_maga = integer(0), smag = integer(0), 
-                   objt=integer(0), cdf=integer(0), sigra=integer(0), sigdc=integer(0), 
-                   na1=integer(0), nu1=integer(0),cu1=integer(0), 
-                   cepra=integer(0), cepdc=integer(0), pmrac=integer(0), pmdc=integer(0), sigpmra=integer(0), sigpmdc=integer(0), 
-                   pts_key=integer(0), j_m=integer(0), h_m=integer(0), k_m=integer(0), 
-                   icqflag_1=integer(0),icqflag_2=integer(0), icqflag_3=integer(0), 
-                   e2mpho_1=integer(0), e2mpho_2=integer(0),  e2mpho_3=integer(0), 
-                   apasm_b=integer(0), apasm_v=integer(0), apasm_g=integer(0), apasm_r=integer(0), apasm_i=integer(0), 
+  res <-data.frame(ra = integer(0), spd = integer(0), u_magm = integer(0), u_maga = integer(0), smag = integer(0),
+                   objt=integer(0), cdf=integer(0), sigra=integer(0), sigdc=integer(0),
+                   na1=integer(0), nu1=integer(0),cu1=integer(0),
+                   cepra=integer(0), cepdc=integer(0), pmrac=integer(0), pmdc=integer(0), sigpmra=integer(0), sigpmdc=integer(0),
+                   pts_key=integer(0), j_m=integer(0), h_m=integer(0), k_m=integer(0),
+                   icqflag_1=integer(0),icqflag_2=integer(0), icqflag_3=integer(0),
+                   e2mpho_1=integer(0), e2mpho_2=integer(0),  e2mpho_3=integer(0),
+                   apasm_b=integer(0), apasm_v=integer(0), apasm_g=integer(0), apasm_r=integer(0), apasm_i=integer(0),
                    eapasm_b=integer(0), eapasm_v=integer(0), eapasm_g=integer(0), eapasm_r=integer(0), eapasm_i=integer(0),
                    gcflg=integer(0), icf=integer(0), leda=integer(0), x2m=integer(0), uc4_id=integer(0), zn2=integer(0), rn2=integer(0),
-                   isHIP = character(0)) 
+                   isHIP = character(0))
   return(res)
 }
 
@@ -777,43 +937,43 @@ read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
 {
   res <- make_ucac4_df()
 
-  #t1 <- system.time(  
+  #t1 <- system.time(
   for (i in 1:num)
   {
     if (!is.null(index))
     {
       seek(con, where = (index[i]-1)*78, rw = "read")
     }
-    
+
     res[i,1:2] <- readBin(con, "integer", n = 2L, size = 4)
     res[i,3:4] <- readBin(con, "integer", n = 2L, size = 2)
-    res[i,5:12] <- readBin(con, "integer", n = 8L, size = 1) 
-    res[i,13:16] <- readBin(con, "integer", n = 4L, size = 2) 
-    res[i,17:18] <- readBin(con, "integer", n = 2L, size = 1) 
-    res[i,19] <- readBin(con, "integer", n = 1L, size = 4) 
-    res[i,20:22] <- readBin(con, "integer", n = 3L, size = 2) 
-    res[i,23:28] <- readBin(con, "integer", n = 6L, size = 1) 
-    res[i,29:33] <- readBin(con, "integer", n = 5L, size = 2) 
-    res[i,34:38] <- readBin(con, "integer", n = 5L, size = 1) 
+    res[i,5:12] <- readBin(con, "integer", n = 8L, size = 1)
+    res[i,13:16] <- readBin(con, "integer", n = 4L, size = 2)
+    res[i,17:18] <- readBin(con, "integer", n = 2L, size = 1)
+    res[i,19] <- readBin(con, "integer", n = 1L, size = 4)
+    res[i,20:22] <- readBin(con, "integer", n = 3L, size = 2)
+    res[i,23:28] <- readBin(con, "integer", n = 6L, size = 1)
+    res[i,29:33] <- readBin(con, "integer", n = 5L, size = 2)
+    res[i,34:38] <- readBin(con, "integer", n = 5L, size = 1)
     res[i,39] <- readBin(con, "integer", n = 1L, size = 1)
-    res[i,40] <- readBin(con, "integer", n = 1L, size = 4) 
-    res[i,41:42] <- readBin(con, "integer", n = 2L, size = 1) 
-    res[i,43] <- readBin(con, "integer", n = 1L, size = 4) 
-    res[i,44] <- readBin(con, "integer", n = 1L, size = 2) 
-    res[i,45] <- readBin(con, "integer", n = 1L, size = 4) 
-  } 
+    res[i,40] <- readBin(con, "integer", n = 1L, size = 4)
+    res[i,41:42] <- readBin(con, "integer", n = 2L, size = 1)
+    res[i,43] <- readBin(con, "integer", n = 1L, size = 4)
+    res[i,44] <- readBin(con, "integer", n = 1L, size = 2)
+    res[i,45] <- readBin(con, "integer", n = 1L, size = 4)
+  }
   #)
-  
+
   #cat(t1,"\n")
   #t2 <- system.time({
   if( !is.null(id))
   {
     res <- res %>% filter(uc4_id %in% id)
   }
-  
-  res <- mutate(res, ra = ra / 3600000, spd = (spd/3600000) - 90, u_magm = u_magm/1000, u_maga = u_magm/1000, 
-                sigra = sigra +128, sigdc = sigdc +128, sigpmra = sigpmra + 128, sigpmdc = sigpmdc + 128, 
-                j_m = j_m/1000, h_m = h_m/1000, k_m = k_m/1000, cepra = cepra /100, cepdc = cepdc /100, 
+
+  res <- mutate(res, ra = ra / 3600000, spd = (spd/3600000) - 90, u_magm = u_magm/1000, u_maga = u_magm/1000,
+                sigra = sigra +128, sigdc = sigdc +128, sigpmra = sigpmra + 128, sigpmdc = sigpmdc + 128,
+                j_m = j_m/1000, h_m = h_m/1000, k_m = k_m/1000, cepra = cepra /100, cepdc = cepdc /100,
                 eapasm_b = eapasm_b/100, eapasm_v = eapasm_v /100, eapasm_g = eapasm_g/100, eapasm_r = eapasm_r/100, eapasm_i = eapasm_i/100)
   res$apasm_b[res$apasm_b!=20000] <- res$apasm_b[res$apasm_b!=20000] / 1000;
   res$apasm_b[res$apasm_b==20000] <- NA;
@@ -833,7 +993,7 @@ read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
 
 read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
 {
-  
+
   if(is_tyc_only)
   {
     cat("Reading UCAC<->Tycho-2 indexes... \n")
@@ -841,36 +1001,36 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     end_pos <- c(12, 22, 32);
     var_names <- c("TYC", "uc4_index", "uc4_id");
     types <- "cii";
-    
+
     filename <- paste0(path, "u4i/u4xtycho")
     u4xt_index <- read_fwf(filename, col_positions = fwf_positions(start_pos, end_pos, var_names),
                            col_types = types)
-    
-    
+
+
     u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==1] <- paste0(" ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==1])
     u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==2] <- paste0("  ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==2])
     u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==3] <- paste0("   ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==3])
-    
-    
+
+
     TYC1 <- as.integer(substr(u4xt_index$TYC, 1, 4))
     TYC2 <- as.integer(substr(u4xt_index$TYC, 6, 10))
     TYC3 <- as.integer(substr(u4xt_index$TYC, 12, 12))
-    u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3), 
-                         nzone = uc4_index %/% 1000000, sindex = uc4_index %% 1000000) 
-  } 
-  
+    u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3),
+                         nzone = uc4_index %/% 1000000, sindex = uc4_index %% 1000000)
+  }
+
   ucac4_data <- make_ucac4_df()
   ucac4_data <- mutate(ucac4_data, TYC = NULL)
-  
+
   to_read <- n;
   readed <- 0;
   gi <- 0;
-  
+
   for (i in 1:900)
   {
     if (gi >= (start + n - 1))
       break;
-    
+
     s <- as.character(i);
     if(nchar(s) == 1){
       s <- paste0("00",s)
@@ -878,13 +1038,13 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
       s <- paste0("0",s);
     filename <- paste0(path, "u4b/","z", s)
     cat(paste0("reading: ", filename), "\n")
-    
+
     if ( !file.exists(filename))
     {
       stop("catalogue file not found!")
     }
-    
-    
+
+
     zone_size <- file.size(filename) %/% 78
     if ((gi + zone_size) < start)
     {
@@ -892,7 +1052,7 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
       gi <- gi + zone_size
       next;
     }
-    
+
     connection <- file(filename, "rb")
     if (is_tyc_only)
     {
@@ -904,10 +1064,10 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     {
       data <- read_ucac4_rec(connection, zone_size)
     }
-    
+
     readed <- zone_size #nrow(data)
     close(connection)
-    
+
     cat("adding:", nrow(data), "\n")
     #if(((start + n)>gi)&((start + n)<(gi+1+readed)))
     #{
@@ -920,33 +1080,34 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     #  data <- data[-(1:(start - 1 - gi)),]
     #}
     gi <- gi + readed
-    
-    
+
+
     if (is_tyc_only)
     {
-     
+
       data <- data %>% left_join(u4xt_index[ , names(u4xt_index) %in% c("TYC", "uc4_id")], by = "uc4_id")
-      
+
       data <- data[!(is.na(data$TYC)),]
       cat("filtered (TYC records):", nrow(data), "\n")
     }
-    
+
     ucac4_data <- rbind(ucac4_data, data)
-    
-    cat("Total records in catalogue:", nrow(ucac4_data), "\n") 
-    
+
+    cat("Total records in catalogue:", nrow(ucac4_data), "\n")
+
   }
-  
-  
+
+
   return(ucac4_data)
 }
-  
+
   read_ucac4_default <- function(start = 1, n = Inf, is_tyc_only = TRUE)
   {
     ucac4_path <- "X:/Data/Catalogues/UCAC4/"
     ucac4_data <- read_ucac4(ucac4_path, start, n, is_tyc_only)
     return (ucac4_data)
   }
+
 
 
 # ------------------------------------------------------------------------------
@@ -956,46 +1117,53 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
 make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
 {
    tyc2_data <- tyc2_data %>% mutate( TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
-   
+
    tyc2sp_data <- tyc2sp_data %>% mutate(TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
-   
+
    # ?? Tycho-2: Mag, B-V
    names(tyc2_data)[7] <- "tyc_pmRA"
    names(tyc2_data)[8] <- "tyc_pmDE"
-   
+
    tgas_data <- tgas_data %>% left_join(tyc2_data[ , names(tyc2_data) %in% c("TYC", "Mag", "B_V", "tyc_pmRA", "tyc_pmDE")], by = "TYC")
    tgas_data <- tgas_data %>% mutate(tyc_m  = Mag, tyc_bv = B_V)
-   
-   
+
+
    # ?? Tycho-2 Spectral Type: LClass, TClass, TSubClass
    tgas_data <- tgas_data %>% left_join(tyc2_sp_data[ , names(tyc2_sp_data) %in% c("TYC", "TClass", "SClass", "LClass", "SpType")], by = "TYC")
-   
+
    # ?? Hipparcos`?: hPx
    tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px")], by = "HIP")
-   
-   tgas <- tgas %>% left_join(ucac[ , names(ucac) %in% c("TYC", "u_magm", "u_maga", "smag", "objt", "cdf", 
+
+   tgas <- tgas %>% left_join(ucac[ , names(ucac) %in% c("TYC", "u_magm", "u_maga", "smag", "objt", "cdf",
                                                          "j_m", "h_m", "k_m", "pts_key",
                                                          "apasm_b", "apasm_v", "apasm_g", "apasm_r", "apasm_i", "uc4_id")], by = "TYC")
-   
-   # ????????? M = m + 5 + 5 lg(px).
+
+   # M = m + 5 + 5 lg(px).
    tgas_data <- tgas_data %>% mutate(M = NA)
-   
+
    #tgas_data$M[tgas_data$gPx>0] <- tgas_data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(tgas_data$gPx[tgas_data$gPx>0]/1000)
-   
-   index <-(data$gPx>0)&(!is.na(data$apasm_v)) 
+
+   index <-(data$gPx>0)&(!is.na(data$apasm_v))
    data$M[index] <- data$apasm_v[index] + 5 + 5*log10(data$gPx[index]/1000)
-  
-   
-   # ????????? M ? ?????? ???????????? ??????????
-   
-   # ????????? ???????????? ?????????
-   
+
+
 }
+
+tgas_apply_APASS <- function(tgas_)
+{
+  index <-(tgas_$gPx>0)&(!is.na(tgas_$apasm_b))&(!is.na(tgas_$apasm_v))
+  tgas_$B_V[index] <- (tgas_$apasm_b[index] - tgas_$apasm_v[index])
+  tgas_$M[index] <- tgas_$apasm_v[index] + 5 + 5*log10(tgas_$gPx[index]/1000)
+  tgas_$Mag[index] <- tgas_$apasm_v[index]
+  return(tgas_)
+}
+
+
 
 # -----------------------------------------------------------------------------
 #                                    Diagrams
 # -----------------------------------------------------------------------------
-HRDiagram <- function(data, photometric = "TGAS", title = "Hertzsprung?Russell")
+HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell", save = NULL)
 {
   if (photometric == "TYCHO")
   {
@@ -1003,32 +1171,84 @@ HRDiagram <- function(data, photometric = "TGAS", title = "Hertzsprung?Russell")
     s <- (data$gPx>0) & (!is.na(data$Mag))
     data$M[s] <- data$Mag[s] + 5 + 5*log10(data$gPx[s]/1000)
     hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
-  } else if (photometric == "APAS")
+  } else if (photometric == "APASS")
   {
     data <- data %>% mutate(M = NA)
-    index <-(data$gPx>0)&(!is.na(data$apasm_v)) 
+    index <-(data$gPx>0)&(!is.na(data$apasm_v))
     data$M[index] <- data$apasm_v[index] + 5 + 5*log10(data$gPx[index]/1000)
     hrdata <- data.frame(cbind( M = data$M[index], B_V = (data$apasm_b[index]-data$apasm_v[index]), LC = data$LClass[!is.na(data$M)]))
   }
-  else 
+  else
   {
     data <- data %>% mutate(M = NA)
     data$M[data$gPx>0] <- data$Gm_mag[data$gPx>0] + 5 + 5*log10(data$gPx[data$gPx>0]/1000)
     hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)], LC = data$LClass[!is.na(data$M)]))
   }
+
+  if(nrow(hrdata)<1000)
+  {
+    alpha_ <- 1
+    size_ <- 1
+  } else if(nrow(hrdata)<10000)
+  {
+    alpha_ <- 0.5
+    size_ <- 1
+  } else if (nrow(hrdata)<100000)
+  {
+    alpha_ <- 0.25
+    size_ <- 0.5
+  } else if (nrow(hrdata)<1000000)
+  {
+    alpha_ <- 0.1
+    size_ <- 0.1
+  } else
+  {
+    alpha_ <- 0.05
+    size_ <- 0.1
+  }
   
-  #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha = 0.05, na.rm = TRUE, size = 0.1) + scale_y_reverse()
-  
-  g <- ggplot() + 
+  #alpha_ <- 1
+
+  #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha_ = 0.05, na.rm = TRUE, size_ = 0.1) + scale_y_reverse()
+
+  g <- ggplot() +
           #scale_colour_manual("L Class",  breaks = colnames(c(1,2,3,4,5)),
            #           values = c("blue", "brown", "red", "yellow", "green")) +
-          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = 0.05, na.rm = TRUE, size = 0.1, shape = ".") +  #color=hrdata$LC,
-          scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) + 
-          scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) + 
-          xlab("B-V") + ylab("M") + ggtitle(title)  
+          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = alpha_, na.rm = TRUE, size = size_, shape = ".") +  #color=hrdata$LC,
+          scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) +
+          scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) +
+          xlab("B-V") + ylab("M") + ggtitle(title)
   
-  ggsave("Hertzsprung-Russell.png", width = 10, height = 10)
+  ms_top_limit <- matrix(0, nrow = 5, ncol = 2)
+  ms_top_limit[,1] <- c(-0.1, 0.8, 1.0, 1.5, 1.7)
+  ms_top_limit[,2] <- c(-1.8, 3.4, 6.0, 8.0, 10.0 )
+  ms_bottom_limit <- matrix(0, nrow = 4, ncol = 2)
+  ms_bottom_limit[,1] <- c(-0.1, 0.5, 1.3, 1.35)
+  ms_bottom_limit[,2] <- c(1.8, 5.6, 9.0, 10.0)
   
+  g <- g + geom_line(aes(x = ms_top_limit[,1], y = ms_top_limit[,2])) +
+           geom_line(aes(x = ms_bottom_limit[,1], y = ms_bottom_limit[,2]));
+  
+  a <- seq(from = 0, to = 2, by = 0.1)
+  g <- g + geom_line(aes(x = a, y = max_M(a))) +
+           geom_line(aes(x = a, y = min_M(a)));
+
+  rg_top_limit <- matrix(0, nrow = 4, ncol = 2)
+  rg_top_limit[,1] <- c(0.8, 0.8, 2.5, 2.5)
+  rg_top_limit[,2] <- c(2.5, -1.5, -1.5, 2.5)
+  rg_bottom_limit <- matrix(0, nrow = 2, ncol = 2)
+  rg_bottom_limit[,1] <- c(0.8, 2.5)
+  rg_bottom_limit[,2] <- c(2.5, 2.5)
+  
+  g <- g + geom_line(aes(x = rg_top_limit[,1], y = rg_top_limit[,2])) +
+           geom_line(aes(x = rg_bottom_limit[,1], y = rg_bottom_limit[,2]))
+  
+  
+  if(!is.null(save))
+  {
+    ggsave(paste0(save, "-HR.png"), width = 10, height = 10)
+  }
+
   return(g)
 }
 
@@ -1051,34 +1271,41 @@ draw_HR_TGAS_T2Sp <- function()
 
 draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
 {
-  g <- ggplot() 
-  g <- g + scale_y_continuous(breaks=seq(-18,18,by=3), minor_breaks=seq(-18,18,by=1), limits = c(-17,17)) + 
-    #scale_x_continuous(breaks=seq(0.25,4,by=0.25), minor_breaks=seq(0.25,4,by=0.125), limits = c(0.25,4))
-    scale_x_continuous(breaks=seq(0.25,2.25,by=0.25), minor_breaks=seq(0.25,2.25,by=0.125), limits = c(0.25,2.25))
-    #scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
+  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
   
+  min_y <- (min(res$X)%/%1) - 1
+  max_y <- (max(res$X)%/%1) + 1
+  g <- ggplot()
+  g <- g + 
+    #scale_y_continuous(breaks=seq(-18,18,by=3), minor_breaks=seq(-18,18,by=1), limits = c(-17,17)) +
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+    #scale_x_continuous(breaks=seq(0.25,4,by=0.25), minor_breaks=seq(0.25,4,by=0.125), limits = c(0.25,4))
+    scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))
+    #scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
+
   g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
                         values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "green", "#0072B2", "#D55E00", "#CC79A7")) +
     #geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
-    #geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
-    #geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,4] - res$S_X[,4], ymax = res$X[,4] + res$S_X[,4], colour = colnames(res$X)[4])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,5] - res$S_X[,5], ymax = res$X[,5] + res$S_X[,5], colour = colnames(res$X)[5])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,6] - res$S_X[,6], ymax = res$X[,6] + res$S_X[,6], colour = colnames(res$X)[6])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,7] - res$S_X[,7], ymax = res$X[,7] + res$S_X[,7], colour = colnames(res$X)[7])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,8] - res$S_X[,8], ymax = res$X[,8] + res$S_X[,8], colour = colnames(res$X)[8])) + 
+    #geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) +
+    #geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,4] - res$S_X[,4], ymax = res$X[,4] + res$S_X[,4], colour = colnames(res$X)[4])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,5] - res$S_X[,5], ymax = res$X[,5] + res$S_X[,5], colour = colnames(res$X)[5])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,6] - res$S_X[,6], ymax = res$X[,6] + res$S_X[,6], colour = colnames(res$X)[6])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,7] - res$S_X[,7], ymax = res$X[,7] + res$S_X[,7], colour = colnames(res$X)[7])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,8] - res$S_X[,8], ymax = res$X[,8] + res$S_X[,8], colour = colnames(res$X)[8])) +
     geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,9] - res$S_X[,9], ymax = res$X[,9] + res$S_X[,9], colour = colnames(res$X)[9])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +     
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +     
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,9] - res$S_X[,9], ymax = res$X[,9] + res$S_X[,9], colour = colnames(res$X)[9])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +
     geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
@@ -1086,41 +1313,41 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
 
 draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
 {
-  g <- ggplot() 
-  
-  g <- g + scale_y_continuous(breaks=seq(-6,7,by=0.5), minor_breaks=seq(-6,7,by=0.25), limits = c(-6,7)) + 
-    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.2,4)) 
-    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.2,2.5)) 
-  
-  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) + 
+  g <- ggplot()
+
+  g <- g + scale_y_continuous(breaks=seq(-6,7,by=0.5), minor_breaks=seq(-6,7,by=0.25), limits = c(-6,7)) +
+    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.2,4))
+    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.2,2.5))
+
+  g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
                         values = c("#000000", "#E69F00", "#56B4E9", "#009E73", "green", "#0072B2", "#D55E00", "#CC79A7")) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) +
     geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) +
     geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
 draw_OM_Solar <- function(res, title = "Solar motion")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) + 
-    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) + 
-    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) + 
-    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
+  g <- ggplot() + scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
+    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
+    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
+    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
     geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,1] - res$S_X[,1], ymax = res$X[,1] + res$S_X[,1], colour = colnames(res$X)[1])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,2] - res$S_X[,2], ymax = res$X[,2] + res$S_X[,2], colour = colnames(res$X)[2])) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) + 
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,3] - res$S_X[,3], ymax = res$X[,3] + res$S_X[,3], colour = colnames(res$X)[3])) + 
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,1] - res$S_X[,1], ymax = res$X[,1] + res$S_X[,1], colour = colnames(res$X)[1])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,2] - res$S_X[,2], ymax = res$X[,2] + res$S_X[,2], colour = colnames(res$X)[2])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,3] - res$S_X[,3], ymax = res$X[,3] + res$S_X[,3], colour = colnames(res$X)[3])) +
     geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
@@ -1128,14 +1355,14 @@ draw_OM_Solar <- function(res, title = "Solar motion")
 
 draw_OM_Solar_diff <- function(res, title = "Solar motion")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(-2,7,by=0.5), minor_breaks=seq(-2,7,by=0.25), limits = c(-2,7)) + 
-    scale_x_continuous(breaks=seq(0,4,by=0.5), minor_breaks=seq(0,4,by=0.1), limits = c(0.25,4)) + 
-    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) + 
+  g <- ggplot() + scale_y_continuous(breaks=seq(-2,7,by=0.5), minor_breaks=seq(-2,7,by=0.25), limits = c(-2,7)) +
+    scale_x_continuous(breaks=seq(0,4,by=0.5), minor_breaks=seq(0,4,by=0.1), limits = c(0.25,4)) +
+    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) + 
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) + 
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) +
+    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) +
     geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
