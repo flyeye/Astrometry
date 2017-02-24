@@ -1,6 +1,6 @@
 # ===============================================================================
 # ---------------------------------  libraries ----------------------------------
-attach_libs <- function()
+tgas_libs_required <- function()
 {
   library("readr", lib.loc="~/R/win-library/3.3")
   library("readxl", lib.loc="~/R/win-library/3.3")
@@ -8,6 +8,7 @@ attach_libs <- function()
   library("xlsx", lib.loc="~/R/win-library/3.3")
   library("stargazer", lib.loc="~/R/win-library/3.3")
   library("scales", lib.loc="~/R/win-library/3.3")
+  library("gdata", lib.loc="~/R/win-library/3.3")
 }
 
 
@@ -569,7 +570,7 @@ read_tgas <- function(path, start = 1, n = Inf, is_short = TRUE)
 
   }
 
-  print(paste("Total records in catalogue:"), nrow(tgas_data))
+  #print(paste("Total records in catalogue:"), nrow(tgas_data))
 
   tgas_data <- tgas_data %>% mutate(RA = RA*pi/180, DE = DE*pi/180)
 
@@ -585,17 +586,19 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
 }
 
 # min_px, max_px - mas
-filter_tgs_px <- function(tgs, px = c(-Inf,Inf), e_px = Inf, bv = c(-Inf,Inf), Mg = c(-Inf,Inf))
+filter_tgs_px <- function(tgs, px = c(-Inf,Inf), e_px = Inf, bv = c(-Inf,Inf), Mg = c(-Inf,Inf), z_lim = c(0, Inf))
 {
-  print(bv)
-  print(Mg)
-  print(px)
-  print(e_px)
+  #print(bv)
+  #print(Mg)
+  #print(px)
+  #print(e_px)
+  tgs <- CalcGalXYZ(tgs)
   tgs <- tgs %>% filter(!is.na(B_V) & !is.na(M)) %>%
                  filter( (gPx > px[1]) & (gPx < px[2])) %>%
                  filter( (B_V>bv[1]) & (B_V<bv[2]) ) %>%
                  filter( (M>Mg[1]) & (M<Mg[2])) %>%
-                 filter( (parallax_error/gPx) < e_px )
+                 filter( (parallax_error/gPx) < e_px ) %>% 
+                 filter( (abs(z)>=z_lim[1]) & (abs(z)<z_lim[2]))
 
   print(paste("stars in sample:", nrow(tgs)))
   return(tgs)
@@ -627,60 +630,64 @@ tgas_get_stars <- function(tgas_data, src = "TGAS")
 
 tgas_calc_gpm <- function(tgas_)
 {
-  
+
   tgas_$pmRA <- tgas_$gpmRA
   tgas_$pmDE <- tgas_$gpmDE
   tgas_ <- cat_eq2gal(tgas_)
   tgas_ <- mutate(tgas_, gpm_l = pm_l, gpm_b = pm_b)
-  
+
   tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
   tgas_$pmRA <- tgas_$tyc_pmRA
   tgas_$pmDE <- tgas_$tyc_pmDE
   tgas_ <- cat_eq2gal(tgas_)
   tgas_ <- mutate(tgas_, tpm_l = pm_l, tpm_b = pm_b)
-  
+
   return(tgas_)
 }
 
-min_M <- function(bv)
-{
-  m <- numeric(length(bv))
-  
-  i1 <- bv < 0.8
-  m[i1] <- 5.7 * bv[i1] - 1.22222;
-  
-  i2 <- (bv>=0.8)&(bv<1.0)
-  m[i2] <- (13 * bv[i2] - 7)
-  
-  i3 <- (bv>=1.0)&(bv<1.5)
-  m[i3] <- (4 * bv[i3] + 2)
-  
-  i4 <- (bv>=1.5)
-  m[i4] <- (10 * bv[i4] - 7)
-  
-  return(m)
-}
 
-max_M <- function(bv)
+tgas_res_export <- function(res, name)
 {
-  m <- numeric(length(bv))
+  s_ <- name
   
-  i1 <- bv < 0.5
-  m[i1] <- 6.3333333 * bv[i1] + 2.4333333;
-  
-  i2 <- (bv>=0.5)&(bv<1.3)
-  m[i2] <- (4.25 * bv[i2] + 3.475)
-  
-  i3 <- (bv>=1.3)
-  m[i3] <- (20 * bv[i3] - 17)
-  
-  return (m)
-}
 
-
-is_main_sequence <- function(bv, M)
-{
-  return( (M<max_M(bv)) & (M>min_M(bv)))
+  output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3], res$X[,4], res$S_X[,4], res$X[,5], res$S_X[,5], res$X[,6], res$S_X[,6],
+                  res$X[,7], res$S_X[,7], res$X[,8], res$S_X[,8], res$X[,9], res$S_X[,9], res$X[,10], res$S_X[,10], res$X[,11], res$S_X[,11], 
+                  res$Oort[,1], res$s_Oort[,1],res$Oort[,2], res$s_Oort[,2],res$Oort[,3], res$s_Oort[,3],res$Oort[,4], res$s_Oort[,4],
+                  res$Parameters[,1:5])
+  output <- t(output)
+  rownames(output)[1:30]<-c(colnames(res$X)[1], colnames(res$S_X)[1], colnames(res$X)[2], colnames(res$S_X)[2], colnames(res$X)[3], colnames(res$S_X)[3],
+                            colnames(res$X)[4], colnames(res$S_X)[4], colnames(res$X)[5], colnames(res$S_X)[5], colnames(res$X)[6], colnames(res$S_X)[6],
+                            colnames(res$X)[7], colnames(res$S_X)[7], colnames(res$X)[8], colnames(res$S_X)[8], colnames(res$X)[9], colnames(res$S_X)[9],
+                            colnames(res$X)[10], colnames(res$S_X)[10], colnames(res$X)[11], colnames(res$S_X)[11], 
+                            colnames(res$Oort)[1], colnames(res$s_Oort)[1], colnames(res$Oort)[2], colnames(res$s_Oort)[2], 
+                            colnames(res$Oort)[3], colnames(res$s_Oort)[3], colnames(res$Oort)[4], colnames(res$s_Oort)[4])
+  write.xlsx2(x = output, file = paste0(s_,".xls"), sheetName = "Solution")
+  
+  
+  output <- cbind(res$X, res$Oort)
+  output_err <- cbind(res$S_X, res$s_Oort) 
+  
+  output_txt <- paste0("$", sprintf("%.2f", output), "pm", sprintf("%.2f", output_err), "$")
+  output_txt <- t(matrix(output_txt, ncol = 15))
+  output_txt <- rbind(output_txt, paste0(sprintf("%.1f", res$Parameters[,1]), "-", sprintf("%.1f", res$Parameters[,2]) ))
+  output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
+  output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
+  output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,5]) ) 
+  rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
+  
+  write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,".tex"), append = FALSE)
+  
+  
+  output_txt <- paste0(sprintf("%.2f", output), "±", sprintf("%.2f", output_err))
+  output_txt <- t(matrix(output_txt, ncol = 15))
+  output_txt <- rbind(output_txt, paste0(sprintf("%.2f", res$Parameters[,1]), "-", sprintf("%.2f", res$Parameters[,2]) ))
+  output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
+  output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
+  output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,5]) ) 
+  rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
+  
+  write_lines(stargazer(output_txt, type = "text"), paste0(s_,".txt"), append = FALSE)
 }
 
 tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, ...)
@@ -692,7 +699,17 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   par <- matrix(0, q, 5)
   sol <- matrix(0, q, 3)
   colnames(sol) <- c("X", "Y", "Z")
-
+  oort <- matrix(0, q, 4)
+  oort_err <- matrix(0, q, 4)
+  
+  if (!is.null(distance))
+  {
+    ds <- distance[q,2]%/%1 + 1 
+  } else 
+  {
+    ds <- (start+step*(q+1))%/%1 + 1 
+  }
+  
   for (i in 1:q)
   {
     if (!is.null(distance))
@@ -707,11 +724,11 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     if (px_type!="ANGLE")
     {
       px_ = c(1/par[i,2], 1/par[i,1])
-      colnames(par) <- c("min_r","max_r","number of stars","mean_r", "px_err")
+      colnames(par) <- c("r_min","r_max","number of stars","r_mean", "px_err")
     } else
     {
       px_ = c(par[i,1], par[i,2])
-      colnames(par) <- c("min_px","max_px","number of stars","mean_px", "px_err")
+      colnames(par) <- c("px_min","px_max","number of stars","px_mean", "px_err")
     }
 
     cat("filtering...", "\n")
@@ -738,6 +755,9 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
       x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
       write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
       HRDiagram(tgas_sample, save = s)
+      DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = ds)
+      DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = ds)
+      DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
     }
 
     cat("Equation of condition forming...", "\n")
@@ -747,93 +767,148 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     par[i,4] <- mean(stars[,3])
     par[i,5] <- mean(tgas_sample$parallax_error)
     cat("Solution calculation...", "\n")
+    
     res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
+    
     res[i, ] <- res_tgas$X
     err[i, ] <- res_tgas$s_X
     sol[i, ] <- res_tgas$X[1:3]/par[i,4]
+    oort[i, ] <- res_tgas$Oort
+    oort_err[i, ] <- res_tgas$s_Oort
     print(par[i,])
     print(res_tgas$X)
     print(res_tgas$s_X)
   }
   colnames(res) <- names(res_tgas$X)
   colnames(err) <- names(res_tgas$s_X)
+  colnames(oort) <- names(res_tgas$Oort)
+  colnames(oort_err) <- names(res_tgas$s_Oort)
 
+  res <- list(X = res, S_X = err, Sol = sol, Parameters = par, Oort = oort, s_Oort = oort_err)
+  
   if(!is.null(save))
-  {
-    s_ <- paste0(save, "_", src_)
-    
-    #write_csv(as.data.frame(res), paste0(s_,"-X.csv"), col_names = TRUE)
-    #write_csv(as.data.frame(err), paste0(s_,"-eX.csv"), col_names = TRUE)
-    #write_csv(as.data.frame(sol), paste0(s_,"-Sol.csv"), col_names = TRUE)
-    #write_csv(as.data.frame(par), paste0(s_,"-par.csv"), col_names = TRUE)
-
-    #write_lines(stargazer(res, type = "text"), paste0(s_,"-X.txt"), append = FALSE)
-    #write_lines(stargazer(err, type = "text"), paste0(s_,"-eX.txt"), append = FALSE)
-    #write_lines(stargazer(sol, type = "text"), paste0(s_,"-Sol.txt"), append = FALSE)
-    #write_lines(stargazer(par, type = "text"), paste0(s_,"-par.txt"), append = FALSE)
-
-    #write_lines(stargazer(res, type = "latex"), paste0(s_,"-X.tex"), append = FALSE)
-    #write_lines(stargazer(err, type = "latex"), paste0(s_,"-eX.tex"), append = FALSE)
-    #write_lines(stargazer(sol, type = "latex"), paste0(s_,"-Sol.tex"), append = FALSE)
-    #write_lines(stargazer(par, type = "latex"), paste0(s_,"-par.tex"), append = FALSE)
-
-    output <- cbind(res[,1], err[,1], res[,2], err[,2], res[,3], err[,3], res[,4], err[,4], res[,5], err[,5], res[,6], err[,6], 
-                    res[,7], err[,7], res[,8], err[,8], res[,9], err[,9], res[,10], err[,10], res[,11], err[,11], par[,1:5])
-    print(output)
-    colnames(output)[1:22]<-c(colnames(res)[1], colnames(err)[1], colnames(res)[2], colnames(err)[2], colnames(res)[3], colnames(err)[3],
-                              colnames(res)[4], colnames(err)[4], colnames(res)[5], colnames(err)[5], colnames(res)[6], colnames(err)[6],
-                              colnames(res)[7], colnames(err)[7], colnames(res)[8], colnames(err)[8], colnames(res)[9], colnames(err)[9],
-                              colnames(res)[10], colnames(err)[10], colnames(res)[11], colnames(err)[11])    
-    write.xlsx2(x = output, file = paste0(s_,".xls"), sheetName = "Solution")
-    #write.xlsx2(x = res, file = paste0(s_,".xls"), sheetName = "Solution")
-    #write.xlsx2(x = err, file = paste0(s_,".xls"), sheetName = "Errors", append = TRUE)
-    #write.xlsx2(x = sol, file = paste0(s_,".xls"), sheetName = "Solar motion", append = TRUE)
-    #write.xlsx2(x = par, file = paste0(s_,".xls"), sheetName = "Parameters", append = TRUE)
-  }
-  return(list(X = res, S_X = err, Sol = sol, Parameters = par))
+    tgas_res_export(res, paste0(save, "_", src_))
+  return(res)
 }
 
-tgas_calc_OM_comparing_PM <- function(tgas_ = tgas, start = 0.1, step = 0.1, q = 30)
+tgas_calc_OM_comparing_PM <- function(tgas_ = tgas, lclass = 3, population = "ALL")
 {
-  #TGAS photometry
-  #ph <- "TGAS"
-  #BV <- c(0.75, 1.75)
-  #MG <- c(-1, 2)
 
   #APASS photometry
-  ph <- "APASS"
-  #BV <- c(0.8, 2.5)
-  #MG <- c(-1.5, 2.5)
-  #e_Px <- 1
-  #SaveTo <- "RG/RG"
   
-  BV <- c(-Inf, Inf)
-  MG <- c(-Inf, Inf)
-  e_Px <- 0.5
-  SaveTo <- "MS/MS"
-  
-  #distance_ <- matrix(0, nrow = 20, ncol = 2)
-  #distance_[,1] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3)
-  #distance_[,2] <- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3, 4)
-  
-  distance_ <- matrix(0, nrow = 15, ncol = 2)
-  distance_[,1] <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75)
-  distance_[,2] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0)
+  if (population == "DISK")
+  {
+    Z <- c(0, 0.5)
+  } else if (population == "GALO")
+  {
+    Z <- c(0.25, Inf)
+  } else 
+  {
+    Z <- c(0, Inf)
+  }
 
-  tgas_ <- tgas_apply_APASS(tgas_)
+  if(lclass == 1)
+  {
+    tgas_ <- tgas_[tgas_$LClass_apass == 1,]
+    BV <- c(-Inf, Inf)
+    MG <- c(-Inf, -2)
+    e_Px <- Inf
+    if (!dir.exists("SG")) 
+      dir.create("SG")
+    SaveTo <- "SG/SG"
+    
+    if (population == "DISK")
+    {
+      distance_ <- matrix(0, nrow = 4, ncol = 2)
+      distance_[,1] <- c(0.0, 2.5, 5.0, 7.5)
+      distance_[,2] <- c(2.5, 5.0, 7.5, 10.0)
+    } else 
+    {
+      distance_ <- matrix(0, nrow = 7, ncol = 2)
+      distance_[,1] <- c(0.0, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0)
+      distance_[,2] <- c(2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 50.0)
+    } 
+
+  } else if(lclass == 3)
+  {
+    tgas_ <- tgas_[tgas_$LClass_apass == 3,]
+    #BV <- c(0.75, 1.75)
+    #MG <- c(-1, 2)
+
+    BV <- c(0.8, 2.5)
+    MG <- c(-1.5, 2.5)
+    e_Px <- Inf #1.5
+    if (!dir.exists("RG")) 
+      dir.create("RG")
+    SaveTo <- "RG/RG"
+
+    if (population == "DISK")
+    {
+      distance_ <- matrix(0, nrow = 14, ncol = 2)
+      distance_[,1] <- c(0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0)
+      distance_[,2] <- c(0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0, 3)
+    } else if (population == "GALO")
+    {
+      distance_ <- matrix(0, nrow = 16, ncol = 2)
+      distance_[,1] <- c(0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3)
+      distance_[,2] <- c(0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3, 4)
+    }else 
+    {
+      distance_ <- matrix(0, nrow = 20, ncol = 2)
+      distance_[,1] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3)
+      distance_[,2] <- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3, 4)
+    }
+
+  } else if(lclass == 5)
+  {
+    tgas_ <- tgas_[tgas_$LClass_apass == 5,]
+    
+    BV <- c(-Inf, Inf)
+    MG <- c(-Inf, Inf)
+    e_Px <- 0.5
+    if (!dir.exists("MS")) 
+      dir.create("MS")
+    SaveTo <- "MS/MS"
+
+    distance_ <- matrix(0, nrow = 14, ncol = 2)
+    distance_[,1] <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5)
+    distance_[,2] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 2.0)
+  } else 
+  {
+    SaveTo <- "NC/NC"
+  }
+
   
-  res_tgas  <- tgas_calc_OM_seq(tgas_, start = start, step = step, q = q, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
+  con <- file(paste0(SaveTo,"_description.txt"), "w")
+  cat("B-V = ", BV, "\n", file=con)
+  cat("M = ", MG, "\n", file=con)
+  cat("ePX = ", e_Px, "\n", file=con)
+  cat("z = ", Z, "\n", file=con)
+  cat("LClass = ", lclass , "\n", file=con)
+  cat("Distance = ", distance_ , "\n", file=con)
+  cat("Population = ", population , "\n", file=con)
+  
+  close(con)
+
+
+  res_tgas  <- tgas_calc_OM_seq(tgas_, start = start, step = step, q = q, z_lim = Z, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
 
   draw_OM(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions. Photometry:", ph))
   ggsave(paste0(SaveTo, "OM-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
+  
+  draw_Oort(res_tgas, title = paste("Oort-Lindblad Model, TGAS proper motions. Photometry:", ph))
+  ggsave(paste0(SaveTo, "OL-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
 
   draw_OM_Solar(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions, Solar motion. Photometr:", ph))
   ggsave(paste0(SaveTo, "Solar-Px_TGAS-",ph,".png"), width = 10, height = 10)
 
-  res_tgas_s  <- tgas_calc_OM_seq(tgas_, src_ = "TYCHO", start = start, step = step, q = q, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
+  res_tgas_s  <- tgas_calc_OM_seq(tgas_, src_ = "TYCHO", start = start, step = step, q = q, z_lim = Z, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
 
   draw_OM(res_tgas_s, title = paste("Ogorodnikov-Miln Model, TYCHO proper motions. Photometry:", ph))
   ggsave(paste0(SaveTo, "OM-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
+  
+  draw_Oort(res_tgas_s, title = paste("Oort-Lindblad Model, TYCHO proper motions. Photometry:", ph))
+  ggsave(paste0(SaveTo, "OL-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
 
   draw_OM_Solar(res_tgas_s, paste("Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion. Photometry:",ph))
   ggsave(paste0(SaveTo, "Solar-Px_TYCHO_02-",ph,".png"), width = 10, height = 10)
@@ -1006,7 +1081,7 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     u4xt_index <- read_fwf(filename, col_positions = fwf_positions(start_pos, end_pos, var_names),
                            col_types = types)
 
-
+ 
     u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==1] <- paste0(" ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==1])
     u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==2] <- paste0("  ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==2])
     u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==3] <- paste0("   ", u4xt_index$TYC[(12-nchar(u4xt_index$TYC))==3])
@@ -1017,6 +1092,16 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     TYC3 <- as.integer(substr(u4xt_index$TYC, 12, 12))
     u4xt_index <- mutate(u4xt_index, TYC = paste0(TYC1, "-", TYC2, "-", TYC3),
                          nzone = uc4_index %/% 1000000, sindex = uc4_index %% 1000000)
+    
+    # UCAC4 содержит около 840 источников, идентифицированных с одиними и теми же зведами каталога Tycho-2, 
+    # то есть на один TYC может приходится несколько уникальных записей в UCAC4. Вылоняя ниже left_join
+    # мы дублируем записи TGAS, дополеннные разными источниками из UCAC4. Все бы ничего, но TYC и TGAS source_id 
+    # теряют при этом уникальность и в последующем при дальнейших оперциях сляиния количество дублей будет множиться. 
+    # поэтому по хорошему тут нужно все дубли беспощадно выкинуть. Все равно пока другого способа идентификации звезд
+    # TGAS и APASS нет кроме как по TYC, а он вот такой ущербный, соответственно даже если в TGAS и APASS 
+    # соответствующие звезд разделены, связать мы их пока никак не можем. 
+    # u4xt_index <- u4xt_index[!duplicated(u4xt_index$TYC), ] # !! не тестировалось 
+    
   }
 
   ucac4_data <- make_ucac4_df()
@@ -1134,43 +1219,104 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
    # ?? Hipparcos`?: hPx
    tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px")], by = "HIP")
 
-   tgas <- tgas %>% left_join(ucac[ , names(ucac) %in% c("TYC", "u_magm", "u_maga", "smag", "objt", "cdf",
+   tgas_data <- tgas_data %>% left_join(ucac[ , names(ucac) %in% c("TYC", "u_magm", "u_maga", "smag", "objt", "cdf",
                                                          "j_m", "h_m", "k_m", "pts_key",
                                                          "apasm_b", "apasm_v", "apasm_g", "apasm_r", "apasm_i", "uc4_id")], by = "TYC")
 
-   # M = m + 5 + 5 lg(px).
-   tgas_data <- tgas_data %>% mutate(M = NA)
-
-   #tgas_data$M[tgas_data$gPx>0] <- tgas_data$Gm_mag[tgas_data$gPx>0] + 5 + 5*log10(tgas_data$gPx[tgas_data$gPx>0]/1000)
-
-   index <-(data$gPx>0)&(!is.na(data$apasm_v))
-   data$M[index] <- data$apasm_v[index] + 5 + 5*log10(data$gPx[index]/1000)
-
+   
+   tgas_data <- tgas_apply_APASS(tgas_data)
 
 }
 
 tgas_apply_APASS <- function(tgas_)
 {
+  tgas_$B_V <- NA
+  tgas_$M <- NA
+  tgas_$Mag <- NA
   index <-(tgas_$gPx>0)&(!is.na(tgas_$apasm_b))&(!is.na(tgas_$apasm_v))
   tgas_$B_V[index] <- (tgas_$apasm_b[index] - tgas_$apasm_v[index])
+  # M = m + 5 + 5 lg(px).
   tgas_$M[index] <- tgas_$apasm_v[index] + 5 + 5*log10(tgas_$gPx[index]/1000)
   tgas_$Mag[index] <- tgas_$apasm_v[index]
   return(tgas_)
 }
 
+tgas_get_APASS <- function(tgas_)
+{
+  tgas_ <- tgas_apply_APASS(tgas_)
+  tgas_ <- tgas_[(!is.na(tgas_$B_V)) & (!is.na(tgas_$M)),]
+  
+  return (tgas_)
+}
 
+tgas_calc_LClass <- function(tgas_)
+{
+  tgas_a <- tgas_get_APASS(tgas_)
+  tgas_a <- mutate(tgas_a, LClass_apass = NA)
+  tgas_a$LClass_apass[is_main_sequence(tgas_a$B_V, tgas_a$M)] <- 5
+  tgas_a$LClass_apass[tgas_a$M<(-2)] <- 1
+  tgas_a$LClass_apass[(tgas_a$M>-1.5)&(tgas_a$M<2.5)&(tgas_a$B_V>0.8)&(tgas_a$B_V<2.5)] <- 3
+  
+  tgas_ <- tgas_ %>% left_join(tgas_a[ , names(tgas_a) %in% c("source_id", "LClass_apass")], by = "source_id")
+  
+  return(tgas_)
+}
+
+
+min_M <- function(bv)
+{
+  m <- numeric(length(bv))
+  
+  i1 <- bv < 0.8
+  m[i1] <- 5.7 * bv[i1] - 1.22222;
+  
+  i2 <- (bv>=0.8)&(bv<1.0)
+  m[i2] <- (13 * bv[i2] - 7)
+  
+  i3 <- (bv>=1.0)&(bv<1.5)
+  m[i3] <- (4 * bv[i3] + 2)
+  
+  i4 <- (bv>=1.5)
+  m[i4] <- (10 * bv[i4] - 7)
+  
+  return(m)
+}
+
+max_M <- function(bv)
+{
+  m <- numeric(length(bv))
+  
+  i1 <- bv < 0.5
+  m[i1] <- 6.3333333 * bv[i1] + 2.4333333;
+  
+  i2 <- (bv>=0.5)&(bv<1.3)
+  m[i2] <- (4.25 * bv[i2] + 3.475)
+  
+  i3 <- (bv>=1.3)
+  m[i3] <- (20 * bv[i3] - 17)
+  
+  return (m)
+}
+
+
+is_main_sequence <- function(bv, M)
+{
+  return( (M<max_M(bv)) & (M>min_M(bv)))
+}
 
 # -----------------------------------------------------------------------------
 #                                    Diagrams
 # -----------------------------------------------------------------------------
+
+
 HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell", save = NULL)
 {
   if (photometric == "TYCHO")
   {
-    data <- data %>% mutate(M = NA)
-    s <- (data$gPx>0) & (!is.na(data$Mag))
-    data$M[s] <- data$Mag[s] + 5 + 5*log10(data$gPx[s]/1000)
-    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)]))
+    data <- data %>% mutate(M = NA, B_V = NA)
+    s <- (data$gPx>0) & (!is.na(data$tyc_m))
+    data$M[s] <- data$tyc_m[s] + 5 + 5*log10(data$gPx[s]/1000)
+    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$tyc_bv[!is.na(data$M)]))
   } else if (photometric == "APASS")
   {
     data <- data %>% mutate(M = NA)
@@ -1206,7 +1352,7 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
     alpha_ <- 0.05
     size_ <- 0.1
   }
-  
+
   #alpha_ <- 1
 
   #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha_ = 0.05, na.rm = TRUE, size_ = 0.1) + scale_y_reverse()
@@ -1214,21 +1360,22 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
   g <- ggplot() +
           #scale_colour_manual("L Class",  breaks = colnames(c(1,2,3,4,5)),
            #           values = c("blue", "brown", "red", "yellow", "green")) +
-          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = alpha_, na.rm = TRUE, size = size_, shape = ".") +  #color=hrdata$LC,
+          #scale_color_continuous(high = "red", low = "blue") + 
+          geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = alpha_, na.rm = TRUE, size = size_, shape = ".") +  
           scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) +
           scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) +
           xlab("B-V") + ylab("M") + ggtitle(title)
-  
+
   ms_top_limit <- matrix(0, nrow = 5, ncol = 2)
   ms_top_limit[,1] <- c(-0.1, 0.8, 1.0, 1.5, 1.7)
   ms_top_limit[,2] <- c(-1.8, 3.4, 6.0, 8.0, 10.0 )
   ms_bottom_limit <- matrix(0, nrow = 4, ncol = 2)
   ms_bottom_limit[,1] <- c(-0.1, 0.5, 1.3, 1.35)
   ms_bottom_limit[,2] <- c(1.8, 5.6, 9.0, 10.0)
-  
+
   g <- g + geom_line(aes(x = ms_top_limit[,1], y = ms_top_limit[,2])) +
            geom_line(aes(x = ms_bottom_limit[,1], y = ms_bottom_limit[,2]));
-  
+
   a <- seq(from = 0, to = 2, by = 0.1)
   g <- g + geom_line(aes(x = a, y = max_M(a))) +
            geom_line(aes(x = a, y = min_M(a)));
@@ -1240,15 +1387,87 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
   rg_bottom_limit[,1] <- c(0.8, 2.5)
   rg_bottom_limit[,2] <- c(2.5, 2.5)
   
+  #g <- g + geom_path()
+
   g <- g + geom_line(aes(x = rg_top_limit[,1], y = rg_top_limit[,2])) +
            geom_line(aes(x = rg_bottom_limit[,1], y = rg_bottom_limit[,2]))
-  
-  
+
+
   if(!is.null(save))
   {
     ggsave(paste0(save, "-HR.png"), width = 10, height = 10)
   }
 
+  return(g)
+}
+
+DrawGalaxyPlane <- function(data, plane = "XZ", title = "Star distribution", save = NULL, dscale = 5)
+{
+  
+  #data <- mutate (data, z = (1/gPx)*sin(b), x = (1/gPx)*cos(b)*cos(l), y = (1/gPx)*cos(b)*sin(l))
+  data <- CalcGalXYZ(data)
+  
+  g <- ggplot()
+  
+  if ( (plane == "XY") | (plane == "YX"))
+  {
+    hrdata <- data.frame(cbind(data$x, data$y))
+    g <- g + xlab("X") + ylab("Y")
+  } else if ((plane == "XZ") | (plane == "ZX"))
+  {
+    hrdata <- data.frame(cbind(data$x, data$z))
+    g <- g + xlab("X") + ylab("Z")
+  }
+  else
+  {
+    hrdata <- data.frame(cbind(data$y, data$z))
+    g <- g + xlab("Y") + ylab("Z")
+  }
+  
+  #min_x <- (max(min(hrdata[,1]),-9)%/%1)*1 - 1
+  #max_x <- (min(max(hrdata[,1]), 9)%/%1)*1 + 1
+  #min_y <- (max(min(hrdata[,2]), -9)%/%1)*1 - 1
+  #max_y <- (min(max(hrdata[,2]), 9)%/%1)*1 + 1
+  
+  min_x <- -dscale
+  max_x <- dscale
+  min_y <- -dscale
+  max_y <- dscale
+  
+  if(nrow(hrdata)<1000)
+  {
+    alpha_ <- 1
+    size_ <- 1
+  } else if(nrow(hrdata)<10000)
+  {
+    alpha_ <- 0.5
+    size_ <- 1
+  } else if (nrow(hrdata)<100000)
+  {
+    alpha_ <- 0.25
+    size_ <- 0.5
+  } else if (nrow(hrdata)<1000000)
+  {
+    alpha_ <- 0.1
+    size_ <- 0.1
+  } else
+  {
+    alpha_ <- 0.05
+    size_ <- 0.1
+  }
+  
+  g <- g +
+    geom_point(data=hrdata, aes(x = hrdata[,1], y = hrdata[,2]),  alpha = alpha_, na.rm = TRUE, size = size_, shape = ".") + 
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+    scale_x_continuous(breaks=seq(min_x,max_x,by=1), minor_breaks=seq(min_x,max_x,by=0.5), limits = c(min_x,max_x)) +
+    ggtitle(title)
+  
+ 
+  if(!is.null(save))
+  {
+    ggsave(paste0(save, plane, ".png"), width = 10, height = 10)
+  }
+  
   return(g)
 }
 
@@ -1273,15 +1492,21 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
 {
   min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
   max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+  stepx <- 0.2
+  #stepx <- 10
   
-  min_y <- (min(res$X)%/%1) - 1
-  max_y <- (max(res$X)%/%1) + 1
+  #min_y <- (min(res$X[,4:11])%/%1) - 1
+  #max_y <- (max(res$X[,4:11])%/%1) + 1
+  min_y <- -17
+  max_y <- 18
+  
+  
   g <- ggplot()
-  g <- g + 
+  g <- g +
     #scale_y_continuous(breaks=seq(-18,18,by=3), minor_breaks=seq(-18,18,by=1), limits = c(-17,17)) +
     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
     #scale_x_continuous(breaks=seq(0.25,4,by=0.25), minor_breaks=seq(0.25,4,by=0.125), limits = c(0.25,4))
-    scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))
+    scale_x_continuous(breaks=seq(min_x,max_x,by=stepx), minor_breaks=seq(min_x,max_x,by=stepx/2), limits = c(min_x,max_x))
     #scale_x_continuous(breaks=seq(1,4.5,by=0.5), minor_breaks=seq(1,4.5,by=0.25), limits = c(1,4.5))
 
   g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) +
@@ -1306,18 +1531,31 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
     geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +
     geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) +
     geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters)))) #+  
+    #geom_smooth(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6])) +
+    #geom_smooth(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9])) +
+    #geom_smooth(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10])) 
   return(g)
 }
 
 
 draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
 {
+  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+
+  min_y <- (min(res$X[,4:11])%/%1) - 1
+  max_y <- (max(res$X[,4:11])%/%1) + 1
+
   g <- ggplot()
 
-  g <- g + scale_y_continuous(breaks=seq(-6,7,by=0.5), minor_breaks=seq(-6,7,by=0.25), limits = c(-6,7)) +
+  g <- g +
+    #scale_y_continuous(breaks=seq(-6,7,by=0.5), minor_breaks=seq(-6,7,by=0.25), limits = c(-6,7)) +
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
     #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.2,4))
-    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.2,2.5))
+    #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.2,2.5))
+    scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))
+
 
   g <- g + xlab("<px>, kpc") + ylab("O-M, km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[4:11],
@@ -1336,9 +1574,18 @@ draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
 
 draw_OM_Solar <- function(res, title = "Solar motion")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
+  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+
+  min_y <- (min(res$X[,1:3])%/%1) - 1
+  max_y <- (max(res$X[,1:3])%/%1) + 1
+
+  g <- ggplot() +
+    #scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
     #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
-    scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
+    #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
+    scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
     xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
@@ -1355,8 +1602,16 @@ draw_OM_Solar <- function(res, title = "Solar motion")
 
 draw_OM_Solar_diff <- function(res, title = "Solar motion")
 {
-  g <- ggplot() + scale_y_continuous(breaks=seq(-2,7,by=0.5), minor_breaks=seq(-2,7,by=0.25), limits = c(-2,7)) +
-    scale_x_continuous(breaks=seq(0,4,by=0.5), minor_breaks=seq(0,4,by=0.1), limits = c(0.25,4)) +
+  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+
+  min_y <- (min(res$X[,1:3])%/%1) - 1
+  max_y <- (max(res$X[,1:3])%/%1) + 1
+  g <- ggplot() +
+    #scale_y_continuous(breaks=seq(-2,7,by=0.5), minor_breaks=seq(-2,7,by=0.25), limits = c(-2,7)) +
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+    #scale_x_continuous(breaks=seq(0,4,by=0.5), minor_breaks=seq(0,4,by=0.1), limits = c(0.25,4)) +
+    scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
     xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
@@ -1367,3 +1622,35 @@ draw_OM_Solar_diff <- function(res, title = "Solar motion")
   return(g)
 }
 
+
+draw_Oort <- function(res, title = "Solar motion")
+{
+  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+  
+  #min_y <- (min(res$Oort)%/%1) - 1
+  #max_y <- (max(res$Oort)%/%1) + 1
+  min_y <- -17
+  max_y <- 18
+  
+  
+  g <- ggplot() +
+    #scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
+    #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
+    scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
+    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
+    scale_colour_manual("Parameters",  breaks = colnames(res$Oort)[1:4],
+                        values = c("green", "blue", "brown", "black")) +
+    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,1], colour = colnames(res$Oort)[1]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,1] - res$s_Oort[,1], ymax = res$Oort[,1] + res$s_Oort[,1], colour = colnames(res$Oort)[1])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,2], colour = colnames(res$Oort)[2]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,2] - res$s_Oort[,2], ymax = res$Oort[,2] + res$s_Oort[,2], colour = colnames(res$Oort)[2])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,3], colour = colnames(res$Oort)[3]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,3] - res$s_Oort[,3], ymax = res$Oort[,3] + res$s_Oort[,3], colour = colnames(res$Oort)[3])) +
+    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,4], colour = colnames(res$Oort)[4]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,4] - res$s_Oort[,4], ymax = res$Oort[,4] + res$s_Oort[,4], colour = colnames(res$Oort)[4])) +
+    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
+  return(g)
+}

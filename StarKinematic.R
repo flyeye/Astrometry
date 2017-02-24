@@ -94,6 +94,11 @@ cat_eq2gal<-function(cat_data)
 }
 
 
+CalcGalXYZ <- function(data)
+{
+  data <- mutate (data, z = (1/gPx)*sin(gb), x = (1/gPx)*cos(gb)*cos(gl), y = (1/gPx)*cos(gb)*sin(gl))
+}
+
 # ===============================================================================
 # -------------------------------------------------------------------------------
 #                 Вычисление коэффициентов уравнений модели ОМ
@@ -208,6 +213,17 @@ MakeOMCoef <- function(stars, use_vr = TRUE, model = 1)
 }
 
 
+Calc_Oort_from_OM <-  function(res)
+{
+  res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], 0.5*res$X["M11*"], 0.5*(res$X["M11*"]-2*res$X["M33*"]))
+  names(res$Oort) <- c("A", "B", "C", "K")
+  
+  res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], 0.5*res$s_X["eM11*"], sqrt((0.5*res$s_X["eM11*"])**2 + res$s_X["eM33*"]**2))
+  names(res$s_Oort) <- c("eA", "eB", "eC", "eK")
+  
+  return (res)
+}
+
 # вычисление параметров заданной кинематической модели
 # stars - матрица положений и скоростей звезд (l, b, px, mu_l, mu_b, v_r)
 # use_vr - флаг использовать лучевые скорости или нет для модели Огородникова-Милна
@@ -252,6 +268,7 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, m
       names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
       names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*")
     }
+    res <- Calc_Oort_from_OM(res)
   } else if (model == 2)
   {
     names(res$X) <- c("U", "V", "W", "Wz(B)", "M12(A)")
