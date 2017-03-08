@@ -113,9 +113,9 @@ GetOM_R <- function ( l, b, r)
 
   result <- vector("numeric", 12)
 
-  result[1] <- -cos(l)*cos(b)*4.74064/r;
-  result[2] <- -sin(l)*cos(b)*4.74064/r;
-  result[3] <- -sin(b)*4.74064/r;
+  result[1] <- -cos(l)*cos(b)/r;
+  result[2] <- -sin(l)*cos(b)/r;
+  result[3] <- -sin(b)/r;
   result[4] <- 0;
   result[5] <- 0;
   result[6] <- 0;
@@ -136,8 +136,8 @@ GetOM_L <- function( l, b, r)
 
   result <- vector("numeric", 12)
 
-  result[1] <- sin(l)*4.74064/r;        # U
-  result[2] <- -cos(l)*4.74064/r;       # V
+  result[1] <- sin(l)/r;        # U
+  result[2] <- -cos(l)/r;       # V
   result[3] <- 0;                       # W
   result[4] <- -sin(b)*cos(l);          # W1
   result[5] <- -sin(b)*sin(l);          # W2
@@ -145,7 +145,8 @@ GetOM_L <- function( l, b, r)
   result[7] <- -sin(b)*sin(l);          # M13
   result[8] <- sin(b)*cos(l);           # M23
   result[9] <- cos(b)*cos(2*l);         # M12 = A
-  result[10] <- -0.5*cos(b)*sin(2*l);   # M11* = M11-M22
+  #result[10] <- -0.5*cos(b)*sin(2*l);   # M11* = M11-M22
+  result[10] <- -cos(b)*sin(2*l);   # C
   result[11] <- 0;                      # M33* = M33-M22
   result[12] <- 0;                      # M22
 
@@ -159,17 +160,19 @@ GetOM_B <- function( l, b, r)
 
   result <- vector("numeric", 12)
 
-  result[1] <- cos(l)*sin(b)*4.74064/r;             # X
-  result[2] <- sin(l)*sin(b)*4.74064/r;             # Y
-  result[3] <- -cos(b)*4.74064/r;                   # Z
+  result[1] <- cos(l)*sin(b)/r;             # X
+  result[2] <- sin(l)*sin(b)/r;             # Y
+  result[3] <- -cos(b)/r;                   # Z
   result[4] <- sin(l);                      # W1
   result[5] <- -cos(l);                     # W2
   result[6] <- 0;                           # W3 = B
   result[7] <- cos(2*b)*cos(l);             # M13
   result[8] <- cos(2*b)*sin(l);             # M23
   result[9] <- -0.5*sin(2*b)*sin(2*l);      # M12 = A
-  result[10] <- -0.5*sin(2*b)*cos(l)*cos(l);# M11* = M11-M22
-  result[11] <- 0.5*sin(2*b);               # M33* = M33-M22
+  #result[10] <- -0.5*sin(2*b)*cos(l)*cos(l);# M11* = M11-M22
+  result[10] <- -0.5*sin(2*b)*cos(2*l);     # C
+  #result[11] <- 0.5*sin(2*b);               # M33* = M33-M22
+  result[11] <- -0.5*sin(2*b);               # K
   result[12] <- 0;                          # M22
 
   return(result);
@@ -178,7 +181,11 @@ GetOM_B <- function( l, b, r)
 #-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
-# model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского
+# model - кинематическая модель, 
+#   1 - Огородникова Милна, 
+#   2 - Оорта-Линдблада, 
+#   3 - Эри-Ковальского, 
+#   4 - модифицированная Огородникова-Милна, где M11 и М33 заменены на K и С
 MakeOMCoef <- function(stars, use_vr = TRUE, model = 1)
 {
   n <- nrow(stars)
@@ -196,14 +203,14 @@ MakeOMCoef <- function(stars, use_vr = TRUE, model = 1)
       a0[(2*n+i),] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3])
   }
 
-  if (model == 1)
+  if (model == 1)  #полная модель Огородникова-Милна
   {
     if(use_vr == FALSE)
       a0 <- a0[,-12]
-  }  else if (model == 2)
+  }  else if (model == 2)  # Модель плоского вращения Оорта-Линдблада
   {
     a0 <- a0[,c(-4, -5, -7, -8, -10:-12)]
-  } else if (model == 3)
+  } else if (model == 3)  # только солнечные члены, уравнение Эри-Ковальского
   {
     a0 <- a0[,1:3]
   }
@@ -215,10 +222,12 @@ MakeOMCoef <- function(stars, use_vr = TRUE, model = 1)
 
 Calc_Oort_from_OM <-  function(res)
 {
-  res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], 0.5*res$X["M11*"], 0.5*(res$X["M11*"]-2*res$X["M33*"]))
+  #res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], 0.5*res$X["M11*"], 0.5*(res$X["M11*"]-2*res$X["M33*"]))
+  res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], res$X["C"], res$X["K"])
   names(res$Oort) <- c("A", "B", "C", "K")
   
-  res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], 0.5*res$s_X["eM11*"], sqrt((0.5*res$s_X["eM11*"])**2 + res$s_X["eM33*"]**2))
+  #res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], 0.5*res$s_X["eM11*"], sqrt((0.5*res$s_X["eM11*"])**2 + res$s_X["eM33*"]**2))
+  res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], res$s_X["eC"], res$s_X["eK"])
   names(res$s_Oort) <- c("eA", "eB", "eC", "eK")
   
   return (res)
@@ -260,13 +269,16 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, m
   {
     if (use_vr == TRUE)
     {
-      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
+      #names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
+      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "C", "K", "M22")
       names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*", "eM22")
     }
     else
     {
-      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
-      names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*")
+      #names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
+      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "C", "K")
+      #names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*")
+      names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eC", "eK")
     }
     res <- Calc_Oort_from_OM(res)
   } else if (model == 2)

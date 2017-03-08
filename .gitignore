@@ -5,7 +5,8 @@
 Astrometry.2017.01.28.RData
 Astrometry.2017.02.07.RData
 Astrometry.2017.02.11.RData
-MS*/*.*
-RG*/*.*
-SG*/*.*
+MS*
+RG*
+SG*
 *.RData
+Solution_01

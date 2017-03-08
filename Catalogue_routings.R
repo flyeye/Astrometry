@@ -646,11 +646,10 @@ tgas_calc_gpm <- function(tgas_)
 }
 
 
-tgas_res_export <- function(res, name)
+tgas_export_solution <- function(res, name)
 {
   s_ <- name
   
-
   output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3], res$X[,4], res$S_X[,4], res$X[,5], res$S_X[,5], res$X[,6], res$S_X[,6],
                   res$X[,7], res$S_X[,7], res$X[,8], res$S_X[,8], res$X[,9], res$S_X[,9], res$X[,10], res$S_X[,10], res$X[,11], res$S_X[,11], 
                   res$Oort[,1], res$s_Oort[,1],res$Oort[,2], res$s_Oort[,2],res$Oort[,3], res$s_Oort[,3],res$Oort[,4], res$s_Oort[,4],
@@ -710,6 +709,8 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     ds <- (start+step*(q+1))%/%1 + 1 
   }
   
+  solution <- list();
+  
   for (i in 1:q)
   {
     if (!is.null(distance))
@@ -760,7 +761,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
       DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
     }
 
-    cat("Equation of condition forming...", "\n")
+    cat("Equation of conditions forming...", "\n")
     stars <- tgas_get_stars(tgas_sample, src_)
 
     par[i,3] <- nrow(stars)
@@ -778,6 +779,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     print(par[i,])
     print(res_tgas$X)
     print(res_tgas$s_X)
+    solution[[i]] <- res_tgas
   }
   colnames(res) <- names(res_tgas$X)
   colnames(err) <- names(res_tgas$s_X)
@@ -785,87 +787,107 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   colnames(oort_err) <- names(res_tgas$s_Oort)
 
   res <- list(X = res, S_X = err, Sol = sol, Parameters = par, Oort = oort, s_Oort = oort_err)
+  res$SolutionR <- solution;
   
-  if(!is.null(save))
-    tgas_res_export(res, paste0(save, "_", src_))
   return(res)
 }
 
-tgas_calc_OM_comparing_PM <- function(tgas_ = tgas, lclass = 3, population = "ALL")
+tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS")
 {
 
   #APASS photometry
   
+  conditions <- list();
+  
+  conditions$Population <- population;
   if (population == "DISK")
   {
-    Z <- c(0, 0.5)
+    conditions$Z <- c(0, 0.5)
   } else if (population == "GALO")
   {
-    Z <- c(0.25, Inf)
+    conditions$Z <- c(0.25, Inf)
   } else 
   {
-    Z <- c(0, Inf)
+    conditions$Z <- c(0, Inf)
   }
 
+  conditions$LClass <- lclass;
   if(lclass == 1)
   {
     tgas_ <- tgas_[tgas_$LClass_apass == 1,]
-    BV <- c(-Inf, Inf)
-    MG <- c(-Inf, -2)
-    e_Px <- Inf
-    if (!dir.exists("SG")) 
-      dir.create("SG")
-    SaveTo <- "SG/SG"
+    conditions$BV <- c(-Inf, Inf)
+    conditions$MG <- c(-Inf, -2)
+    conditions$e_Px <- Inf
     
     if (population == "DISK")
     {
       distance_ <- matrix(0, nrow = 4, ncol = 2)
       distance_[,1] <- c(0.0, 2.5, 5.0, 7.5)
       distance_[,2] <- c(2.5, 5.0, 7.5, 10.0)
+      if (!dir.exists("SG_Disk")) 
+        dir.create("SG_Disk")
+      SaveTo <- "SG_Disk/SG"
+    } else if (population == "GALO")
+    {
+      distance_ <- matrix(0, nrow = 7, ncol = 2)
+      distance_[,1] <- c(0.0, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0)
+      distance_[,2] <- c(2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 50.0)
+      if (!dir.exists("SG_Galo")) 
+        dir.create("SG_Galo")
+      SaveTo <- "SG_Galo/SG"
     } else 
     {
       distance_ <- matrix(0, nrow = 7, ncol = 2)
       distance_[,1] <- c(0.0, 2.5, 5.0, 7.5, 10.0, 15.0, 20.0)
       distance_[,2] <- c(2.5, 5.0, 7.5, 10.0, 15.0, 20.0, 50.0)
-    } 
+      if (!dir.exists("SG")) 
+        dir.create("SG")
+      SaveTo <- "SG/SG"
+    }
 
   } else if(lclass == 3)
   {
     tgas_ <- tgas_[tgas_$LClass_apass == 3,]
-    #BV <- c(0.75, 1.75)
-    #MG <- c(-1, 2)
+    #conditions$BV <- c(0.75, 1.75)
+    #conditions$MG <- c(-1, 2)
 
-    BV <- c(0.8, 2.5)
-    MG <- c(-1.5, 2.5)
-    e_Px <- Inf #1.5
-    if (!dir.exists("RG")) 
-      dir.create("RG")
-    SaveTo <- "RG/RG"
-
+    conditions$BV <- c(0.8, 2.5)
+    conditions$MG <- c(-1.5, 2.5)
+    conditions$e_Px <- Inf #1.5
+    
     if (population == "DISK")
     {
       distance_ <- matrix(0, nrow = 14, ncol = 2)
       distance_[,1] <- c(0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0)
       distance_[,2] <- c(0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0, 3)
+      if (!dir.exists("RG_Disk")) 
+        dir.create("RG_Disk")
+      SaveTo <- "RG_Disk/RG"
     } else if (population == "GALO")
     {
       distance_ <- matrix(0, nrow = 16, ncol = 2)
       distance_[,1] <- c(0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3)
       distance_[,2] <- c(0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3, 4)
+      if (!dir.exists("RG_Galo")) 
+        dir.create("RG_Galo")
+      SaveTo <- "RG_Galo/RG"
     }else 
     {
       distance_ <- matrix(0, nrow = 20, ncol = 2)
       distance_[,1] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3)
       distance_[,2] <- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.25, 2.5, 2.75, 3, 4)
+      if (!dir.exists("RG")) 
+        dir.create("RG")
+      SaveTo <- "RG/RG"
     }
 
   } else if(lclass == 5)
   {
     tgas_ <- tgas_[tgas_$LClass_apass == 5,]
     
-    BV <- c(-Inf, Inf)
-    MG <- c(-Inf, Inf)
-    e_Px <- 0.5
+    conditions$BV <- c(-Inf, Inf)
+    conditions$MG <- c(-Inf, Inf)
+    conditions$e_Px <- 0.5
     if (!dir.exists("MS")) 
       dir.create("MS")
     SaveTo <- "MS/MS"
@@ -877,52 +899,79 @@ tgas_calc_OM_comparing_PM <- function(tgas_ = tgas, lclass = 3, population = "AL
   {
     SaveTo <- "NC/NC"
   }
-
   
   con <- file(paste0(SaveTo,"_description.txt"), "w")
-  cat("B-V = ", BV, "\n", file=con)
-  cat("M = ", MG, "\n", file=con)
-  cat("ePX = ", e_Px, "\n", file=con)
-  cat("z = ", Z, "\n", file=con)
-  cat("LClass = ", lclass , "\n", file=con)
+  cat("B-V = ", conditions$BV, "\n", file=con)
+  cat("M = ", conditions$MG, "\n", file=con)
+  cat("ePX = ", conditions$e_Px, "\n", file=con)
+  cat("z = ", conditions$Z, "\n", file=con)
+  cat("LClass = ", conditions$LClass , "\n", file=con)
   cat("Distance = ", distance_ , "\n", file=con)
-  cat("Population = ", population , "\n", file=con)
+  cat("Population = ", conditions$Population , "\n", file=con)
   
   close(con)
 
-
-  res_tgas  <- tgas_calc_OM_seq(tgas_, start = start, step = step, q = q, z_lim = Z, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
-
-  draw_OM(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions. Photometry:", ph))
-  ggsave(paste0(SaveTo, "OM-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
+  solution  <- tgas_calc_OM_seq(tgas_, src_ = src, start = start, step = step, q = q, z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG, px_type = "DIST", distance = distance_, save = SaveTo)
+  solution$Conditions <- conditions
   
-  draw_Oort(res_tgas, title = paste("Oort-Lindblad Model, TGAS proper motions. Photometry:", ph))
-  ggsave(paste0(SaveTo, "OL-Px-TGAS_02-",ph,".png"), width = 10, height = 10)
-
-  draw_OM_Solar(res_tgas, title = paste("Ogorodnikov-Miln Model, TGAS proper motions, Solar motion. Photometr:", ph))
-  ggsave(paste0(SaveTo, "Solar-Px_TGAS-",ph,".png"), width = 10, height = 10)
-
-  res_tgas_s  <- tgas_calc_OM_seq(tgas_, src_ = "TYCHO", start = start, step = step, q = q, z_lim = Z, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
-
-  draw_OM(res_tgas_s, title = paste("Ogorodnikov-Miln Model, TYCHO proper motions. Photometry:", ph))
-  ggsave(paste0(SaveTo, "OM-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
   
-  draw_Oort(res_tgas_s, title = paste("Oort-Lindblad Model, TYCHO proper motions. Photometry:", ph))
-  ggsave(paste0(SaveTo, "OL-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
+  tgas_export_solution(solution, paste0(SaveTo, "_", src))
+  tgas_draw_solution(solution, save = paste0(SaveTo, "_", src,"_", ph, "_"))
+    
 
-  draw_OM_Solar(res_tgas_s, paste("Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion. Photometry:",ph))
-  ggsave(paste0(SaveTo, "Solar-Px_TYCHO_02-",ph,".png"), width = 10, height = 10)
-
-  res2 <- res_tgas
-  res2$X <- res_tgas$X - res_tgas_s$X
-
-  draw_OM_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO. Photometry:", ph))
-  ggsave(paste0(SaveTo, "OM-Px-TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
-
-  draw_OM_Solar_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions. Photometry:",ph))
-  ggsave(paste0(SaveTo, "Solar-PX_TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
-
+  return(solution)
+  
 }
+  
+tgas_draw_solution <- function (solution, save)
+{
+  draw_OM(solution, title = paste("Ogorodnikov-Miln Model, TGAS proper motions. Photometry:", ph))
+  ggsave(paste0(save, "OM-R", ".png"), width = 10, height = 10)
+  
+  draw_Oort(solution, title = paste("Oort-Lindblad Model, TGAS proper motions. Photometry:", ph))
+  ggsave(paste0(save, "OL-R", ".png"), width = 10, height = 10)
+  
+  draw_OM_Solar(solution, title = paste("Ogorodnikov-Miln Model, TGAS proper motions, Solar motion. Photometr:", ph))
+  ggsave(paste0(save, "Solar-R", ".png"), width = 10, height = 10)
+}
+
+
+tgas_make_all_solutions <- function()
+{
+  solutions <- list();
+ 
+  solutions$SG_ALL <-  tgas_calc_OM_cond(tgas, lclass = 1)
+  solutions$SG_Disk <- tgas_calc_OM_cond(tgas, lclass = 1, population = "DISK")
+  solutions$SG_Galo <- tgas_calc_OM_cond(tgas, lclass = 1, population = "GALO")
+  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL")
+  solutions$RG_Disk <- tgas_calc_OM_cond(tgas, lclass = 3, population = "DISK")
+  solutions$RG_Galo <- tgas_calc_OM_cond(tgas, lclass = 3, population = "GALO")
+  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK")
+  
+  return(solutions)
+}
+
+  #res_tgas_s  <- tgas_calc_OM_seq(tgas_, src_ = src, start = start, step = step, q = q, z_lim = Z, e_px = e_Px, bv = BV, Mg = MG, px_type = "DIST", distance = distance_, save = SaveTo)
+
+  #draw_OM(res_tgas_s, title = paste("Ogorodnikov-Miln Model, TYCHO proper motions. Photometry:", ph))
+  #ggsave(paste0(SaveTo, "OM-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
+  
+  #draw_Oort(res_tgas_s, title = paste("Oort-Lindblad Model, TYCHO proper motions. Photometry:", ph))
+  #ggsave(paste0(SaveTo, "OL-Px-TYCHO_02-",ph,".png"), width = 10, height = 10)
+
+  #draw_OM_Solar(res_tgas_s, paste("Ogorodnikov-Miln Model, TYCHO proper motions, Solar motion. Photometry:",ph))
+  #ggsave(paste0(SaveTo, "Solar-Px_TYCHO_02-",ph,".png"), width = 10, height = 10)
+
+  #res2 <- res_tgas
+  #res2$X <- res_tgas$X - res_tgas_s$X
+
+  #draw_OM_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO. Photometry:", ph))
+  #ggsave(paste0(SaveTo, "OM-Px-TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
+
+  #draw_OM_Solar_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions. Photometry:",ph))
+  #ggsave(paste0(SaveTo, "Solar-PX_TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
+
+
 
 # ===============================================================================
 # --------------------------------   UCAC4 Routings  ----------------------------
@@ -1623,7 +1672,7 @@ draw_OM_Solar_diff <- function(res, title = "Solar motion")
 }
 
 
-draw_Oort <- function(res, title = "Solar motion")
+draw_Oort <- function(res, title = "Oort`s parameters")
 {
   min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
   max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
@@ -1640,7 +1689,7 @@ draw_Oort <- function(res, title = "Solar motion")
     #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
     #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
     scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
-    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
+    xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$Oort)[1:4],
                         values = c("green", "blue", "brown", "black")) +
     geom_line(aes(x = res$Parameters[,4], y = res$Oort[,1], colour = colnames(res$Oort)[1]), size = 1) +
@@ -1654,3 +1703,129 @@ draw_Oort <- function(res, title = "Solar motion")
     geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
+
+draw_solution_Oort <- function(solution, title = "Oort`s parameters")
+{
+  min_x <- 0
+  max_x <- 4
+  step_x <- 0.5
+  
+  #min_y <- (min(res$Oort)%/%1) - 1
+  #max_y <- (max(res$Oort)%/%1) + 1
+  min_y <- -17
+  max_y <- 18
+  
+  g <- ggplot() +
+    #scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
+    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
+    #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
+    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0.2,3.5))+
+    xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+    #scale_colour_manual("Parameters",  breaks = colnames(solution$MS_All$Oort)[1:4],
+     #                   values = c("green", "blue", "brown", "black")) +
+    scale_colour_manual("Parameters",  breaks = c("A Main Sequence", "A Red Giants Disk", "A Red Giants Galo", 
+                                                  "B Main Sequence", "B Red Giants Disk", "B Red Giants Galo", 
+                                                  "C Main Sequence", "C Red Giants Disk", "C Red Giants Galo", 
+                                                  "K Main Sequence", "K Red Giants Disk", "K Red Giants Galo"),
+                        values = c("green1", "green3", "green4", "blue1", "blue3", "blue4","brown1", "brown3", "brown4", "gray0","gray20", "gray40")) +
+    scale_fill_manual("Parameters",  breaks = c("A Main Sequence", "A Red Giants Disk", "A Red Giants Galo", 
+                                                  "B Main Sequence", "B Red Giants Disk", "B Red Giants Galo", 
+                                                  "C Main Sequence", "C Red Giants Disk", "C Red Giants Galo", 
+                                                  "K Main Sequence", "K Red Giants Disk", "K Red Giants Galo"),
+                        values = c("green1", "green3", "green4", "blue1", "blue3", "blue4","brown1", "brown3", "brown4", "gray0","gray20", "gray40")) +    
+    #geom_line(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,1], colour = colnames(solution$MS_All$Oort)[1]), size = 1) +
+    #geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,1] - solution$MS_All$s_Oort[,1], ymax = solution$MS_All$Oort[,1] + solution$MS_All$s_Oort[,1], colour = colnames(solution$MS_All$Oort)[1])) +
+    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,1], colour = "A Main Sequence"), size = 1) +
+    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,1], fill = "A Main Sequence"), shape = 21) + 
+    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,1] - solution$MS_All$s_Oort[,1], ymax = solution$MS_All$Oort[,1] + solution$MS_All$s_Oort[,1], colour = "A Main Sequence")) +
+    
+    geom_line( aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,2], colour = "B Main Sequence"), size = 1) +
+    geom_point(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,2], fill = "B Main Sequence"), shape = 21) + 
+    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,2] - solution$MS_All$s_Oort[,2], ymax = solution$MS_All$Oort[,2] + solution$MS_All$s_Oort[,2], colour = "B Main Sequence")) +
+    
+    
+    geom_line(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,3], colour = "C Main Sequence"), size = 1) +
+    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,3] - solution$MS_All$s_Oort[,3], ymax = solution$MS_All$Oort[,3] + solution$MS_All$s_Oort[,3], colour = "C Main Sequence")) +
+    geom_point(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,3], fill = "C Main Sequence"), shape = 21) + 
+    
+    geom_line(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,4], colour = "K Main Sequence"), size = 1) +
+    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,4] - solution$MS_All$s_Oort[,4], ymax = solution$MS_All$Oort[,4] + solution$MS_All$s_Oort[,4], colour = "K Main Sequence")) +
+    geom_point(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,4], fill = "K Main Sequence"), shape = 21) + 
+    
+    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+  
+  
+  g <- g + 
+    #geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,1], colour = colnames(solution$RG_Disk$Oort)[1]), size = 1) +
+    #geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,1] - solution$RG_Disk$s_Oort[,1], ymax = solution$RG_Disk$Oort[,1] + solution$RG_Disk$s_Oort[,1], colour = colnames(solution$RG_Disk$Oort)[1])) +
+    geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,1], colour = "A Red Giants Disk"), size = 1) +
+    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,1], fill = "A Red Giants Disk"), shape = 22) + 
+    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,1] - solution$RG_Disk$s_Oort[,1], ymax = solution$RG_Disk$Oort[,1] + solution$RG_Disk$s_Oort[,1], colour = "A Red Giants Disk")) +
+    
+    geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,2], colour = "B Red Giants Disk"), size = 1) +
+    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,2], fill = "B Red Giants Disk"), shape = 22) + 
+    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,2] - solution$RG_Disk$s_Oort[,2], ymax = solution$RG_Disk$Oort[,2] + solution$RG_Disk$s_Oort[,2], colour = "B Red Giants Disk")) +
+    
+    geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,3], colour = "C Red Giants Disk"), size = 1) +
+    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,3], fill = "C Red Giants Disk"), shape = 22) + 
+    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,3] - solution$RG_Disk$s_Oort[,3], ymax = solution$RG_Disk$Oort[,3] + solution$RG_Disk$s_Oort[,3], colour = "C Red Giants Disk")) +
+    
+    geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,4], colour = "K Red Giants Disk"), size = 1) +
+    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,4], fill = "K Red Giants Disk"), shape = 22) + 
+    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,4] - solution$RG_Disk$s_Oort[,4], ymax = solution$RG_Disk$Oort[,4] + solution$RG_Disk$s_Oort[,4], colour = "K Red Giants Disk")) +
+    
+    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+  
+  g <- g + 
+    #geom_line(aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,1], colour = colnames(solution$RG_Galo$Oort)[1]), size = 1) +
+    #geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,1] - solution$RG_Galo$s_Oort[,1], ymax = solution$RG_Galo$Oort[,1] + solution$RG_Galo$s_Oort[,1], colour = colnames(solution$RG_Galo$Oort)[1])) +
+    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,1], colour = "A Red Giants Galo"), size = 1) +
+    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,1], fill = "A Red Giants Galo"), shape = 23) + 
+    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,1] - solution$RG_Galo$s_Oort[,1], ymax = solution$RG_Galo$Oort[,1] + solution$RG_Galo$s_Oort[,1], colour = "A Red Giants Galo")) +
+    
+    geom_line(aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,2], colour = "B Red Giants Galo"), size = 1) +
+    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,2], fill = "B Red Giants Galo"), shape = 23) + 
+    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,2] - solution$RG_Galo$s_Oort[,2], ymax = solution$RG_Galo$Oort[,2] + solution$RG_Galo$s_Oort[,2], colour = "B Red Giants Galo")) +
+    
+    geom_line(aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,3], colour = "C Red Giants Galo"), size = 1) +
+    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,3], fill = "C Red Giants Galo"), shape = 23) + 
+    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,3] - solution$RG_Galo$s_Oort[,3], ymax = solution$RG_Galo$Oort[,3] + solution$RG_Galo$s_Oort[,3], colour = "C Red Giants Galo")) +
+    
+    geom_line(aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,4], colour = "K Red Giants Galo"), size = 1) +
+    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,4], fill = "K Red Giants Galo"), shape = 23) + 
+    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,4] - solution$RG_Galo$s_Oort[,4], ymax = solution$RG_Galo$Oort[,4] + solution$RG_Galo$s_Oort[,4], colour = "K Red Giants Galo")) +
+    
+    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+  
+  # g <- g + geom_line(aes(x = solution$SG_Disk$Parameters[,4], y = solution$SG_Disk$Oort[,1], colour = colnames(solution$SG_Disk$Oort)[1]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Disk$Parameters[,4], ymin = solution$SG_Disk$Oort[,1] - solution$SG_Disk$s_Oort[,1], ymax = solution$SG_Disk$Oort[,1] + solution$SG_Disk$s_Oort[,1], colour = colnames(solution$SG_Disk$Oort)[1])) +
+  #   
+  #   geom_line(aes(x = solution$SG_Disk$Parameters[,4], y = solution$SG_Disk$Oort[,2], colour = colnames(solution$SG_Disk$Oort)[2]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Disk$Parameters[,4], ymin = solution$SG_Disk$Oort[,2] - solution$SG_Disk$s_Oort[,2], ymax = solution$SG_Disk$Oort[,2] + solution$SG_Disk$s_Oort[,2], colour = colnames(solution$SG_Disk$Oort)[2])) +
+  #   
+  #   geom_line(aes(x = solution$SG_Disk$Parameters[,4], y = solution$SG_Disk$Oort[,3], colour = colnames(solution$SG_Disk$Oort)[3]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Disk$Parameters[,4], ymin = solution$SG_Disk$Oort[,3] - solution$SG_Disk$s_Oort[,3], ymax = solution$SG_Disk$Oort[,3] + solution$SG_Disk$s_Oort[,3], colour = colnames(solution$SG_Disk$Oort)[3])) +
+  #   
+  #   geom_line(aes(x = solution$SG_Disk$Parameters[,4], y = solution$SG_Disk$Oort[,4], colour = colnames(solution$SG_Disk$Oort)[4]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Disk$Parameters[,4], ymin = solution$SG_Disk$Oort[,4] - solution$SG_Disk$s_Oort[,4], ymax = solution$SG_Disk$Oort[,4] + solution$SG_Disk$s_Oort[,4], colour = colnames(solution$SG_Disk$Oort)[4])) +
+  #   
+  #   geom_point(aes(x = solution$SG_Disk$Parameters[,4], y = rep(0,nrow(solution$SG_Disk$Parameters))))
+  # 
+  # g <- g + geom_line(aes(x = solution$SG_Galo$Parameters[,4], y = solution$SG_Galo$Oort[,1], colour = colnames(solution$SG_Galo$Oort)[1]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Galo$Parameters[,4], ymin = solution$SG_Galo$Oort[,1] - solution$SG_Galo$s_Oort[,1], ymax = solution$SG_Galo$Oort[,1] + solution$SG_Galo$s_Oort[,1], colour = colnames(solution$SG_Galo$Oort)[1])) +
+  #   
+  #   geom_line(aes(x = solution$SG_Galo$Parameters[,4], y = solution$SG_Galo$Oort[,2], colour = colnames(solution$SG_Galo$Oort)[2]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Galo$Parameters[,4], ymin = solution$SG_Galo$Oort[,2] - solution$SG_Galo$s_Oort[,2], ymax = solution$SG_Galo$Oort[,2] + solution$SG_Galo$s_Oort[,2], colour = colnames(solution$SG_Galo$Oort)[2])) +
+  #   
+  #   geom_line(aes(x = solution$SG_Galo$Parameters[,4], y = solution$SG_Galo$Oort[,3], colour = colnames(solution$SG_Galo$Oort)[3]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Galo$Parameters[,4], ymin = solution$SG_Galo$Oort[,3] - solution$SG_Galo$s_Oort[,3], ymax = solution$SG_Galo$Oort[,3] + solution$SG_Galo$s_Oort[,3], colour = colnames(solution$SG_Galo$Oort)[3])) +
+  #   
+  #   geom_line(aes(x = solution$SG_Galo$Parameters[,4], y = solution$SG_Galo$Oort[,4], colour = colnames(solution$SG_Galo$Oort)[4]), size = 1) +
+  #   geom_errorbar(aes(x = solution$SG_Galo$Parameters[,4], ymin = solution$SG_Galo$Oort[,4] - solution$SG_Galo$s_Oort[,4], ymax = solution$SG_Galo$Oort[,4] + solution$SG_Galo$s_Oort[,4], colour = colnames(solution$SG_Galo$Oort)[4])) +
+  #   
+  #   geom_point(aes(x = solution$SG_Galo$Parameters[,4], y = rep(0,nrow(solution$SG_Galo$Parameters))))
+  # 
+  return(g)
+}
+
