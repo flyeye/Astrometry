@@ -652,44 +652,58 @@ tgas_export_solution <- function(res, name)
   
   output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3], res$X[,4], res$S_X[,4], res$X[,5], res$S_X[,5], res$X[,6], res$S_X[,6],
                   res$X[,7], res$S_X[,7], res$X[,8], res$S_X[,8], res$X[,9], res$S_X[,9], res$X[,10], res$S_X[,10], res$X[,11], res$S_X[,11], 
-                  res$Oort[,1], res$s_Oort[,1],res$Oort[,2], res$s_Oort[,2],res$Oort[,3], res$s_Oort[,3],res$Oort[,4], res$s_Oort[,4],
+                  #res$Oort[,1], res$s_Oort[,1],res$Oort[,2], res$s_Oort[,2],res$Oort[,3], res$s_Oort[,3],res$Oort[,4], res$s_Oort[,4],
                   res$Parameters[,1:5])
   output <- t(output)
-  rownames(output)[1:30]<-c(colnames(res$X)[1], colnames(res$S_X)[1], colnames(res$X)[2], colnames(res$S_X)[2], colnames(res$X)[3], colnames(res$S_X)[3],
+  rownames(output)[1:22]<-c(colnames(res$X)[1], colnames(res$S_X)[1], colnames(res$X)[2], colnames(res$S_X)[2], colnames(res$X)[3], colnames(res$S_X)[3],
                             colnames(res$X)[4], colnames(res$S_X)[4], colnames(res$X)[5], colnames(res$S_X)[5], colnames(res$X)[6], colnames(res$S_X)[6],
                             colnames(res$X)[7], colnames(res$S_X)[7], colnames(res$X)[8], colnames(res$S_X)[8], colnames(res$X)[9], colnames(res$S_X)[9],
-                            colnames(res$X)[10], colnames(res$S_X)[10], colnames(res$X)[11], colnames(res$S_X)[11], 
-                            colnames(res$Oort)[1], colnames(res$s_Oort)[1], colnames(res$Oort)[2], colnames(res$s_Oort)[2], 
-                            colnames(res$Oort)[3], colnames(res$s_Oort)[3], colnames(res$Oort)[4], colnames(res$s_Oort)[4])
+                            colnames(res$X)[10], colnames(res$S_X)[10], colnames(res$X)[11], colnames(res$S_X)[11]) 
+                            #colnames(res$Oort)[1], colnames(res$s_Oort)[1], colnames(res$Oort)[2], colnames(res$s_Oort)[2], 
+                            #colnames(res$Oort)[3], colnames(res$s_Oort)[3], colnames(res$Oort)[4], colnames(res$s_Oort)[4])
   write.xlsx2(x = output, file = paste0(s_,".xls"), sheetName = "Solution")
   
   
-  output <- cbind(res$X, res$Oort)
-  output_err <- cbind(res$S_X, res$s_Oort) 
+  #output <- cbind(res$X, res$Oort)
+  #output_err <- cbind(res$S_X, res$s_Oort)
+  output <- res$X
+  output_err <- res$S_X
   
   output_txt <- paste0("$", sprintf("%.2f", output), "pm", sprintf("%.2f", output_err), "$")
-  output_txt <- t(matrix(output_txt, ncol = 15))
+  #output_txt <- t(matrix(output_txt, ncol = 15))
+  output_txt <- t(matrix(output_txt, ncol = 11))
   output_txt <- rbind(output_txt, paste0(sprintf("%.1f", res$Parameters[,1]), "-", sprintf("%.1f", res$Parameters[,2]) ))
   output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,5]) ) 
-  rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
+  #rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
+  rownames(output_txt) <- c(colnames(res$X),  c("r", "N", "r_mean", "ePx"))
   
-  write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,".tex"), append = FALSE)
+  if (ncol(output_txt)>10)
+  {
+    i <- ncol(output_txt) %/% 2
+    write_lines(stargazer(output_txt[,1:i], type = "latex", digits = 2), paste0(s_,"_1.tex"), append = FALSE)
+    write_lines(stargazer(output_txt[,(i+1):ncol(output_txt)], type = "latex", digits = 2), paste0(s_,"_2.tex"), append = FALSE)
+  } else 
+  {
+    write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,".tex"), append = FALSE) 
+  }
   
   
   output_txt <- paste0(sprintf("%.2f", output), "±", sprintf("%.2f", output_err))
-  output_txt <- t(matrix(output_txt, ncol = 15))
+  output_txt <- t(matrix(output_txt, ncol = 11))
+  #output_txt <- t(matrix(output_txt, ncol = 15))
   output_txt <- rbind(output_txt, paste0(sprintf("%.2f", res$Parameters[,1]), "-", sprintf("%.2f", res$Parameters[,2]) ))
   output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,5]) ) 
-  rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
+  #rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
+  rownames(output_txt) <- c(colnames(res$X), c("r", "N", "r_mean", "ePx"))
   
   write_lines(stargazer(output_txt, type = "text"), paste0(s_,".txt"), append = FALSE)
 }
 
-tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, ...)
+tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, type = 0, ...)
 {
   if (!is.null(distance))
     q <- nrow(distance)
@@ -769,7 +783,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     par[i,5] <- mean(tgas_sample$parallax_error)
     cat("Solution calculation...", "\n")
     
-    res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11)
+    res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11, type = type)
     
     res[i, ] <- res_tgas$X
     err[i, ] <- res_tgas$s_X
@@ -792,7 +806,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   return(res)
 }
 
-tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS")
+tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", type = 0)
 {
 
   #APASS photometry
@@ -911,7 +925,7 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
   
   close(con)
 
-  solution  <- tgas_calc_OM_seq(tgas_, src_ = src, start = start, step = step, q = q, z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG, px_type = "DIST", distance = distance_, save = SaveTo)
+  solution  <- tgas_calc_OM_seq(tgas_, src_ = src, start = start, step = step, q = q, z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG, px_type = "DIST", distance = distance_, save = SaveTo, type = type)
   solution$Conditions <- conditions
   
   
@@ -927,26 +941,29 @@ tgas_draw_solution <- function (solution, save)
 {
   draw_OM(solution, title = paste("Ogorodnikov-Miln Model, TGAS proper motions. Photometry:", ph))
   ggsave(paste0(save, "OM-R", ".png"), width = 10, height = 10)
+  ggsave(paste0(save, "OM-R", ".eps"), width = 10, height = 10)
   
   draw_Oort(solution, title = paste("Oort-Lindblad Model, TGAS proper motions. Photometry:", ph))
   ggsave(paste0(save, "OL-R", ".png"), width = 10, height = 10)
+  ggsave(paste0(save, "OL-R", ".eps"), width = 10, height = 10)
   
   draw_OM_Solar(solution, title = paste("Ogorodnikov-Miln Model, TGAS proper motions, Solar motion. Photometr:", ph))
   ggsave(paste0(save, "Solar-R", ".png"), width = 10, height = 10)
+  ggsave(paste0(save, "Solar-R", ".eps"), width = 10, height = 10)
 }
 
 
-tgas_make_all_solutions <- function()
+tgas_make_all_solutions <- function(src = "TGAS")
 {
   solutions <- list();
  
-  solutions$SG_ALL <-  tgas_calc_OM_cond(tgas, lclass = 1)
-  solutions$SG_Disk <- tgas_calc_OM_cond(tgas, lclass = 1, population = "DISK")
-  solutions$SG_Galo <- tgas_calc_OM_cond(tgas, lclass = 1, population = "GALO")
-  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL")
-  solutions$RG_Disk <- tgas_calc_OM_cond(tgas, lclass = 3, population = "DISK")
-  solutions$RG_Galo <- tgas_calc_OM_cond(tgas, lclass = 3, population = "GALO")
-  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK")
+  solutions$SG_ALL <-  tgas_calc_OM_cond(tgas, lclass = 1, type = 1, src = src)
+  solutions$SG_Disk <- tgas_calc_OM_cond(tgas, lclass = 1, population = "DISK", type = 1, src = src)
+  solutions$SG_Galo <- tgas_calc_OM_cond(tgas, lclass = 1, population = "GALO", type = 1, src = src)
+  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", type = 1, src = src)
+  solutions$RG_Disk <- tgas_calc_OM_cond(tgas, lclass = 3, population = "DISK", type = 1, src = src)
+  solutions$RG_Galo <- tgas_calc_OM_cond(tgas, lclass = 3, population = "GALO", type = 1, src = src)
+  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK", type = 1, src = src)
   
   return(solutions)
 }
@@ -1445,6 +1462,7 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
   if(!is.null(save))
   {
     ggsave(paste0(save, "-HR.png"), width = 10, height = 10)
+    ggsave(paste0(save, "-HR.eps"), width = 10, height = 10)
   }
 
   return(g)
@@ -1515,6 +1533,7 @@ DrawGalaxyPlane <- function(data, plane = "XZ", title = "Star distribution", sav
   if(!is.null(save))
   {
     ggsave(paste0(save, plane, ".png"), width = 10, height = 10)
+    ggsave(paste0(save, plane, ".eps"), width = 10, height = 10)
   }
   
   return(g)
