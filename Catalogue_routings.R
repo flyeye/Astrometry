@@ -9,6 +9,7 @@ tgas_libs_required <- function()
   library("stargazer", lib.loc="~/R/win-library/3.3")
   library("scales", lib.loc="~/R/win-library/3.3")
   library("gdata", lib.loc="~/R/win-library/3.3")
+  library("xtable", lib.loc="~/R/win-library/3.3")
 }
 
 
@@ -713,7 +714,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
       #write_csv(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v), paste0(s, "_sample.csv"), col_names = TRUE)
       x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
       write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
-      HRDiagram(tgas_sample, save = s)
+      hrd <- HRDiagram(tgas_sample, save = s)
       DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = ds)
       DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = ds)
       DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
@@ -737,6 +738,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     print(par[i,])
     print(res_tgas$X)
     print(res_tgas$s_X)
+    res_tgas$HR <- hrd;
     solution[[i]] <- res_tgas
   }
   colnames(res) <- names(res_tgas$X)
@@ -902,7 +904,9 @@ calc_physical_params <- function(solution, Rs = 8.09)
   e_physical[, 3] <- sqrt(solution$s_Oort[,1]**2 + solution$s_Oort[,2]**2)
   e_physical[, 4] <- sqrt(-solution$Oort[,2]/(solution$Oort[,1]-solution$Oort[,2])**3) * sqrt(solution$s_Oort[,1]**2 + (solution$s_Oort[,2]*solution$Oort[,1]/solution$Oort[,2])**2)
                           
-  e_physical[, 5] <- (2 * (Rs*3.086e+19) * (physical[,1]*1000) / 132712438e+12) * e_physical[, 1]  #  6.67408e-11
+  #e_physical[, 5] <- (2 * (Rs*3.086e+19) * (physical[,1]*1000) / 132712438e+12) * e_physical[, 1]  #  6.67408e-11
+  e_physical[, 5] <- (2 * (Rs*3.086e+19) * (physical[,1]*1000) / 132712438e+12) * (e_physical[, 1]*1000)  #  6.67408e-11
+  
   e_physical[, 6] <- (180/pi) * (1/(solution$X[,1]**2 + solution$X[,2]**2)) * sqrt((solution$X[,2]**2) * (solution$S_X[,1]**2) + (solution$X[,1]**2) * (solution$S_X[,2]**2))
   e_physical[, 7] <- (180/pi) * (1/(solution$X[,1]**2 + solution$X[,2]**2 + solution$X[,3]**2)) * 
              sqrt((solution$X[,1]**2) * (solution$X[,3]**2) * (solution$S_X[,1]**2)/(solution$X[,1]**2 + solution$X[,2]**2) +
@@ -959,7 +963,9 @@ tgas_export_solution_txt <- function(res)
   output_err <- cbind(res$S_X, res$s_Physical)
   
   output_txt <- paste0(sprintf("%.2f", output), "±", sprintf("%.2f", output_err))
-  output_txt <- t(matrix(output_txt, ncol = (ncol(res$X) + ncol(res$Physical))))
+  output_txt <- matrix(output_txt, ncol = ncol(output))
+  output_txt[,16] <- paste0(sprintf("%.1e", output[,16]), "±", sprintf("%.2e", output_err[,16]))
+  output_txt <- t(output_txt)
   output_txt <- rbind(output_txt, paste0(sprintf("%.2f", res$Parameters[,1]), "-", sprintf("%.2f", res$Parameters[,2]) ))
   output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
@@ -969,33 +975,51 @@ tgas_export_solution_txt <- function(res)
   write_lines(stargazer(output_txt, type = "text"), paste0(s_,".txt"), append = FALSE)
 }
 
+my_san <- function (str, type = "latex", ...)
+{
+  return (str)
+}
+
 tgas_export_solution_latex <- function(res)
 {
   s_ <- paste0(res$Conditions$SaveTo, "_", res$Conditions$Src)
+
+  output <- cbind(res$X[,1:5], res$X[,7:9], res$X[,6:6], res$X[,10:11], res$Physical)
+  output_err <- cbind(res$S_X[,1:5], res$S_X[,7:9], res$S_X[,6:6], res$S_X[,10:11], res$s_Physical)
+  colnames(output)[4] <- "\\Omega_x"
+  colnames(output)[5] <- "\\Omega_y"
+  colnames(output)[6] <- "M_{13}"
+  colnames(output)[7] <- "M_{23}"
+  colnames(output)[8] <- "A"
+  colnames(output)[9] <- "B"
+  colnames(output)[17] <- "Apex L"
+  colnames(output)[18] <- "Apex B"
+  colnames(output_err)[8] <- "sA"
+  colnames(output_err)[9] <- "sB"
   
-  #output <- cbind(res$X, res$Oort)
-  #output_err <- cbind(res$S_X, res$s_Oort)
-  output <- res$X
-  output_err <- res$S_X
-  
-  output_txt <- paste0("$", sprintf("%.2f", output), "pm", sprintf("%.2f", output_err), "$")
-  #output_txt <- t(matrix(output_txt, ncol = 15))
-  output_txt <- t(matrix(output_txt, ncol = 11))
+  output_txt <- paste0("$", sprintf("%.2f", output), "\\pm", sprintf("%.2f", output_err), "$")
+  output_txt <- matrix(output_txt, ncol = ncol(output))
+  output_txt[,16] <- paste0("$", sprintf("%.1e", output[,16]), "\\pm", sprintf("%.2e", output_err[,16]), "$")
+  output_txt <- t(output_txt)
   output_txt <- rbind(output_txt, paste0(sprintf("%.1f", res$Parameters[,1]), "-", sprintf("%.1f", res$Parameters[,2]) ))
   output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,5]) ) 
-  #rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
-  rownames(output_txt) <- c(colnames(res$X),  c("r", "N", "r_mean", "ePx"))
+  rownames(output_txt) <- c(colnames(output),  c("r", "N", "\\overline{r}", "$\\overline{\\sigma}_{\\pi}$"))
+  rownames(output_txt) <- paste0("$", rownames(output_txt), "$")
   
   if (ncol(output_txt)>10)
   {
     i <- ncol(output_txt) %/% 2
-    write_lines(stargazer(output_txt[,1:i], type = "latex", digits = 2), paste0(s_,"_1.tex"), append = FALSE)
-    write_lines(stargazer(output_txt[,(i+1):ncol(output_txt)], type = "latex", digits = 2), paste0(s_,"_2.tex"), append = FALSE)
+    #write_lines(stargazer(output_txt[,1:i], type = "latex", digits = 2), paste0(s_,"_1.tex"), append = FALSE)
+    #write_lines(stargazer(output_txt[,(i+1):ncol(output_txt)], type = "latex", digits = 2), paste0(s_,"_2.tex"), append = FALSE)
+    print.xtable(xtable(output_txt[,1:i]), sanitize.text.function = my_san, file = paste0(s_,"_1.tex"), append = FALSE)
+    print.xtable(xtable(output_txt[,(i+1):ncol(output_txt)]), sanitize.text.function = my_san, file = paste0(s_,"_2.tex"), append = FALSE)
+    
   } else 
   {
-    write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,".tex"), append = FALSE) 
+    #write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,".tex"), append = FALSE) 
+    print.xtable(xtable(output_txt), sanitize.text.function = my_san, file = paste0(s_,".tex"), append = FALSE)
   }
 }
 
@@ -1007,26 +1031,38 @@ tgas_export_physical_latex <- function(res)
   output <- cbind(res$X[,9], res$X[,6],  res$X[,10],  res$X[,11], res$Physical)
   output_err <- cbind(res$S_X[,9], res$S_X[,6],  res$S_X[,10],  res$S_X[,11], res$s_Physical)
   
-  output_txt <- paste0("$", sprintf("%.2f", output), "pm", sprintf("%.2f", output_err), "$")
+  colnames(output)[1] <- "A"
+  colnames(output)[2] <- "B"
+  colnames(output)[3] <- "C"
+  colnames(output)[4] <- "K"
+  colnames(output)[10] <- "Apex L"
+  colnames(output)[11] <- "Apex B"
+  
+  output_txt <- paste0("$", sprintf("%.2f", output), "\\pm", sprintf("%.2f", output_err), "$")
+  output_txt <- matrix(output_txt, ncol = 12)
+  output_txt[,9] <- paste0("$", sprintf("%.1e", output[,9]), "\\pm", sprintf("%.2e", output_err[,9]), "$")
   #output_txt <- t(matrix(output_txt, ncol = 15))
-  output_txt <- t(matrix(output_txt, ncol = 12))
+  output_txt <- t(output_txt)
   output_txt <- rbind(output_txt, paste0(sprintf("%.1f", res$Parameters[,1]), "-", sprintf("%.1f", res$Parameters[,2]) ))
   output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,4]) ) 
   output_txt <- rbind(output_txt, sprintf("%.2f", res$Parameters[,5]) ) 
   #rownames(output_txt) <- c(colnames(res$X), colnames(res$Oort), c("r", "N", "r_mean", "ePx"))
-  rownames(output_txt) <- c( c("A", "B", "C", "K"),
-                             colnames(res$Physical), 
-                             c("r", "N", "r_mean", "ePx"))
+  rownames(output_txt) <- c( colnames(output), 
+                             c("r", "N", "\\overline{r}", "$\\overline{\\sigma}_{\\pi}$"))
+  rownames(output_txt) <- paste0("$", rownames(output_txt), "$")
   
   if (ncol(output_txt)>10)
   {
     i <- ncol(output_txt) %/% 2
-    write_lines(stargazer(output_txt[,1:i], type = "latex", digits = 2), paste0(s_,"_physical_1.tex"), append = FALSE)
-    write_lines(stargazer(output_txt[,(i+1):ncol(output_txt)], type = "latex", digits = 2), paste0(s_,"_physical_2.tex"), append = FALSE)
+    #write_lines(stargazer(output_txt[,1:i], type = "latex", digits = 2), paste0(s_,"_physical_1.tex"), append = FALSE)
+    #write_lines(stargazer(output_txt[,(i+1):ncol(output_txt)], type = "latex", digits = 2), paste0(s_,"_physical_2.tex"), append = FALSE)
+    print.xtable(xtable(output_txt[,1:i]), sanitize.text.function = my_san, file = paste0(s_,"_physical_1.tex"), append = FALSE)
+    print.xtable(xtable(output_txt[,(i+1):ncol(output_txt)]), sanitize.text.function = my_san, file = paste0(s_,"_physical_2.tex"), append = FALSE)
   } else 
   {
-    write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,"physical.tex"), append = FALSE) 
+    #write_lines(stargazer(output_txt, type = "latex", digits = 2), paste0(s_,"_physical.tex"), append = FALSE) 
+    print.xtable(xtable(output_txt), sanitize.text.function = my_san, file = paste0(s_,"_physical.tex"), append = FALSE)
   }
 }
 
@@ -1039,14 +1075,7 @@ tgas_export_all_solution <- function(solutions)
     tgas_export_solution_latex(solutions[[i]])
     tgas_export_physical_latex(solutions[[i]])
   }
-  
-  #tgas_export_solution(solutions$SG_ALL)
-  #tgas_export_solution(solutions$SG_Disk)
-  #tgas_export_solution(solutions$SG_Galo) 
-  #tgas_export_solution(solutions$RG_All) 
-  #tgas_export_solution(solutions$RG_Disk) 
-  #tgas_export_solution(solutions$RG_Galo) 
-  #tgas_export_solution(solutions$MS_All) 
+
 }
 
 
@@ -1064,14 +1093,64 @@ tgas_draw_kinematic <- function (solution)
   draw_OM_Solar(solution, title = paste("Solar motion,", solution$Conditions$Src, " proper motions, Solar motion."))
   ggsave(paste0(save, "Solar-R", ".png"), width = 10, height = 10)
   ggsave(paste0(save, "Solar-R", ".eps"), width = 10, height = 10)
+  
 }
 
-tgas_draw_all_kinematic <- function(solutions)
+tgas_draw_all_kinematic <- function(solutions, src = "TGAS")
 {
   for(i in 1:length(solutions))
   {
     tgas_draw_kinematic(solutions[[i]])
   }
+  
+  save <- paste0(src,"_")
+  
+  draw_OortParameter(solutions[c(4, 7)], 
+                     title = paste("Oort`s parameter A, ", src, " proper motions."))
+  ggsave(paste0(save, "OortA-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "OortA-R", ".eps"), width = 10, height = 5)
+  
+  
+  draw_OortParameter(solutions[c(4, 7)], 
+                     parameter = 2,
+                     title = paste("Oort`s parameter B, ", src, " proper motions."),
+                     x_lim = c(0, 4, 0.5), y_lim = c(-17, -7, 1))
+  ggsave(paste0(save, "OortB-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "OortB-R", ".eps"), width = 10, height = 5)
+  
+  draw_OortParameter(solutions[c(4, 7)], 
+                     parameter = 3,
+                     title = paste("Oort`s parameter C, ", src, " proper motions."),
+                     x_lim = c(0, 4, 0.5), y_lim = c(-7, 3, 1))
+  ggsave(paste0(save, "OortC-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "OortC-R", ".eps"), width = 10, height = 5)
+  
+  
+  draw_OortParameter(solutions[c(4, 7)], 
+                     parameter = 4,
+                     title = paste("Oort`s parameter K, ", src, " proper motions."),
+                     x_lim = c(0, 4, 0.5), y_lim = c(-9, 2, 1))
+  ggsave(paste0(save, "OortK-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "OortK-R", ".eps"), width = 10, height = 5)
+  
+  draw_OMParameter(solutions[c(4,7)],
+                   title = paste("Solar motion U, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarU-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "SolarU-R", ".eps"), width = 10, height = 5)
+  
+  draw_OMParameter(solutions[c(4,7)],
+                   parameter = 2,
+                   y_lim = c(10, 85, 10),
+                   title = paste("Solar motion V, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarV-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "SolarV-R", ".eps"), width = 10, height = 5)
+  
+  draw_OMParameter(solutions[c(4,7)],
+                   parameter = 3,
+                   y_lim = c(5, 25, 5),
+                   title = paste("Solar motion W, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarW-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "SolarW-R", ".eps"), width = 10, height = 5)
   
 }
 
@@ -1080,37 +1159,90 @@ tgas_draw_physics <- function (solution, src = "TGAS")
 {
   save <- paste0(src,"_")
   
-  draw_LinGalSpeed(solution)
-  ggsave(paste0(save, "V-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "V-R", ".eps"), width = 10, height = 10)
+  draw_Physical(solution, 
+                title = paste("Linear galactic velocity at Solar distance, ", src, " proper motions."))
+  ggsave(paste0(save, "V-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "V-R", ".eps"), width = 10, height = 5)
   
-  draw_GalRotationPeriod(solution)
-  ggsave(paste0(save, "Period-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "Period-R", ".eps"), width = 10, height = 10)
+  draw_Physical(solution, 
+                parameter = 2,
+                title = paste("Galaxy rotation period, ", src, " proper motions."),
+                y_lim = c(205, 260, 10),
+                y_title = "million years")
+  ggsave(paste0(save, "Period-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "Period-R", ".eps"), width = 10, height = 5)
   
-  draw_GalRotationCurveTilt(solution)
-  ggsave(paste0(save, "S-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "S-R", ".eps"), width = 10, height = 10)
+  #draw_GalRotationCurveTilt(solution)
+  draw_Physical(solution, 
+                parameter = 3,
+                title = paste("Galaxy rotation curve inclination, ", src, " proper motions."),
+                y_lim = c(-7, 7, 1),
+                y_title = "km/s/kpc")
+  ggsave(paste0(save, "S-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "S-R", ".eps"), width = 10, height = 5)
   
-  draw_GalF(solution)
-  ggsave(paste0(save, "F-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "F-R", ".eps"), width = 10, height = 10)
+  #draw_GalF(solution)
+  draw_Physical(solution, 
+                parameter = 4,
+                title = paste("Epicyclic frequency to angular velocity, ", src, " proper motions."),
+                y_lim = c(1.2, 1.6, 0.1),
+                y_title = "")
+  ggsave(paste0(save, "F-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "F-R", ".eps"), width = 10, height = 5)
   
-  draw_GalMass(solution)
-  ggsave(paste0(save, "M-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "M-R", ".eps"), width = 10, height = 10)
+  #draw_GalMass(solution)
+  draw_Physical(solution, 
+                parameter = 5,
+                title = paste("Galaxy mass inside Solar orbit, ", src, " proper motions."),
+                y_lim = c(6.5e10, 11e10, 1e10),
+                y_title = "Solar mass")
+  ggsave(paste0(save, "M-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "M-R", ".eps"), width = 10, height = 5)
   
-  draw_ApexL(solution)
-  ggsave(paste0(save, "ApexL-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "ApexL-R", ".eps"), width = 10, height = 10)
+  #draw_ApexL(solution)
+  draw_Physical(solution, 
+                parameter = 6,
+                title = paste("Solar motion apex L, ", src, " proper motions."),
+                y_lim = c(55, 74, 1),
+                y_title = "degree")
+  ggsave(paste0(save, "ApexL-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "ApexL-R", ".eps"), width = 10, height = 5)
   
-  draw_ApexB(solution)
-  ggsave(paste0(save, "ApexB-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "ApexB-R", ".eps"), width = 10, height = 10)
+  #draw_ApexB(solution)
+  draw_Physical(solution, 
+                parameter = 7,
+                title = paste("Solar motion apex B, ", src, " proper motions."),
+                y_lim = c(11, 23, 1),
+                y_title = "degree")
+  ggsave(paste0(save, "ApexB-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "ApexB-R", ".eps"), width = 10, height = 5)
   
-  draw_SolarV(solution)
-  ggsave(paste0(save, "SolarV-R", ".png"), width = 10, height = 10)
-  ggsave(paste0(save, "SolarV-R", ".eps"), width = 10, height = 10)
+  #draw_SolarV(solution)
+  draw_Physical(solution, 
+                parameter = 8,
+                title = paste("Solar velocity, ", src, " proper motions."),
+                y_lim = c(10, 100, 10),
+                y_title = "km/s")
+  ggsave(paste0(save, "SolarV-R", ".png"), width = 10, height = 5)
+  ggsave(paste0(save, "SolarV-R", ".eps"), width = 10, height = 5)
+}
+
+
+tgas_draw_HR_facet <- function(solution, M_lim = c(10,-10), BV_lim = c(-1, 3))
+{
+  gl <- list()
+  for (i in 1:length(solution$SolutionR))
+  {
+    g <- solution$SolutionR[[i]]$HR
+    g <- g + ggtitle(paste(solution$Parameters[i,1], "-",paste(solution$Parameters[i,2]," kpc"))) + 
+       scale_y_reverse(breaks=seq(M_lim[1],M_lim[2],by=-1), minor_breaks=seq(M_lim[1],M_lim[2],by=-0.5), limits = M_lim) +
+       scale_x_continuous(breaks=seq(BV_lim[1],BV_lim[2],by=0.5), minor_breaks=seq(BV_lim[1],BV_lim[2],by=0.25), limits = BV_lim)
+    gl <- append(gl, list(g))
+  }
+  
+  g <- grid.arrange(grobs = gl, ncol = 4)
+  
+  return (g)
 }
 
 tgas_make_all_solutions <- function(src = "TGAS")
@@ -1118,12 +1250,19 @@ tgas_make_all_solutions <- function(src = "TGAS")
   solutions <- list();
  
   solutions$SG_ALL <-  tgas_calc_OM_cond(tgas, lclass = 1, type = 1, src = src)
+  solutions$SG_ALL$Name <- "Super Giants"
   solutions$SG_Disk <- tgas_calc_OM_cond(tgas, lclass = 1, population = "DISK", type = 1, src = src)
+  solutions$SG_Disk$Name <- "Super Giants Disk"
   solutions$SG_Galo <- tgas_calc_OM_cond(tgas, lclass = 1, population = "GALO", type = 1, src = src)
+  solutions$SG_Galo$Name <- "Super Giants Galo"
   solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", type = 1, src = src)
+  solutions$RG_All$Name <- "Red Giants"
   solutions$RG_Disk <- tgas_calc_OM_cond(tgas, lclass = 3, population = "DISK", type = 1, src = src)
+  solutions$RG_Disk$Name <- "Red Giants Disk"
   solutions$RG_Galo <- tgas_calc_OM_cond(tgas, lclass = 3, population = "GALO", type = 1, src = src)
+  solutions$RG_Galo$Name <- "Red Giants Galo"
   solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK", type = 1, src = src)
+  solutions$MS_All$Name <- "Main Sequence"
   
   solutions <- calc_all_physical_params(solutions)
   
@@ -1131,6 +1270,17 @@ tgas_make_all_solutions <- function(src = "TGAS")
   tgas_draw_all_kinematic(solutions)
   tgas_draw_physics(solutions, src)
   
+  g <- tgas_draw_HR_facet(solutions$SG_ALL, M_lim = c(-2, -10), BV_lim = c(-1, 3))
+  ggsave(file = "SG_HR_all.png", plot = g, width = 15, height = 12)
+  
+  g <- tgas_draw_HR_facet(solutions$RG_Disk, M_lim = c(3, -2), BV_lim = c(0.5, 2.5))
+  ggsave(file = "RG_DISK_HR_all.png", plot = g, width = 15, height = 12)
+  
+  g <- tgas_draw_HR_facet(solutions$RG_Galo, M_lim = c(3, -2), BV_lim = c(0.5, 2.5))
+  ggsave(file = "RG_GALO_HR_all.png", plot = g, width = 15, height = 12)
+  
+  g <- tgas_draw_HR_facet(solutions$MS_All, M_lim = c(10, -3), BV_lim = c(-0.5, 1.75))
+  ggsave(file = "MS_HR_all.png", plot = g, width = 15, height = 12)
 
   return(solutions)
 }
@@ -1542,7 +1692,8 @@ is_main_sequence <- function(bv, M)
 # -----------------------------------------------------------------------------
 
 
-HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell", save = NULL)
+HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell", save = NULL, 
+                      L5lim = TRUE, L3lim = TRUE, BV_lim = c(-1, 3), M_lim = c(10, -10))
 {
   if (photometric == "TYCHO")
   {
@@ -1557,10 +1708,13 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
     data$M[index] <- data$apasm_v[index] + 5 + 5*log10(data$gPx[index]/1000)
     hrdata <- data.frame(cbind( M = data$M[index], B_V = (data$apasm_b[index]-data$apasm_v[index]), LC = data$LClass[!is.na(data$M)]))
   }
-  else
+  else if (photometric == "TGAS")
   {
     data <- data %>% mutate(M = NA)
     data$M[data$gPx>0] <- data$Gm_mag[data$gPx>0] + 5 + 5*log10(data$gPx[data$gPx>0]/1000)
+    hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)], LC = data$LClass[!is.na(data$M)]))
+  } else 
+  {
     hrdata <- data.frame(cbind( M = data$M[!is.na(data$M)], B_V = data$B_V[!is.na(data$M)], LC = data$LClass[!is.na(data$M)]))
   }
 
@@ -1586,8 +1740,6 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
     size_ <- 0.1
   }
 
-  #alpha_ <- 1
-
   #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha_ = 0.05, na.rm = TRUE, size_ = 0.1) + scale_y_reverse()
 
   g <- ggplot() +
@@ -1595,35 +1747,39 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
            #           values = c("blue", "brown", "red", "yellow", "green")) +
           #scale_color_continuous(high = "red", low = "blue") + 
           geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M),  alpha = alpha_, na.rm = TRUE, size = size_, shape = ".") +  
-          scale_y_reverse(breaks=seq(10,-10,by=-1), minor_breaks=seq(10,-10,by=-0.5), limits = c(10,-10)) +
+          scale_y_reverse(breaks=seq(M_lim[1],M_lim[2],by=-1), minor_breaks=seq(M_lim[1],M_lim[2],by=-0.5), limits = M_lim) +
           scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) +
           xlab("B-V") + ylab("M") + ggtitle(title)
 
-  ms_top_limit <- matrix(0, nrow = 5, ncol = 2)
-  ms_top_limit[,1] <- c(-0.1, 0.8, 1.0, 1.5, 1.7)
-  ms_top_limit[,2] <- c(-1.8, 3.4, 6.0, 8.0, 10.0 )
-  ms_bottom_limit <- matrix(0, nrow = 4, ncol = 2)
-  ms_bottom_limit[,1] <- c(-0.1, 0.5, 1.3, 1.35)
-  ms_bottom_limit[,2] <- c(1.8, 5.6, 9.0, 10.0)
-
-  g <- g + geom_line(aes(x = ms_top_limit[,1], y = ms_top_limit[,2])) +
-           geom_line(aes(x = ms_bottom_limit[,1], y = ms_bottom_limit[,2]));
-
-  a <- seq(from = 0, to = 2, by = 0.1)
-  g <- g + geom_line(aes(x = a, y = max_M(a))) +
-           geom_line(aes(x = a, y = min_M(a)));
-
-  rg_top_limit <- matrix(0, nrow = 4, ncol = 2)
-  rg_top_limit[,1] <- c(0.8, 0.8, 2.5, 2.5)
-  rg_top_limit[,2] <- c(2.5, -1.5, -1.5, 2.5)
-  rg_bottom_limit <- matrix(0, nrow = 2, ncol = 2)
-  rg_bottom_limit[,1] <- c(0.8, 2.5)
-  rg_bottom_limit[,2] <- c(2.5, 2.5)
+  if (L5lim)
+  {
+    #ms_top_limit <- matrix(0, nrow = 5, ncol = 2)
+    #ms_top_limit[,1] <- c(-0.1, 0.8, 1.0, 1.5, 1.7)
+    #ms_top_limit[,2] <- c(-1.8, 3.4, 6.0, 8.0, 10.0 )
+    #ms_bottom_limit <- matrix(0, nrow = 4, ncol = 2)
+    #ms_bottom_limit[,1] <- c(-0.1, 0.5, 1.3, 1.35)
+    #ms_bottom_limit[,2] <- c(1.8, 5.6, 9.0, 10.0)
   
-  #g <- g + geom_path()
+    #g <- g + geom_line(aes(x = ms_top_limit[,1], y = ms_top_limit[,2])) +
+     #        geom_line(aes(x = ms_bottom_limit[,1], y = ms_bottom_limit[,2]));
+  
+    a <- seq(from = -1, to = 2.0, by = 0.01)
+    g <- g + geom_line(aes(x = a, y = max_M(a))) +
+             geom_line(aes(x = a, y = min_M(a)));
+  }
 
-  g <- g + geom_line(aes(x = rg_top_limit[,1], y = rg_top_limit[,2])) +
-           geom_line(aes(x = rg_bottom_limit[,1], y = rg_bottom_limit[,2]))
+  if (L3lim)
+  {
+    rg_top_limit <- matrix(0, nrow = 4, ncol = 2)
+    rg_top_limit[,1] <- c(0.8, 0.8, 2.5, 2.5)
+    rg_top_limit[,2] <- c(2.5, -1.5, -1.5, 2.5)
+    rg_bottom_limit <- matrix(0, nrow = 2, ncol = 2)
+    rg_bottom_limit[,1] <- c(0.8, 2.5)
+    rg_bottom_limit[,2] <- c(2.5, 2.5)
+    
+    g <- g + geom_line(aes(x = rg_top_limit[,1], y = rg_top_limit[,2])) +
+             geom_line(aes(x = rg_bottom_limit[,1], y = rg_bottom_limit[,2]))
+  }
 
 
   if(!is.null(save))
@@ -2015,338 +2171,633 @@ draw_solution_Oort <- function(solution, title = "Oort`s parameters")
   return(g)
 }
 
-draw_LinGalSpeed <- function(solution, title = "Linear galactic velocity at Solar distance")
+# draw_OortA <- function(solution, title = "Oort`s parameter A")
+# {
+#   min_x <- 0
+#   max_x <- 3.5
+#   step_x <- 0.5
+#   
+#   min_y <- 8
+#   max_y <- 18
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(min_x,max_x))+
+#     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                         values = c("green1", "green3", "green4", "darkgreen")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                       values = c("green1", "green3", "green4", "darkgreen")) +
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                        values = c(21, 22, 23, 24)) + 
+#     scale_linetype_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                           values = c(1, 2, 3, 5))  
+#   g <- g +   
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,1], colour = "Main Sequence", linetype = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,1], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,1] - solution$MS_All$s_Oort[,1], ymax = solution$MS_All$Oort[,1] + solution$MS_All$s_Oort[,1], colour = "Main Sequence"))
+# 
+#   g <- g + 
+#     geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,1], colour = "Red Giants Disk", linetype = "Red Giants Disk" ), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,1], fill = "Red Giants Disk", shape = "Red Giants Disk")) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], 
+#                       ymin = solution$RG_Disk$Oort[,1] - solution$RG_Disk$s_Oort[,1], 
+#                       ymax = solution$RG_Disk$Oort[,1] + solution$RG_Disk$s_Oort[,1], colour = "Red Giants Disk"))
+# 
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,1], colour = "Red Giants Galo", linetype = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,1], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], 
+#                       ymin = solution$RG_Galo$Oort[,1] - solution$RG_Galo$s_Oort[,1], 
+#                       ymax = solution$RG_Galo$Oort[,1] + solution$RG_Galo$s_Oort[,1], colour = "Red Giants Galo"))
+# 
+#   g <- g + 
+#     geom_line( aes(x = solution$RG_All$Parameters[,4], y = solution$RG_All$Oort[,1], colour = "Red Giants", linetype = "Red Giants"), size = 1) +
+#     geom_point( aes(x = solution$RG_All$Parameters[,4], y = solution$RG_All$Oort[,1], fill = "Red Giants", shape = "Red Giants")) + 
+#     geom_errorbar(aes(x = solution$RG_All$Parameters[,4], ymin = solution$RG_All$Oort[,1] - solution$RG_All$s_Oort[,1], ymax = solution$RG_All$Oort[,1] + solution$RG_All$s_Oort[,1], colour = "Red Giants"))
+#       
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))  
+#   
+#   
+#   return(g)
+# }
+
+draw_OMParameter <- function(solution, 
+                               parameter = 1,
+                               title = "Solar motion U", 
+                               x_lim = c(0, 4, 0.5), y_lim = c(5, 40, 5), 
+                               clr = c("blue", "green4", "brown", "black", "red"))
 {
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
   
-  min_y <- 185
-  max_y <- 245
+  names <- vector("character", 0)
+  for (i in 1:length(solution))
+  {
+    names[i] <- solution[[i]]$Name
+  }
   
   g <- ggplot() +
-    #scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=10), minor_breaks=seq(min_y,max_y,by=5), limits = c(min_y,max_y)) +
-    #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
-    #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("km/s") +ggtitle(title) +
-    #scale_colour_manual("Parameters",  breaks = colnames(solution$MS_All$Oort)[1:4],
-    #                   values = c("green", "blue", "brown", "black")) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "blue1", "brown1")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "blue1", "brown1")) +    
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                values = c(21, 22, 23)) +
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,1], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,1], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,1] - solutions$MS_All$s_Physical[,1], 
-                      ymax = solutions$MS_All$Physical[,1] + solutions$MS_All$s_Physical[,1], colour = "Main Sequence")) #+
-#    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,1], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,1], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,1] - solutions$RG_Disk$s_Physical[,1], 
-                      ymax = solutions$RG_Disk$Physical[,1] + solutions$RG_Disk$s_Physical[,1], colour = "Red Giants Disk")) #+
-#    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,1], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,1], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,1] - solutions$RG_Galo$s_Physical[,1], 
-                      ymax = solutions$RG_Galo$Physical[,1] + solutions$RG_Galo$s_Physical[,1], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
-  return(g)
-}
-
-draw_GalRotationPeriod <- function(solution, title = "Galaxy rotation period")
-{
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
-  
-  min_y <- 205
-  max_y <- 260
-  
-  g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=10), minor_breaks=seq(min_y,max_y,by=5), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("million years") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "blue1", "brown1")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "blue1", "brown1")) +    
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,2], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,2], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,2] - solutions$MS_All$s_Physical[,2], ymax = solutions$MS_All$Physical[,2] + solutions$MS_All$s_Physical[,2], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
- 
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,2], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,2], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,2] - solutions$RG_Disk$s_Physical[,2], ymax = solutions$RG_Disk$Physical[,2] + solutions$RG_Disk$s_Physical[,2], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,2], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,2], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,2] - solutions$RG_Galo$s_Physical[,2], ymax = solutions$RG_Galo$Physical[,2] + solutions$RG_Galo$s_Physical[,2], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
-  return(g)
-}
-
-
-draw_GalRotationCurveTilt <- function(solution, title = "Galaxy rotation curve inclination")
-{
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
-  
-  min_y <- -7
-  max_y <- 7
-  
-  g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+    scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
+    scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "blue1", "brown1")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "blue1", "brown1")) +    
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
+    scale_colour_manual("Parameters",  breaks = names, values = clr) +
+    scale_fill_manual("Parameters",  breaks = names, values = clr) +    
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25)) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5))  
   
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,3], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,3], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,3] - solutions$MS_All$s_Physical[,3], ymax = solutions$MS_All$Physical[,3] + solutions$MS_All$s_Physical[,3], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+  for (i in 1:length(solution))
+  {
+    
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$X[,parameter], 
+                                   colour = shQuote(solution[[i]]$Name), 
+                                   linetype = shQuote(solution[[i]]$Name)
+    ), 
+    size = 1)
+    
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$X[,parameter],
+                                   fill = shQuote(solution[[i]]$Name),
+                                   shape = shQuote(solution[[i]]$Name)
+    ))
+    
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,4],
+                                      ymin = solution[[i]]$X[,parameter] - solution[[i]]$S_X[,parameter],
+                                      ymax = solution[[i]]$X[,parameter] + solution[[i]]$S_X[,parameter],
+                                      colour = shQuote(solution[[i]]$Name)
+    ))
+  }
   
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,3], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,3], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,3] - solutions$RG_Disk$s_Physical[,3], ymax = solutions$RG_Disk$Physical[,3] + solutions$RG_Disk$s_Physical[,3], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,3], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,3], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,3] - solutions$RG_Galo$s_Physical[,3], ymax = solutions$RG_Galo$Physical[,3] + solutions$RG_Galo$s_Physical[,3], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
-  return(g)
-}
-
-draw_GalF <- function(solution, title = "Epicyclic frequency to angular velocity")
-{
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
-  
-  min_y <- 1.2
-  max_y <- 1.6
-  
-  g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=0.1), minor_breaks=seq(min_y,max_y,by=0.05), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "blue1", "brown1")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "blue1", "brown1")) +    
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,4], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,4], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,4] - solutions$MS_All$s_Physical[,4], ymax = solutions$MS_All$Physical[,4] + solutions$MS_All$s_Physical[,4], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,4], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,4], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,4] - solutions$RG_Disk$s_Physical[,4], ymax = solutions$RG_Disk$Physical[,4] + solutions$RG_Disk$s_Physical[,4], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,4], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,4], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,4] - solutions$RG_Galo$s_Physical[,4], ymax = solutions$RG_Galo$Physical[,4] + solutions$RG_Galo$s_Physical[,4], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
   
   return(g)
 }
 
-draw_GalMass <- function(solution, title = "Galaxy mass inside Solar orbit")
+draw_OortParameter <- function(solution, 
+                       parameter = 1,
+                       title = "Oort`s parameter A", 
+                       x_lim = c(0, 3.5, 0.5), y_lim = c(8, 18, 1), 
+                       clr = c("blue", "green4", "brown", "black", "red"))
 {
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
   
-  min_y <- 7e10
-  max_y <- 11e10
+  names <- vector("character", 0)
+  for (i in 1:length(solution))
+  {
+    names[i] <- solution[[i]]$Name
+  }
   
   g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=1e10), minor_breaks=seq(min_y,max_y,by=0.5e10), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("Solar mass") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "blue1", "brown1")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "blue1", "brown1")) +    
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
+    scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
+    scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
+    xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+    scale_colour_manual("Parameters",  breaks = names, values = clr) +
+    scale_fill_manual("Parameters",  breaks = names, values = clr) +    
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25)) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5))  
   
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,5], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,5], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,5] - solutions$MS_All$s_Physical[,5], ymax = solutions$MS_All$Physical[,5] + solutions$MS_All$s_Physical[,5], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,5], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,5], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,5] - solutions$RG_Disk$s_Physical[,5], ymax = solutions$RG_Disk$Physical[,5] + solutions$RG_Disk$s_Physical[,5], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,5], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,5], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,5] - solutions$RG_Galo$s_Physical[,5], ymax = solutions$RG_Galo$Physical[,5] + solutions$RG_Galo$s_Physical[,5], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
+  for (i in 1:length(solution))
+  {
+
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$Oort[,parameter], 
+                            colour = shQuote(solution[[i]]$Name), 
+                            linetype = shQuote(solution[[i]]$Name)
+                            ), 
+                 size = 1)
+    
+     g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$Oort[,parameter],
+                             fill = shQuote(solution[[i]]$Name),
+                             shape = shQuote(solution[[i]]$Name)
+                             ))
+
+     g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,4],
+                               ymin = solution[[i]]$Oort[,parameter] - solution[[i]]$s_Oort[,parameter],
+                               ymax = solution[[i]]$Oort[,parameter] + solution[[i]]$s_Oort[,parameter],
+                               colour = shQuote(solution[[i]]$Name)
+                               ))
+  }
+
+
   return(g)
 }
 
-draw_ApexL <- function(solution, title = "Solar motion apex L")
+# draw_OortC <- function(solution, title = "Oort`s parameter C")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   #min_y <- (min(res$Oort)%/%1) - 1
+#   #max_y <- (max(res$Oort)%/%1) + 1
+#   min_y <- -7
+#   max_y <- 3
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(min_x,max_x))+
+#     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("brown1", "brown3", "brown4")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("brown1", "brown3", "brown4")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23)) + 
+#     geom_line(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,3], colour = "Main Sequence"), size = 1) +
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,3] - solution$MS_All$s_Oort[,3], ymax = solution$MS_All$Oort[,3] + solution$MS_All$s_Oort[,3], colour = "Main Sequence")) +
+#     geom_point(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,3], fill = "Main Sequence", shape = "Main Sequence"))  
+#     
+#   g <- g + 
+#     geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,3], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,3], fill = "Red Giants Disk", shape = "Red Giants Disk")) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,3] - solution$RG_Disk$s_Oort[,3], ymax = solution$RG_Disk$Oort[,3] + solution$RG_Disk$s_Oort[,3], colour = "Red Giants Disk")) 
+#   
+#   g <- g + 
+#     geom_line(aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,3], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,3], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,3] - solution$RG_Galo$s_Oort[,3], ymax = solution$RG_Galo$Oort[,3] + solution$RG_Galo$s_Oort[,3], colour = "Red Giants Galo"))
+#     
+#     # geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#     # geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#     # geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+# 
+#   return(g)
+# }
+# 
+# draw_OortK <- function(solution, title = "Oort`s parameter K")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   #min_y <- (min(res$Oort)%/%1) - 1
+#   #max_y <- (max(res$Oort)%/%1) + 1
+#   min_y <- -9
+#   max_y <- 2
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(min_x,max_x))+
+#     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("brown1", "brown3", "brown4")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("brown1", "brown3", "brown4")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23)) + 
+#     geom_line(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,4], colour = "Main Sequence"), size = 1) +
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solution$MS_All$Oort[,4] - solution$MS_All$s_Oort[,4], ymax = solution$MS_All$Oort[,4] + solution$MS_All$s_Oort[,4], colour = "Main Sequence")) +
+#     geom_point(aes(x = solution$MS_All$Parameters[,4], y = solution$MS_All$Oort[,4], fill = "Main Sequence", shape = "Main Sequence"))  
+#   
+#   g <- g + 
+#     geom_line(aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,4], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solution$RG_Disk$Oort[,4], fill = "Red Giants Disk", shape = "Red Giants Disk")) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solution$RG_Disk$Oort[,4] - solution$RG_Disk$s_Oort[,4], ymax = solution$RG_Disk$Oort[,4] + solution$RG_Disk$s_Oort[,4], colour = "Red Giants Disk")) 
+#   
+#   g <- g + 
+#     geom_line(aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,4], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solution$RG_Galo$Oort[,4], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solution$RG_Galo$Oort[,4] - solution$RG_Galo$s_Oort[,4], ymax = solution$RG_Galo$Oort[,4] + solution$RG_Galo$s_Oort[,4], colour = "Red Giants Galo"))
+#   
+#   # geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   # geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   # geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   return(g)
+# }
+
+ 
+draw_Physical <- function(solution,                        
+                          parameter = 1,
+                          title = "Linear galactic velocity at Solar distance", 
+                          x_lim = c(0, 4, 0.5), y_lim = c(185, 245, 10), 
+                          clr = c("blue", "green4", "brown", "black", "red"), 
+                          x_title = "<r>, kpc", 
+                          y_title = "km/s")
 {
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
   
-  min_y <- 55
-  max_y <- 74
+  names <- vector("character", 0)
+  for (i in 1:length(solution))
+  {
+    names[i] <- solution[[i]]$Name
+  }
   
   g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("degree") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "green3", "green4")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "green3", "green4")) +
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
+    scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
+    scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
+    xlab(x_title) + ylab(y_title) +ggtitle(title) +
+    scale_colour_manual("Parameters",  breaks = names, values = clr) +
+    scale_fill_manual("Parameters",  breaks = names, values = clr) +    
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25)) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5)) 
   
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,6], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,6], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,6] - solutions$MS_All$s_Physical[,6], ymax = solutions$MS_All$Physical[,6] + solutions$MS_All$s_Physical[,6], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
   
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,6], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,6], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,6] - solutions$RG_Disk$s_Physical[,6], ymax = solutions$RG_Disk$Physical[,6] + solutions$RG_Disk$s_Physical[,6], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+  for (i in 1:length(solution))
+  {
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$Physical[,parameter], 
+                                   colour = shQuote(solution[[i]]$Name), 
+                                   linetype = shQuote(solution[[i]]$Name)), 
+                        size = 1)
+    
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$Physical[,parameter],
+                                   fill = shQuote(solution[[i]]$Name),
+                                   shape = shQuote(solution[[i]]$Name)))
+    
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,4],
+                                      ymin = solution[[i]]$Physical[,parameter] - solution[[i]]$s_Physical[,parameter],
+                                      ymax = solution[[i]]$Physical[,parameter] + solution[[i]]$s_Physical[,parameter],
+                                      colour = shQuote(solution[[i]]$Name)))
+
+  #  g <- g + geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+  }
   
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,6], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,6], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,6] - solutions$RG_Galo$s_Physical[,6], ymax = solutions$RG_Galo$Physical[,6] + solutions$RG_Galo$s_Physical[,6], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
+
   return(g)
 }
 
-draw_ApexB <- function(solution, title = "Solar motion apex B")
-{
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
-  
-  min_y <- 11
-  max_y <- 23
-  
-  g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("degree") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "green3", "green4")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "green3", "green4")) +
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,7], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,7], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,7] - solutions$MS_All$s_Physical[,7], ymax = solutions$MS_All$Physical[,7] + solutions$MS_All$s_Physical[,7], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,7], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,7], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,7] - solutions$RG_Disk$s_Physical[,7], ymax = solutions$RG_Disk$Physical[,7] + solutions$RG_Disk$s_Physical[,7], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,7], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,7], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,7] - solutions$RG_Galo$s_Physical[,7], ymax = solutions$RG_Galo$Physical[,7] + solutions$RG_Galo$s_Physical[,7], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
-  return(g)
-}
+# 
+# draw_LinGalSpeed <- function(solution, title = "Linear galactic velocity at Solar distance")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 185
+#   max_y <- 245
+#   
+#   g <- ggplot() +
+# 
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=10), minor_breaks=seq(min_y,max_y,by=5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("km/s") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "blue1", "brown1")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "blue1", "brown1")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                 values = c(21, 22, 23)) +
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,1], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,1], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,1] - solutions$MS_All$s_Physical[,1], 
+#                       ymax = solutions$MS_All$Physical[,1] + solutions$MS_All$s_Physical[,1], colour = "Main Sequence")) #+
+# #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,1], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,1], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,1] - solutions$RG_Disk$s_Physical[,1], 
+#                       ymax = solutions$RG_Disk$Physical[,1] + solutions$RG_Disk$s_Physical[,1], colour = "Red Giants Disk")) #+
+# #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,1], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,1], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,1] - solutions$RG_Galo$s_Physical[,1], 
+#                       ymax = solutions$RG_Galo$Physical[,1] + solutions$RG_Galo$s_Physical[,1], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
 
-draw_SolarV <- function(solution, title = "Solar motion")
-{
-  min_x <- 0
-  max_x <- 4
-  step_x <- 0.5
-  
-  min_y <- 10
-  max_y <- 100
-  
-  g <- ggplot() +
-    scale_y_continuous(breaks=seq(min_y,max_y,by=10), minor_breaks=seq(min_y,max_y,by=5), limits = c(min_y,max_y)) +
-    scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
-    xlab("<r>, kpc") + ylab("km/s") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                        values = c("green1", "green3", "green4")) +
-    scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                      values = c("green1", "green3", "green4")) +
-    scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
-                       values = c(21, 22, 23))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,8], colour = "Main Sequence"), size = 1) +
-    geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,8], fill = "Main Sequence", shape = "Main Sequence")) + 
-    geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,8] - solutions$MS_All$s_Physical[,8], ymax = solutions$MS_All$Physical[,8] + solutions$MS_All$s_Physical[,8], colour = "Main Sequence")) #+
-  #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,8], colour = "Red Giants Disk"), size = 1) +
-    geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,8], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
-    geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,8] - solutions$RG_Disk$s_Physical[,8], ymax = solutions$RG_Disk$Physical[,8] + solutions$RG_Disk$s_Physical[,8], colour = "Red Giants Disk")) #+
-  #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
-  
-  g <- g + 
-    geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,8], colour = "Red Giants Galo"), size = 1) +
-    geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,8], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
-    geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,8] - solutions$RG_Galo$s_Physical[,8], ymax = solutions$RG_Galo$Physical[,8] + solutions$RG_Galo$s_Physical[,8], colour = "Red Giants Galo")) #+
-  #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
-  
-  return(g)
-}
+#"Galaxy rotation period"
+# (205, 260, 10)
+#"million years"
+# 
+# draw_GalRotationPeriod <- function(solution, title = "Galaxy rotation period")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 205
+#   max_y <- 260
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=10), minor_breaks=seq(min_y,max_y,by=5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("million years") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "blue1", "brown1")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "blue1", "brown1")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,2], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,2], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,2] - solutions$MS_All$s_Physical[,2], ymax = solutions$MS_All$Physical[,2] + solutions$MS_All$s_Physical[,2], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#  
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,2], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,2], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,2] - solutions$RG_Disk$s_Physical[,2], ymax = solutions$RG_Disk$Physical[,2] + solutions$RG_Disk$s_Physical[,2], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,2], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,2], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,2] - solutions$RG_Galo$s_Physical[,2], ymax = solutions$RG_Galo$Physical[,2] + solutions$RG_Galo$s_Physical[,2], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
+# 
+# #parameter = 3,
+# #title = paste("Galaxy rotation curve inclination", src, " proper motions."),
+# #y_lim = c(-7, 7, 1),
+# #y_title = "km/s/kpc")
+# draw_GalRotationCurveTilt <- function(solution, title = "Galaxy rotation curve inclination")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- -7
+#   max_y <- 7
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "blue1", "brown1")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "blue1", "brown1")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,3], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,3], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,3] - solutions$MS_All$s_Physical[,3], ymax = solutions$MS_All$Physical[,3] + solutions$MS_All$s_Physical[,3], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,3], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,3], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,3] - solutions$RG_Disk$s_Physical[,3], ymax = solutions$RG_Disk$Physical[,3] + solutions$RG_Disk$s_Physical[,3], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,3], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,3], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,3] - solutions$RG_Galo$s_Physical[,3], ymax = solutions$RG_Galo$Physical[,3] + solutions$RG_Galo$s_Physical[,3], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
+# 
+# 
+# draw_GalF <- function(solution, title = "Epicyclic frequency to angular velocity")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 1.2
+#   max_y <- 1.6
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=0.1), minor_breaks=seq(min_y,max_y,by=0.05), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "blue1", "brown1")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "blue1", "brown1")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,4], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,4], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,4] - solutions$MS_All$s_Physical[,4], ymax = solutions$MS_All$Physical[,4] + solutions$MS_All$s_Physical[,4], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,4], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,4], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,4] - solutions$RG_Disk$s_Physical[,4], ymax = solutions$RG_Disk$Physical[,4] + solutions$RG_Disk$s_Physical[,4], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,4], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,4], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,4] - solutions$RG_Galo$s_Physical[,4], ymax = solutions$RG_Galo$Physical[,4] + solutions$RG_Galo$s_Physical[,4], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
+# 
+# 
+# draw_GalMass <- function(solution, title = "Galaxy mass inside Solar orbit")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 6.5e10
+#   max_y <- 11e10
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1e10), minor_breaks=seq(min_y,max_y,by=0.5e10), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("Solar mass") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "blue1", "brown1")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "blue1", "brown1")) +    
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,5], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,5], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,5] - solutions$MS_All$s_Physical[,5], ymax = solutions$MS_All$Physical[,5] + solutions$MS_All$s_Physical[,5], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,5], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,5], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,5] - solutions$RG_Disk$s_Physical[,5], ymax = solutions$RG_Disk$Physical[,5] + solutions$RG_Disk$s_Physical[,5], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,5], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,5], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,5] - solutions$RG_Galo$s_Physical[,5], ymax = solutions$RG_Galo$Physical[,5] + solutions$RG_Galo$s_Physical[,5], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
+# 
+# 
+# draw_ApexL <- function(solution, title = "Solar motion apex L")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 55
+#   max_y <- 74
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("degree") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "green3", "green4")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "green3", "green4")) +
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,6], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,6], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,6] - solutions$MS_All$s_Physical[,6], ymax = solutions$MS_All$Physical[,6] + solutions$MS_All$s_Physical[,6], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,6], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,6], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,6] - solutions$RG_Disk$s_Physical[,6], ymax = solutions$RG_Disk$Physical[,6] + solutions$RG_Disk$s_Physical[,6], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,6], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,6], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,6] - solutions$RG_Galo$s_Physical[,6], ymax = solutions$RG_Galo$Physical[,6] + solutions$RG_Galo$s_Physical[,6], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
+# 
+# draw_ApexB <- function(solution, title = "Solar motion apex B")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 11
+#   max_y <- 23
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=1), minor_breaks=seq(min_y,max_y,by=0.5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("degree") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                         values = c("green1", "green3", "green4")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                       values = c("green1", "green3", "green4")) +
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo"),
+#                        values = c(21, 22, 23))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,7], colour = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,7], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,7] - solutions$MS_All$s_Physical[,7], ymax = solutions$MS_All$Physical[,7] + solutions$MS_All$s_Physical[,7], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,7], colour = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,7], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,7] - solutions$RG_Disk$s_Physical[,7], ymax = solutions$RG_Disk$Physical[,7] + solutions$RG_Disk$s_Physical[,7], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,7], colour = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,7], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,7] - solutions$RG_Galo$s_Physical[,7], ymax = solutions$RG_Galo$Physical[,7] + solutions$RG_Galo$s_Physical[,7], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   return(g)
+# }
+# 
+# draw_SolarV <- function(solution, title = "Solar motion")
+# {
+#   min_x <- 0
+#   max_x <- 4
+#   step_x <- 0.5
+#   
+#   min_y <- 10
+#   max_y <- 100
+#   
+#   g <- ggplot() +
+#     scale_y_continuous(breaks=seq(min_y,max_y,by=10), minor_breaks=seq(min_y,max_y,by=5), limits = c(min_y,max_y)) +
+#     scale_x_continuous(breaks=seq(min_x,max_x,by=step_x), minor_breaks=seq(min_x,max_x,by=step_x/2), limits = c(0,3.5))+
+#     xlab("<r>, kpc") + ylab("km/s") +ggtitle(title) +
+#     scale_colour_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                         values = c("green1", "green3", "green4", "darkgreen")) +
+#     scale_fill_manual("Parameters",  breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                       values = c("green1", "green3", "green4", "darkgreen")) +
+#     scale_shape_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                        values = c(21, 22, 23, 24)) + 
+#     scale_linetype_manual("Parameters", breaks = c("Main Sequence", "Red Giants Disk", "Red Giants Galo", "Red Giants"),
+#                         values = c(1, 2, 3, 5))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,8], colour = "Main Sequence", linetype = "Main Sequence"), size = 1) +
+#     geom_point( aes(x = solution$MS_All$Parameters[,4], y = solutions$MS_All$Physical[,8], fill = "Main Sequence", shape = "Main Sequence")) + 
+#     geom_errorbar(aes(x = solution$MS_All$Parameters[,4], ymin = solutions$MS_All$Physical[,8] - solutions$MS_All$s_Physical[,8], ymax = solutions$MS_All$Physical[,8] + solutions$MS_All$s_Physical[,8], colour = "Main Sequence")) #+
+#   #    geom_point(aes(x = solution$MS_All$Parameters[,4], y = rep(0,nrow(solution$MS_All$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,8], colour = "Red Giants Disk", linetype = "Red Giants Disk"), size = 1) +
+#     geom_point( aes(x = solution$RG_Disk$Parameters[,4], y = solutions$RG_Disk$Physical[,8], fill = "Red Giants Disk", shape = "Red Giants Disk" )) + 
+#     geom_errorbar(aes(x = solution$RG_Disk$Parameters[,4], ymin = solutions$RG_Disk$Physical[,8] - solutions$RG_Disk$s_Physical[,8], ymax = solutions$RG_Disk$Physical[,8] + solutions$RG_Disk$s_Physical[,8], colour = "Red Giants Disk")) #+
+#   #    geom_point(aes(x = solution$RG_Disk$Parameters[,4], y = rep(0,nrow(solution$RG_Disk$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,8], colour = "Red Giants Galo", linetype = "Red Giants Galo"), size = 1) +
+#     geom_point( aes(x = solution$RG_Galo$Parameters[,4], y = solutions$RG_Galo$Physical[,8], fill = "Red Giants Galo", shape = "Red Giants Galo")) + 
+#     geom_errorbar(aes(x = solution$RG_Galo$Parameters[,4], ymin = solutions$RG_Galo$Physical[,8] - solutions$RG_Galo$s_Physical[,8], ymax = solutions$RG_Galo$Physical[,8] + solutions$RG_Galo$s_Physical[,8], colour = "Red Giants Galo")) #+
+#   #    geom_point(aes(x = solution$RG_Galo$Parameters[,4], y = rep(0,nrow(solution$RG_Galo$Parameters))))
+#   
+#   g <- g + 
+#     geom_line(  aes(x = solution$RG_All$Parameters[,4], y = solutions$RG_All$Physical[,8], colour = "Red Giants", linetype = "Red Giants"), size = 1) +
+#     geom_point( aes(x = solution$RG_All$Parameters[,4], y = solutions$RG_All$Physical[,8], fill = "Red Giants", shape = "Red Giants")) + 
+#     geom_errorbar(aes(x = solution$RG_All$Parameters[,4], ymin = solutions$RG_All$Physical[,8] - solutions$RG_All$s_Physical[,8], ymax = solutions$RG_All$Physical[,8] + solutions$RG_All$s_Physical[,8], colour = "Red Giants")) #+
+#   #    geom_point(aes(x = solution$RG_All$Parameters[,4], y = rep(0,nrow(solution$RG_All$Parameters))))
+#   
+#   return(g)
+# }
