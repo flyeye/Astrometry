@@ -188,14 +188,28 @@ GetOM_B <- function( l, b, r, type = 0)
 }
 
 #-----------------------------------------------------------------
+GetOM_Gx <- function( l, b, r)
+{
+  return(-sin(abs(b)) * sin(l))
+}
+
+GetOM_Gy <- function( l, b, r)
+{
+  return(-sin(abs(b)) * cos(l))
+}
+
+#-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
 # model - кинематическая модель, 
 #   1 - Огородникова Милна, 
+#       type - модификация модели ОМ
+#          0 - классический вариант с М11 и М33
+#          1 - модифицированная модель Огородникова-Милна, где M11 и М33 заменены на K и С
 #   2 - Оорта-Линдблада, 
 #   3 - Эри-Ковальского, 
-#   4 - модифицированная Огородникова-Милна, где M11 и М33 заменены на K и С
-MakeOMCoef <- function(stars, use_vr = TRUE, model = 1, type = 0)
+#   4 - модифицированная модель Огородникова-Милна, вводятся Gx и Gy 
+MakeOMCoef <- function(stars, use_vr = TRUE, use_mu_b = TRUE, use_mu_l = TRUE, model = 1, type = 0)
 {
   n <- nrow(stars)
 
@@ -241,7 +255,7 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, m
 {
   #  calculate equation of conditions
   # l, b, px, mu_l, mu_b, vr
-  a <- MakeOMCoef(stars, use_vr, model, type)
+  a <- MakeOMCoef(stars, use_vr = use_vr, model = model, type = type)
 
   n <- nrow(stars)
 
