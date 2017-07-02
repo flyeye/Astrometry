@@ -103,9 +103,9 @@ CalcGalXYZ <- function(data)
 # -------------------------------------------------------------------------------
 #                 Вычисление коэффициентов уравнений модели ОМ
 # -------------------------------------------------------------------------------
-# l, b - degrees, r - parsec
+# l, b - degrees, r - kiloparsec
 # mu_l, mu_b - "/year
-# k = 4.74 "km/sec*parsec"
+# k = 4.74 "km/sec*kiloparsec"
 GetOM_R <- function ( l, b, r, type = 0)
 {
   #l <- l_d*pi/180
@@ -188,33 +188,64 @@ GetOM_B <- function( l, b, r, type = 0)
 }
 
 #-----------------------------------------------------------------
+GetOM_B_Gx <- function( l, b, r)
+{
+  return(-sin(abs(b)) * sin(l))
+}
+
+GetOM_B_Gy <- function( l, b, r)
+{
+  return(-sin(abs(b)) * cos(l))
+}
+
+#-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
 # model - кинематическая модель, 
 #   1 - Огородникова Милна, 
+#       type - модификация модели ОМ
+#          0 - классический вариант с М11 и М33
+#          1 - модифицированная модель Огородникова-Милна, где M11 и М33 заменены на K и С
 #   2 - Оорта-Линдблада, 
 #   3 - Эри-Ковальского, 
-#   4 - модифицированная Огородникова-Милна, где M11 и М33 заменены на K и С
-MakeOMCoef <- function(stars, use_vr = TRUE, model = 1, type = 0)
+#   4 - модифицированная модель Огородникова-Милна, вводятся Gx и Gy 
+MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
 {
   n <- nrow(stars)
 
-  if (use_vr == TRUE)
-    a0 <- matrix(0, n*3, 12)
-  else
-    a0 <- matrix(0, n*2, 12)
-
+  a1 <- matrix(0, nrow = nrow(stars), ncol = 12)
+  a2 <- matrix(0, nrow = nrow(stars), ncol = 12)
+  a3 <- matrix(0, nrow = nrow(stars), ncol = 12)
+  
   for (i in 1:n)
   {
-    a0[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3], type)
-    a0[(n+i),] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3], type)
-    if (use_vr == TRUE)
-      a0[(2*n+i),] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3], type)
+    #a0[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3], type)
+    if (use[1] == TRUE)
+      #a0 <- rbind(a0, matrix( data = GetOM_L(stars[i,1], stars[i,2], stars[i,3], type), nrow = 1))
+      a1[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3], type)
+    
+    #a0[(n+i),] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3], type)
+    if (use[2] == TRUE)
+      #a1 <- rbind(a1, matrix( data = GetOM_B(stars[i,1], stars[i,2], stars[i,3], type), nrow = 1))
+      a2[i,] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3], type)
+    
+    if (use[3] == TRUE)
+      #a0[(2*n+i),] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3], type)
+      #a2 <- rbind(a2, matrix( data = GetOM_R(stars[i,1], stars[i,2], stars[i,3], type), nrow = 1))
+      a3[i,] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3], type)
   }
 
+  a0 <- matrix(0, nrow = 0, ncol = 12)
+  if(use[1]==TRUE)
+    a0 <- rbind(a0, a1)
+  if(use[2]==TRUE)
+    a0 <- rbind(a0, a2)
+  if(use[3]==TRUE)
+    a0 <- rbind(a0, a3)
+  
   if (model == 1)  #полная модель Огородникова-Милна
   {
-    if(use_vr == FALSE)
+    if(use[3] == FALSE)
       a0 <- a0[,-12]
   }  else if (model == 2)  # Модель плоского вращения Оорта-Линдблада
   {
@@ -241,7 +272,7 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, m
 {
   #  calculate equation of conditions
   # l, b, px, mu_l, mu_b, vr
-  a <- MakeOMCoef(stars, use_vr, model, type)
+  a <- MakeOMCoef(stars, use = c(TRUE, TRUE, use_vr), model = model, type = type)
 
   n <- nrow(stars)
 
