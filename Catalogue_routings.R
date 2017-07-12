@@ -752,8 +752,6 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
 
     par[i,3] <- nrow(stars)
     par[i,6] <- mean(stars[,3])
-    cat("Mean model distance:", par[i,6], "\n")
-    cat("Stars dataframe:", nrow(stars), "\n")
     par[i,5] <- mean(tgas_sample$parallax_error)
     cat("Solution calculation...", "\n")
     
@@ -1332,15 +1330,17 @@ tgas_draw_all_OM_sol <- function(sol1, sol2, sol1_name, sol2_name, saveto = "")
     ggsave(paste0(saveto, "OM_", cname, "_", sol1_name, "-", sol2_name,  ".png"), plot = g, width = 5, height = 5)
     ggsave(paste0(saveto, "OM_", cname, "_", sol1_name, "-", sol2_name,  ".eps"), plot = g, width = 5, height = 5)
   }
-  
+
 }
   
+
 
 # tgas_draw_all_OM_sol_comp(list(solutions_mw$MS_All, solutions_mw_px$MS_All, solutions_Exp1$MS_All, solutions_Exp2$MS_All), 
 # ylims  = matrix(data = c(5, 15, 10, 25, 0, 15, -5, 5, -5, 5, -15, -10, -5, 5, -3, 7 , 10, 20, -7, 3, -8, 2), nrow = 2))
 
 # tgas_draw_all_OM_sol_comp(list(solutions_mw$RG_All, solutions_mw_px$RG_All, solutions_Exp1$RG_All, solutions_Exp2$RG_All), 
 # ylims  = matrix(data = c(5, 35, 15, 55, 0, 25, -3, 7, -5, 5, -20, -10, -5, 5, -8, 2 , 7, 20, -7, 3, -10, 5), nrow = 2))
+
 tgas_draw_all_OM_sol_comp <- function(solutions, ylims, saveto = "")
 {
   
@@ -1412,8 +1412,10 @@ tgas_calc_all_weighted <- function(solutions)
   return(solutions)
 }
 
-tgas_make_all_solutions_dist <- function()
+
+tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
 {
+
   tgas_make_all_solutions(dist_type = "TGAS_PX", filter_dist = "TGAS_PX")
   tgas_make_all_solutions(dist_type = "rMoMW", filter_dist = "TGAS_PX")
   tgas_make_all_solutions(dist_type = "rMoExp1", filter_dist = "TGAS_PX")

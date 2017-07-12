@@ -188,10 +188,12 @@ GetOM_B <- function( l, b, r, type = 0)
 }
 
 #-----------------------------------------------------------------
+
 GetOM_B_Gx <- function( l, b, r)
 {
   return(-sin(abs(b)) * sin(l))
 }
+
 
 GetOM_B_Gy <- function( l, b, r)
 {
@@ -209,6 +211,7 @@ GetOM_B_Gy <- function( l, b, r)
 #   2 - Оорта-Линдблада, 
 #   3 - Эри-Ковальского, 
 #   4 - модифицированная модель Огородникова-Милна, вводятся Gx и Gy 
+
 MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
 {
   n <- nrow(stars)
