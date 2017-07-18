@@ -654,7 +654,7 @@ tgas_calc_gpm <- function(tgas_)
 
 
 
-tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, type = 0, dist_type = "TGAS_PX", ...)
+tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, type = 0, model = 1, dist_type = "TGAS_PX", use = c(TRUE, TRUE, FALSE),...)
 {
   if (!is.null(distance))
     q <- nrow(distance)
@@ -731,31 +731,39 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     #tgas_sample$M <- (tgas_sample$apasm_v + 5 - 5*log10(tgas_sample$R))
     cat("Stars after distance re-calc:", nrow(tgas_sample),"\n")
     
-    sample_ <<- tgas_sample
+    #sample_ <<- tgas_sample
 
     if(!is.null(save))
     {
       cat("Saving...", "\n")
       s <- paste0(save, "_", src_, "_", par[i,1], "-",par[i,2])
       #write_csv(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v), paste0(s, "_sample.csv"), col_names = TRUE)
-      x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
-      write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
+      #x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
+      #write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
+      
       hrd <- HRDiagram(tgas_sample, save = s, photometric = "none")
-      DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = ds)
-      DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = ds)
-      DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
+      #DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = ds)
+      #DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = ds)
+      #DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
     }
 
     cat("Equation of conditions forming...", "\n")
     stars <- tgas_get_stars(tgas_sample, src_)
-    stars_ <<- stars;
+    stars <<- stars;
 
     par[i,3] <- nrow(stars)
     par[i,6] <- mean(stars[,3])
     par[i,5] <- mean(tgas_sample$parallax_error)
     cat("Solution calculation...", "\n")
     
-    res_tgas <- Calc_OM_Model(stars, use_vr = FALSE, mode = 2, scaling = 0, ef = 11, type = type)
+    res_tgas <- Calc_OM_Model(stars, use = use, mode = 2, model = model, type = type)
+    res <<- res_tgas
+    
+    if ((i == 1) & (ncol(res) != length(res_tgas$X)))
+    {
+      res <- matrix(0, q, length(res_tgas$X))
+      err <- matrix(0, q, length(res_tgas$X))
+    }
     
     res[i, ] <- res_tgas$X
     err[i, ] <- res_tgas$s_X
@@ -779,7 +787,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   return(res)
 }
 
-tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", type = 0, dist_type = "TGAS_PX", filter_dist = "TGAS_PX", saveto = "")
+tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", type = 0, model = 1, use = c(TRUE, TRUE, FALSE), dist_type = "TGAS_PX", filter_dist = "TGAS_PX", saveto = "")
 {
 
   #APASS photometry
@@ -789,6 +797,9 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
   conditions$Src <- src;
   conditions$Dist_Type <- dist_type;
   conditions$Filter_Dist <- filter_dist;
+  conditions$use <- use;
+  conditions$KinModel <- model
+  conditions$KinModelType <- type
   
   conditions$Population <- population;
   if (population == "DISK")
@@ -953,10 +964,19 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
   cat("Population = ", conditions$Population , "\n", file=con)
   cat("Distance type = ", conditions$Dist_Type, "\n", file=con)
   cat("Filtering Distance type = ", conditions$Filter_Dist, "\n", file=con)
+  cat("used equations (mu_l, mu_b, v_r) = ", conditions$use, "\n", file=con)
+  cat("Kinematic model = ", conditions$KinModel, "\n", file=con)
+  cat("Kinematic model type = ", conditions$KinModelType, "\n", file=con)
   
   close(con)
 
-  solution  <- tgas_calc_OM_seq(tgas_, src_ = src, start = start, step = step, q = q, z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG, px_type = "DIST", distance = distance_, save = conditions$SaveTo, type = type, dist_type = dist_type)
+  solution  <- tgas_calc_OM_seq(tgas_, src_ = src, 
+                                start = start, step = step, q = q, 
+                                z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG, 
+                                px_type = "DIST", distance = distance_, 
+                                save = conditions$SaveTo, 
+                                type = conditions$KinModelType, model = conditions$KinModel, 
+                                dist_type = dist_type, use = conditions$use)
   
   solution$Conditions <- conditions
 
@@ -1157,14 +1177,19 @@ tgas_export_physical_latex <- function(res)
   }
 }
 
+tgas_export_solution <- function(solution_)
+{
+  tgas_export_solution_xls(solution_)
+  tgas_export_solution_txt(solution_)
+  tgas_export_solution_latex(solution_)
+  tgas_export_physical_latex(solution_)
+}
+
 tgas_export_all_solution <- function(solutions)
 {
   for(i in 1:length(solutions))
   {
-    tgas_export_solution_xls(solutions[[i]])
-    tgas_export_solution_txt(solutions[[i]])
-    tgas_export_solution_latex(solutions[[i]])
-    tgas_export_physical_latex(solutions[[i]])
+    tgas_export_solution(solutions[[i]])
   }
 
 }
@@ -1398,22 +1423,41 @@ tgas_calc_weighted_mean <- function(X, sX)
 }
 
 
+tgas_calc_solution_weighted <- function(solution_)
+{
+  wr <- tgas_calc_weighted_mean(solution_$X, solution_$S_X)
+  solution_$wX <- wr$wX
+  solution_$s_wX <- wr$s_wX
+  wr <- tgas_calc_weighted_mean(solution_$Physical, solution_$s_Physical)
+  solution_$wPhysical <- wr$wX
+  solution_$s_wPhysical <- wr$s_wX
+  return(solution_)
+}
+
+
 tgas_calc_all_weighted <- function(solutions)
 {
   for(i in 1:length(solutions))
   {
-    wr <- tgas_calc_weighted_mean(solutions[[i]]$X, solutions[[i]]$S_X)
-    solutions[[i]]$wX <- wr$wX
-    solutions[[i]]$s_wX <- wr$s_wX
-    wr <- tgas_calc_weighted_mean(solutions[[i]]$Physical, solutions[[i]]$s_Physical)
-    solutions[[i]]$wPhysical <- wr$wX
-    solutions[[i]]$s_wPhysical <- wr$s_wX
+    solutions[[i]] <- tgas_calc_solution_weighted(solutions[[i]]) 
+    
+    # wr <- tgas_calc_weighted_mean(solutions[[i]]$X, solutions[[i]]$S_X)
+    # solutions[[i]]$wX <- wr$wX
+    # solutions[[i]]$s_wX <- wr$s_wX
+    # wr <- tgas_calc_weighted_mean(solutions[[i]]$Physical, solutions[[i]]$s_Physical)
+    # solutions[[i]]$wPhysical <- wr$wX
+    # solutions[[i]]$s_wPhysical <- wr$s_wX
   }
   return(solutions)
 }
 
+tgas_process_solution <- function(solution_)
+{
+  solution_ <- calc_physical_params(solution_) 
+  solution_ <- tgas_calc_solution_weighted(solution_)
+}
 
-tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
+tgas_make_all_solutions_dist <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
 {
 
   tgas_make_all_solutions(dist_type = "TGAS_PX", filter_dist = "TGAS_PX")
@@ -1426,6 +1470,8 @@ tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_P
   tgas_make_all_solutions(dist_type = "rMoExp1", filter_dist = "rMoMW")
   tgas_make_all_solutions(dist_type = "rMoExp2", filter_dist = "rMoMW")
 }
+
+
 
 tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
 {
@@ -1441,11 +1487,11 @@ tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_P
   solutions <- list();
   
   cat("Red Giants processing", "\n")
-  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", type = 1, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = saveto_)
+  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", type = 1, model = 0, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = saveto_)
   solutions$RG_All$Name <- "Red Giants"
   
   cat("Main Sequence processing", "\n")
-  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK", type = 1, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = saveto_)
+  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK", type = 1, model = 0, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = saveto_)
   solutions$MS_All$Name <- "Main Sequence"
   
   # cat("Red Giants Disk processing", "\n")

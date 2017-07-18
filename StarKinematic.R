@@ -128,6 +128,88 @@ GetOM_R <- function ( l, b, r, type = 0)
 
   return(result);
 }
+
+OM_U_R <- function ( l, b, r)         # U
+{
+  return( -cos(l)*cos(b)/r );
+}
+
+OM_V_R <- function ( l, b, r)         # V
+{
+  return( -sin(l)*cos(b)/r );
+}
+
+OM_W_R <- function ( l, b, r)         # W
+{
+  return( -sin(b)/r);
+}
+
+OM_w1_R <- function ( l, b, r)         # w1
+{
+  return( 0 );
+}
+
+OM_w2_R <- function ( l, b, r)         # w2
+{
+  return( 0 );
+}
+
+OL_B_R <- function ( l, b, r)               # B
+{
+  return( OM_w3_R(l, b, r));
+}
+
+OM_w3_R <- function ( l, b, r)         # w3
+{
+  return( 0 );
+}
+
+OM_M13_R <- function ( l, b, r)
+{
+  return( sin(2*b)*cos(l) );                    #M13
+}
+ 
+OM_M23_R <- function ( l, b, r)
+{
+  return( sin(2*b)*sin(l) );                    #M23
+}
+
+OL_A_R <- function ( l, b, r)               # A
+{
+  return( OM_M12_R(l, b, r));
+}
+
+OM_M12_R <- function ( l, b, r)
+{
+  return( cos(b)*cos(b)*sin(2*l) );             #M12 = A
+}
+
+OM_M11s_R <- function ( l, b, r)
+{
+  return( cos(b)*cos(b)*cos(l)*cos(l) );       #M11* = M11-M22
+}
+
+OM_M33s_R <- function ( l, b, r)
+{
+  return( sin(b)*sin(b) );                     #M33* = M33-M22
+}
+
+OM_M22_R <- function ( l, b, r)
+{
+  return( 1 );                                 #M22
+}
+
+
+OL_C_R <- function ( l, b, r)
+{
+  return( 0 );                                 # C, не реализовано
+}
+
+OL_K_R <- function ( l, b, r)
+{
+  return( 0 );                                 # K, не реализовано
+}
+
 #-----------------------------------------------------------------
 GetOM_L <- function( l, b, r, type = 0)
 {
@@ -156,6 +238,87 @@ GetOM_L <- function( l, b, r, type = 0)
 
   return(result);
 }
+
+OM_U_L <- function( l, b, r)
+{
+  return( sin(l)/r);        # U
+}  
+  
+OM_V_L <- function( l, b, r)
+{
+  return( -cos(l)/r );       # V
+}
+
+OM_W_L <- function( l, b, r)
+{
+  return( 0 );                       # W
+}
+
+OM_w1_L <- function( l, b, r)
+{
+  return( -sin(b)*cos(l) );          # W1
+}
+
+OM_w2_L <- function( l, b, r)
+{
+  return( -sin(b)*sin(l) );          # W2
+}
+
+OL_B_L <- function( l, b, r)
+{
+  return(OM_w3_L(l, b, r))
+}
+
+OM_w3_L <- function( l, b, r)
+{
+  return( cos(b) );                  # W3 = B
+}
+
+OM_M13_L <- function( l, b, r)
+{
+  return( -sin(b)*sin(l) );          # M13
+}
+
+OM_M23_L <- function( l, b, r)
+{
+  return( sin(b)*cos(l) );           # M23
+}
+
+OL_A_L <- function(l, b, r)
+{
+  return(OM_M12_L(l, b, r))
+}
+
+OM_M12_L <- function( l, b, r)
+{
+  return( cos(b)*cos(2*l) );         # M12 = A
+}
+
+OM_M11s_L <- function( l, b, r)
+{
+  return( -0.5*cos(b)*sin(2*l));   # M11* = M11-M22
+}
+
+OL_C_L <- function( l, b, r)
+{
+  return( -cos(b)*sin(2*l));   # C
+}
+
+OL_K_L <- function( l, b, r)
+{
+  return(0);   # K, не определяется
+}
+ 
+OM_M33s_L <- function( l, b, r)
+{
+  return(0);                      # M33* = M33-M22, не определяется 
+}
+
+OM_M22_L <- function( l, b, r)
+{
+  return(0);                      # M22, не определяется
+}
+
 #-----------------------------------------------------------------
 GetOM_B <- function( l, b, r, type = 0)
 {
@@ -187,32 +350,413 @@ GetOM_B <- function( l, b, r, type = 0)
   return(result);
 }
 
+OM_U_B <- function( l, b, r)
+{
+  return( cos(l)*sin(b)/r );             # U
+}
+
+OM_V_B <- function( l, b, r)
+{
+  return( sin(l)*sin(b)/r );             # V
+}
+
+OM_W_B <- function( l, b, r)
+{
+  return( -cos(b)/r );                   # W
+}
+  
+OM_w1_B <- function( l, b, r)
+{
+  return( sin(l) );                      # W1
+}
+
+OM_w2_B <- function( l, b, r)
+{
+  return( -cos(l) );                     # W2
+}
+  
+OL_B_B <- function(l, b, r)
+{
+  return(OM_w3_B(l, b, r))
+}
+
+OM_w3_B <- function( l, b, r)
+{
+  return( 0 );                           # W3 = B
+}
+  
+OM_M13_B <- function( l, b, r)
+{
+  return( cos(2*b)*cos(l) );             # M13
+}
+
+OM_M23_B <- function( l, b, r)
+{
+  return( cos(2*b)*sin(l) );             # M23
+}
+
+OL_A_B <- function (l, b, r)
+{
+  return( OM_M12_B(l, b, r))
+}
+
+OM_M12_B <- function( l, b, r)
+{
+  return( -0.5*sin(2*b)*sin(2*l) );      # M12 = A
+}
+
+OM_M11s_B <- function( l, b, r)
+{
+  return( -0.5*sin(2*b)*cos(l)*cos(l) ); # M11* = M11-M22
+}
+
+OM_M33s_B <- function( l, b, r)
+{
+  return( 0.5*sin(2*b) );               # M33* = M33-M22
+}
+  
+OL_C_B <- function( l, b, r)
+{
+  return( -0.5*sin(2*b)*cos(2*l) );     # C
+}
+  
+OL_K_B <- function( l, b, r)
+{
+  return( -0.5*sin(2*b) );               # K
+}
+
+OM_M22_B <- function( l, b, r)
+{
+  return( 0 );                          # M22, не определяется
+}
+  
+
 #-----------------------------------------------------------------
 
-GetOM_B_Gx <- function( l, b, r)
+OL_Gx_L <- function( l, b, r)
 {
   return(-sin(abs(b)) * sin(l))
 }
 
 
-GetOM_B_Gy <- function( l, b, r)
+OL_Gy_L <- function( l, b, r)
 {
   return(-sin(abs(b)) * cos(l))
+}
+
+OL_Gx_B <- function( l, b, r)  # not implemented
+{
+  return(0)
+}
+
+
+OL_Gy_B <- function( l, b, r)  # not implemented
+{
+  return(0)
+}
+
+OL_Gx_R <- function( l, b, r)  # not implemented
+{
+  return(0)
+}
+
+
+OL_Gy_R <- function( l, b, r)  # not implemented
+{
+  return(0)
+}
+
+
+#-----------------------------------------------------------------
+# stars - matrix(n,3), where 
+# stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
+# model - кинематическая модель, 
+#   1 - Огородникова-Милна, 
+#       type - модификация модели ОМ
+#          0 - классический вариант с М11 и М33
+#          1 - модифицированная модель Огородникова-Милна, где M11 и М33 заменены на K и С
+#   2 - Оорта-Линдблада, 
+#          0 - классический вариант с A и B
+#          1 - расширенный вариант с С и К
+#          2 - расширенный вариант с С, К, Gx и  Gy
+#   3 - Эри-Ковальского, 
+# use - массив флагов используемых скоростей
+#   1 - mu_l
+#   2 - mu_b
+#   3 - v_r
+MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
+{
+  n <- nrow(stars)
+  
+  a1 <- matrix(0, nrow = nrow(stars), ncol = 12)
+  colnames(a1) <- c("U", "V", "W","", "", "", "", "", "", "", "", "")
+  a2 <- matrix(0, nrow = nrow(stars), ncol = 12)
+  a3 <- matrix(0, nrow = nrow(stars), ncol = 12)
+  
+  if (use[1] == TRUE)
+  {
+    a1[,1] <- OM_U_L(stars[,1], stars[,2], stars[,3])
+    a1[,2] <- OM_V_L(stars[,1], stars[,2], stars[,3])
+    a1[,3] <- OM_W_L(stars[,1], stars[,2], stars[,3])
+  }
+  
+  if (use[2] == TRUE){
+    a2[,1] <- OM_U_B(stars[,1], stars[,2], stars[,3])
+    a2[,2] <- OM_V_B(stars[,1], stars[,2], stars[,3])
+    a2[,3] <- OM_W_B(stars[,1], stars[,2], stars[,3])
+  }
+  
+  if (use[3] == TRUE)
+  {
+    a3[,1] <- OM_U_R(stars[,1], stars[,2], stars[,3])
+    a3[,2] <- OM_V_R(stars[,1], stars[,2], stars[,3])
+    a3[,3] <- OM_W_R(stars[,1], stars[,2], stars[,3])
+  }
+  
+  if (model == 2)  # Модель Оорта-Линдаблада
+  {
+    if (use[1] == TRUE)
+    {
+      #a1[,4] <- OL_B_L(stars[,1], stars[,2], stars[,3])
+      a1[,4] <- OM_w3_L(stars[,1], stars[,2], stars[,3])
+      #a1[,5] <- OL_A_L(stars[,1], stars[,2], stars[,3])
+      a1[,5] <- OM_M12_L(stars[,1], stars[,2], stars[,3])
+      colnames(a1)[4:5] <- c("B", "A")
+    }
+    
+    if (use[2] == TRUE){
+      #a2[,4] <- OL_B_B(stars[,1], stars[,2], stars[,3])
+      a2[,4] <- OM_w3_B(stars[,1], stars[,2], stars[,3])
+      #a2[,5] <- OL_A_B(stars[,1], stars[,2], stars[,3])
+      a2[,5] <- OM_M12_B(stars[,1], stars[,2], stars[,3])
+    }
+    
+    if (use[3] == TRUE)
+    {
+      #a3[,4] <- OL_B_R(stars[,1], stars[,2], stars[,3])
+      a3[,4] <- OM_w3_R(stars[,1], stars[,2], stars[,3])
+      #a3[,5] <- OL_A_R(stars[,1], stars[,2], stars[,3])
+      a3[,5] <- OM_M12_R(stars[,1], stars[,2], stars[,3])
+    }
+    
+    if ((type == 1) | (type == 2))
+    {
+      if (use[1] == TRUE)
+      {
+        a1[,6] <- OL_C_L(stars[,1], stars[,2], stars[,3])
+        a1[,7] <- OL_K_L(stars[,1], stars[,2], stars[,3])
+        colnames(a1)[6:7] <- c("C", "K")
+      }
+      
+      if (use[2] == TRUE){
+        a2[,6] <- OL_C_B(stars[,1], stars[,2], stars[,3])
+        a2[,7] <- OL_K_B(stars[,1], stars[,2], stars[,3])
+      }
+      
+      if (use[3] == TRUE)
+      {
+        a3[,6] <- OL_C_R(stars[,1], stars[,2], stars[,3])
+        a3[,7] <- OL_K_R(stars[,1], stars[,2], stars[,3])
+      } 
+    }
+    
+    if (type == 2)
+    {
+      if (use[1] == TRUE)
+      {
+        a1[,8] <- OL_Gx_L(stars[,1], stars[,2], stars[,3])
+        a1[,9] <- OL_Gy_L(stars[,1], stars[,2], stars[,3])
+        colnames(a1)[8:9] <- c("Gx", "Gy")
+      }
+      
+      if (use[2] == TRUE){
+        a2[,8] <- OL_Gx_B(stars[,1], stars[,2], stars[,3])
+        a2[,9] <- OL_Gy_B(stars[,1], stars[,2], stars[,3])
+      }
+      
+      if (use[3] == TRUE)
+      {
+        a3[,8] <- OL_Gx_R(stars[,1], stars[,2], stars[,3])
+        a3[,9] <- OL_Gy_R(stars[,1], stars[,2], stars[,3])
+      } 
+      
+    }
+    
+  } else if (model == 1)  # Модель Огородникова-Милна
+  {
+    if (use[1] == TRUE)
+    {
+      a1[,4] <- OM_w1_L(stars[,1], stars[,2], stars[,3])
+      a1[,5] <- OM_w2_L(stars[,1], stars[,2], stars[,3])
+      a1[,6] <- OM_w3_L(stars[,1], stars[,2], stars[,3])
+      a1[,7] <- OM_M13_L(stars[,1], stars[,2], stars[,3])
+      a1[,8] <- OM_M23_L(stars[,1], stars[,2], stars[,3])
+      a1[,9] <- OM_M12_L(stars[,1], stars[,2], stars[,3])
+      colnames(a1)[4:9] <- c("Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)")
+      if (type == 1)
+      {
+        a1[,10] <- OL_C_L(stars[,1], stars[,2], stars[,3])
+        a1[,11] <- OL_K_L(stars[,1], stars[,2], stars[,3])
+        colnames(a1)[10:11] <- c("C", "K")
+      } else if (type == 0)
+      {
+        a1[,10] <- OM_M11s_L(stars[,1], stars[,2], stars[,3])
+        a1[,11] <- OM_M33s_L(stars[,1], stars[,2], stars[,3])
+        colnames(a1)[10:11] <- c("M11*", "M33*")
+      }
+      a1[,12] <- OM_M22_L(stars[,1], stars[,2], stars[,3])
+      colnames(a1)[12] <- "M22"
+    }
+    
+    if (use[2] == TRUE){
+      a2[,4] <- OM_w1_B(stars[,1], stars[,2], stars[,3])
+      a2[,5] <- OM_w2_B(stars[,1], stars[,2], stars[,3])
+      a2[,6] <- OM_w3_B(stars[,1], stars[,2], stars[,3])
+      a2[,7] <- OM_M13_B(stars[,1], stars[,2], stars[,3])
+      a2[,8] <- OM_M23_B(stars[,1], stars[,2], stars[,3])
+      a2[,9] <- OM_M12_B(stars[,1], stars[,2], stars[,3])
+      if (type == 1)
+      {
+        a2[,10] <- OL_C_B(stars[,1], stars[,2], stars[,3])
+        a2[,11] <- OL_K_B(stars[,1], stars[,2], stars[,3])
+      } else 
+      {
+        a2[,10] <- OM_M11s_B(stars[,1], stars[,2], stars[,3])
+        a2[,11] <- OM_M33s_B(stars[,1], stars[,2], stars[,3])
+      }
+      a2[,12] <- OM_M22_B(stars[,1], stars[,2], stars[,3])
+    }
+    
+    if (use[3] == TRUE)
+    {
+      a3[,4] <- OM_w1_R(stars[,1], stars[,2], stars[,3])
+      a3[,5] <- OM_w2_R(stars[,1], stars[,2], stars[,3])
+      a3[,6] <- OM_w3_R(stars[,1], stars[,2], stars[,3])
+      a3[,7] <- OM_M13_R(stars[,1], stars[,2], stars[,3])
+      a3[,8] <- OM_M23_R(stars[,1], stars[,2], stars[,3])
+      a3[,9] <- OM_M12_R(stars[,1], stars[,2], stars[,3])
+      if (type == 1)
+      {
+        a3[,10] <- OL_C_R(stars[,1], stars[,2], stars[,3])
+        a3[,11] <- OL_K_R(stars[,1], stars[,2], stars[,3])
+      } else 
+      {
+        a3[,10] <- OM_M11s_R(stars[,1], stars[,2], stars[,3])
+        a3[,11] <- OM_M33s_R(stars[,1], stars[,2], stars[,3])
+      }
+      a3[,12] <- OM_M22_R(stars[,1], stars[,2], stars[,3])
+    } 
+    
+  }
+  
+  
+  # for (i in 1:n)
+  # {
+  #   if (use[1] == TRUE)
+  #     a1[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3], type)
+  #   
+  #   if (use[2] == TRUE)
+  #     a2[i,] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3], type)
+  #   
+  #   if (use[3] == TRUE)
+  #     a3[i,] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3], type)
+  # }
+  
+  a0 <- matrix(0, nrow = 0, ncol = 12)
+  if(use[1]==TRUE)
+    a0 <- rbind(a0, a1)
+  if(use[2]==TRUE)
+    a0 <- rbind(a0, a2)
+  if(use[3]==TRUE)
+    a0 <- rbind(a0, a3)
+  colnames(a0) <- colnames(a1)
+  
+  # if (model == 1)  #полная модель Огородникова-Милна
+  # {
+  #   if(use[3] == FALSE)
+  #     a0 <- a0[,-12]
+  # }  else if (model == 2)  # Модель плоского вращения Оорта-Линдблада
+  # {
+  #   a0 <- a0[,c(-4, -5, -7, -8, -10:-12)]
+  # } else if (model == 3)  # только солнечные члены, уравнение Эри-Ковальского
+  # {
+  #   a0 <- a0[,1:3]
+  # }
+  # 
+  # if ((use[1] == TRUE) & (use[2] == FALSE) & (use[3] = FALSE))  # если используется только решение по mu_l, выкидываем W
+  #   a0 <- a0[,-3]
+  
+  
+  return(RemoveEmptyCols(a0));
+  
+}
+
+RemoveEmptyCols <- function(a)
+{
+  for (i in ncol(a):1)
+  {
+    if (sum(a[,i] != 0) == 0)
+      a <- a[,-i]
+  }
+  return(a)
+}
+
+PrepareOMRightSide <- function(stars, use = c(TRUE, TRUE, TRUE))
+{
+  n <- nrow(stars)
+  b <- matrix(0, nrow = 0, ncol = 1)
+  if (use[1] == TRUE){
+    b1 <- matrix(0, n, 1)
+    b1[1:n,1] <- stars[,4]*4.74064;
+    b <- rbind(b, b1)
+  }
+  if (use[2] == TRUE){
+    b2 <- matrix(0, n, 1)
+    b2[1:n,1] <- stars[,5]*4.74064;
+    b <- rbind(b, b2)
+  }
+  if (use[3] == TRUE){
+    b3 <- matrix(0, n, 1)
+    b3[1:n,1] <- stars[,6];
+    b <- rbind(b, b3)
+  }
+  return(b);
+}
+
+
+PrepareOMRightSide_old <- function(stars, use_vr = TRUE)
+{
+  n <- nrow(stars)
+  if (use_vr == TRUE){
+    b <- matrix(0, n*3, 1)
+    b[1:n,1] <- stars[,4]*4.74064;
+    b[(n+1):(2*n),1] <- stars[,5]*4.74064;
+    b[(2*n+1):(3*n)] <- stars[,6];
+  }
+  else
+  {
+    b <- matrix(0, n*2, 1)
+    b[1:n,1] <- stars[,4]*4.74064;
+    b[(n+1):(2*n),1] <- stars[,5]*4.74064;
+  }
+  return(b)
 }
 
 #-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
 # model - кинематическая модель, 
-#   1 - Огородникова Милна, 
+#   1 - Огородникова-Милна, 
 #       type - модификация модели ОМ
 #          0 - классический вариант с М11 и М33
 #          1 - модифицированная модель Огородникова-Милна, где M11 и М33 заменены на K и С
 #   2 - Оорта-Линдблада, 
+#          0 - классический вариант с A и B
+#          1 - расширенный вариант с С и К
+#          2 - расширенный вариант с С, К, Gx и  Gy
 #   3 - Эри-Ковальского, 
-#   4 - модифицированная модель Огородникова-Милна, вводятся Gx и Gy 
 
-MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
+MakeOMCoef_old <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
 {
   n <- nrow(stars)
 
@@ -222,19 +766,13 @@ MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
   
   for (i in 1:n)
   {
-    #a0[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3], type)
     if (use[1] == TRUE)
-      #a0 <- rbind(a0, matrix( data = GetOM_L(stars[i,1], stars[i,2], stars[i,3], type), nrow = 1))
       a1[i,] <- GetOM_L(stars[i,1], stars[i,2], stars[i,3], type)
     
-    #a0[(n+i),] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3], type)
     if (use[2] == TRUE)
-      #a1 <- rbind(a1, matrix( data = GetOM_B(stars[i,1], stars[i,2], stars[i,3], type), nrow = 1))
       a2[i,] <- GetOM_B(stars[i,1], stars[i,2], stars[i,3], type)
     
     if (use[3] == TRUE)
-      #a0[(2*n+i),] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3], type)
-      #a2 <- rbind(a2, matrix( data = GetOM_R(stars[i,1], stars[i,2], stars[i,3], type), nrow = 1))
       a3[i,] <- GetOM_R(stars[i,1], stars[i,2], stars[i,3], type)
   }
 
@@ -271,58 +809,50 @@ MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
 # scaling - способ масштабирования, см. TLS_Gen()
 # ef - количество переменных, не содержащих ошибки, см. TLS_Gen
 # model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского
-Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, model = 1, type = 0)
+# type - вариант модели, см. в MakeOmCoef()
+Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 0, ef = -1, model = 1, type = 0)
 {
   #  calculate equation of conditions
   # l, b, px, mu_l, mu_b, vr
-  a <- MakeOMCoef(stars, use = c(TRUE, TRUE, use_vr), model = model, type = type)
-
-  n <- nrow(stars)
-
-  if (use_vr == TRUE){
-    b <- matrix(0, n*3, 1)
-    b[1:n,1] <- stars[,4]*4.74064;
-    b[(n+1):(2*n),1] <- stars[,5]*4.74064;
-    b[(2*n+1):(3*n)] <- stars[,6];
-  }
-  else
-    {
-    b <- matrix(0, n*2, 1)
-    b[1:n,1] <- stars[,4]*4.74064;
-    b[(n+1):(2*n),1] <- stars[,5]*4.74064;
-  }
-
+  a <- MakeOMCoef(stars = stars, use = use, model = model, type = type)
+  
+  b <- PrepareOMRightSide(stars = stars, use = use)
   #b <- rowSums(t(t(a)*GetOM_Default()))
 
+  if (ef == -1)
+    ef <-  ncol(a)
   res <- TLS_Gen(a, b, mode, scaling, ef);
 
+  names(res$X) <- colnames(a)
+  names(res$s_X) <- paste0("e", colnames(a))
+  
   if (model == 1)
   {
-    if (use_vr == TRUE)
-    {
-      if (type == 0)
-      {
-        names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
-        names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*", "eM22")
-      }
-      else 
-      {
-       names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "C", "K", "M22")
-       names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eC*", "eK*", "eM22")
-      }
-    }
-    else
-    {
-      if (type == 0 )
-      {
-        names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
-        names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*")
-      } else {
-        names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "C", "K")
-        names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eC", "eK")
-        
-      }
-    }
+  #   if (use_vr == TRUE)
+  #   {
+  #     if (type == 0)
+  #     {
+  #       names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*", "M22")
+  #       names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*", "eM22")
+  #     }
+  #     else 
+  #     {
+  #      names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "C", "K", "M22")
+  #      names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eC*", "eK*", "eM22")
+  #     }
+  #   }
+  #   else
+  #   {
+  #     if (type == 0 )
+  #     {
+  #       names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "M11*", "M33*")
+  #       names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eM11*", "eM33*")
+  #     } else {
+  #       names(res$X) <- c("U", "V", "W","Wx", "Wy", "Wz(B)", "M13", "M23", "M12(A)", "C", "K")
+  #       names(res$s_X) <- c("eU", "eV", "eW","eWx", "eWy", "eWz(B)", "eM13", "eM23", "eM12(A)", "eC", "eK")
+  #       
+  #     }
+  #   }
     
     if (type == 0)
     {
@@ -333,19 +863,31 @@ Calc_OM_Model <- function(stars, use_vr = TRUE, mode = 1, scaling = 0, ef = 0, m
       res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], res$X["C"], res$X["K"])
       res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], res$s_X["eC"], res$s_X["eK"])
     }
-  
-    names(res$Oort) <- c("A", "B", "C", "K")
-    names(res$s_Oort) <- c("eA", "eB", "eC", "eK")
     
   } else if (model == 2)
   {
-    names(res$X) <- c("U", "V", "W", "Wz(B)", "M12(A)")
-    names(res$s_X) <- c("eU", "eV", "eW", "eWz(B)", "eM12(A)")
-  } else if(model == 3)
+    res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"])
+    res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"])
+  
+  } else if (model == 3)
   {
-    names(res$X) <- c("U", "V", "W")
-    names(res$s_X) <- c("eU", "eV", "eW")
+    res$Oort <- c(NA, NA, NA, NA)
+    res$s_Oort <- c(NA, NA, NA, NA)
+    
   }
+  
+  names(res$Oort) <- c("A", "B", "C", "K")
+  names(res$s_Oort) <- c("eA", "eB", "eC", "eK")
+  
+  # else if (model == 2)
+  # {
+  #   names(res$X) <- c("U", "V", "W", "Wz(B)", "M12(A)")
+  #   names(res$s_X) <- c("eU", "eV", "eW", "eWz(B)", "eM12(A)")
+  # } else if(model == 3)
+  # {
+  #   names(res$X) <- c("U", "V", "W")
+  #   names(res$s_X) <- c("eU", "eV", "eW")
+  # }
 
   return(res)
 }
@@ -407,7 +949,6 @@ Make_OM_Test <- function()
   b[(2*n+1):(3*n)] <- b0[(2*n+1):(3*n)] + rnorm(n, 0, s0[6])
 
   #--------
-
 
   data <- list(A = a, B = b, A0 = a0, B0 = b0, S_0 = s0, X_0 = OM_0)
 
