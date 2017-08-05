@@ -94,11 +94,6 @@ cat_eq2gal<-function(cat_data)
 }
 
 
-CalcGalXYZ <- function(data)
-{
-  data <- mutate (data, z = (1/gPx)*sin(gb), x = (1/gPx)*cos(gb)*cos(gl), y = (1/gPx)*cos(gb)*sin(gl))
-}
-
 # ===============================================================================
 # -------------------------------------------------------------------------------
 #                 Вычисление коэффициентов уравнений модели ОМ
@@ -433,15 +428,26 @@ OM_M22_B <- function( l, b, r)
 
 #-----------------------------------------------------------------
 
-OL_Gx_L <- function( l, b, r)
+OL_GxA_L <- function( l, b, r)
 {
   return(-sin(abs(b)) * sin(l))
 }
 
 
-OL_Gy_L <- function( l, b, r)
+OL_GyA_L <- function( l, b, r)
 {
   return(-sin(abs(b)) * cos(l))
+}
+
+OL_Gx_L <- function( l, b, r)
+{
+  return(-sin(b) * sin(l))
+}
+
+
+OL_Gy_L <- function( l, b, r)
+{
+  return(-sin(b) * cos(l))
 }
 
 OL_Gx_B <- function( l, b, r)  # not implemented
@@ -539,7 +545,7 @@ MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
       a3[,5] <- OM_M12_R(stars[,1], stars[,2], stars[,3])
     }
     
-    if ((type == 1) | (type == 2))
+    if ((type == 1) | (type == 2) | (type == 3))
     {
       if (use[1] == TRUE)
       {
@@ -561,6 +567,28 @@ MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
     }
     
     if (type == 2)
+    {
+      if (use[1] == TRUE)
+      {
+        a1[,8] <- OL_GxA_L(stars[,1], stars[,2], stars[,3])
+        a1[,9] <- OL_GyA_L(stars[,1], stars[,2], stars[,3])
+        colnames(a1)[8:9] <- c("Gx", "Gy")
+      }
+      
+      if (use[2] == TRUE){
+        a2[,8] <- OL_Gx_B(stars[,1], stars[,2], stars[,3])
+        a2[,9] <- OL_Gy_B(stars[,1], stars[,2], stars[,3])
+      }
+      
+      if (use[3] == TRUE)
+      {
+        a3[,8] <- OL_Gx_R(stars[,1], stars[,2], stars[,3])
+        a3[,9] <- OL_Gy_R(stars[,1], stars[,2], stars[,3])
+      } 
+      
+    }
+    
+    if (type == 3)
     {
       if (use[1] == TRUE)
       {
@@ -866,18 +894,28 @@ Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 
     
   } else if (model == 2)
   {
-    res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"])
-    res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"])
-  
+    if (type == 0){
+      res$Oort <- c(res$X["A"], res$X["B"], NA, NA, NA, NA)
+      res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], NA, NA, NA, NA)  
+    } else if (type == 1)
+    {
+      res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"])
+      res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"])
+    } else if ((type == 2)|(type == 3))
+    {
+      res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"], res$X["Gx"], res$X["Gy"])
+      res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"], res$s_X["eGx"], res$s_X["eGy"])
+    }
+    
   } else if (model == 3)
   {
-    res$Oort <- c(NA, NA, NA, NA)
-    res$s_Oort <- c(NA, NA, NA, NA)
-    
+    res$Oort <- c(NA, NA, NA, NA, NA, NA)
+    res$s_Oort <- c(NA, NA, NA, NA, NA, NA)
   }
   
-  names(res$Oort) <- c("A", "B", "C", "K")
-  names(res$s_Oort) <- c("eA", "eB", "eC", "eK")
+  
+  names(res$Oort) <- c("A", "B", "C", "K", "Gx", "Gy")
+  names(res$s_Oort) <- c("eA", "eB", "eC", "eK", "eGx", "eGy")
   
   # else if (model == 2)
   # {

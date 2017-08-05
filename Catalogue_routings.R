@@ -587,8 +587,20 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
   return (tgas_data)
 }
 
+CalcGalXYZ <- function(data)
+{
+  data <- mutate (data, z = (1/gPx)*sin(gb), x = (1/gPx)*cos(gb)*cos(gl), y = (1/gPx)*cos(gb)*sin(gl))
+}
+
 # min_px, max_px - mas
-filter_tgs_px <- function(tgs, px = c(-Inf,Inf), e_px = Inf, bv = c(-Inf,Inf), Mg = c(-Inf,Inf), z_lim = c(0, Inf), r_lim = c(0, Inf))
+filter_tgs_px <- function(tgs, 
+                          px = c(-Inf,Inf), 
+                          e_px = Inf, 
+                          bv = c(-Inf,Inf), 
+                          Mg = c(-Inf,Inf), 
+                          z_lim = c(0, Inf), 
+                          r_lim = c(0, Inf), 
+                          g_b = c(-Inf, Inf))
 {
   #print(bv)
   #print(Mg)
@@ -604,7 +616,8 @@ filter_tgs_px <- function(tgs, px = c(-Inf,Inf), e_px = Inf, bv = c(-Inf,Inf), M
                  filter( (B_V>bv[1]) & (B_V<bv[2]) ) %>%
                  filter( (M>Mg[1]) & (M<Mg[2])) %>%
                  filter( (parallax_error/gPx) < e_px ) %>% 
-                 filter( (abs(z)>=z_lim[1]) & (abs(z)<z_lim[2]))
+                 filter( (abs(z)>=z_lim[1]) & (abs(z)<z_lim[2])) %>% #kpc
+                 filter( (gb>=g_b[1]) & (gb<g_b[2]))  #grad
 
   print(paste("stars in sample:", nrow(tgs)))
   return(tgs)
@@ -637,12 +650,13 @@ tgas_get_stars <- function(tgas_data, src = "TGAS")
 
 tgas_calc_gpm <- function(tgas_)
 {
-
+  # GAIA proper motions
   tgas_$pmRA <- tgas_$gpmRA
   tgas_$pmDE <- tgas_$gpmDE
   tgas_ <- cat_eq2gal(tgas_)
   tgas_ <- mutate(tgas_, gpm_l = pm_l, gpm_b = pm_b)
 
+  # TYCHO-2 proper motions
   tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
   tgas_$pmRA <- tgas_$tyc_pmRA
   tgas_$pmDE <- tgas_$tyc_pmDE
@@ -663,8 +677,8 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   par <- matrix(0, q, 6)
   sol <- matrix(0, q, 3)
   colnames(sol) <- c("X", "Y", "Z")
-  oort <- matrix(0, q, 4)
-  oort_err <- matrix(0, q, 4)
+  oort <- matrix(0, q, 6)
+  oort_err <- matrix(0, q, 6)
   
   if (!is.null(distance))
   {
@@ -737,19 +751,19 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     {
       cat("Saving...", "\n")
       s <- paste0(save, "_", src_, "_", par[i,1], "-",par[i,2])
-      #write_csv(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v), paste0(s, "_sample.csv"), col_names = TRUE)
-      #x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
-      #write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
+      # write_csv(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v), paste0(s, "_sample.csv"), col_names = TRUE)
+      x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
+      write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
       
       hrd <- HRDiagram(tgas_sample, save = s, photometric = "none")
-      #DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = ds)
-      #DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = ds)
-      #DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
+      DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = ds)
+      DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = ds)
+      DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = ds)
     }
 
     cat("Equation of conditions forming...", "\n")
     stars <- tgas_get_stars(tgas_sample, src_)
-    stars <<- stars;
+    # stars_ <<- stars;
 
     par[i,3] <- nrow(stars)
     par[i,6] <- mean(stars[,3])
@@ -757,7 +771,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     cat("Solution calculation...", "\n")
     
     res_tgas <- Calc_OM_Model(stars, use = use, mode = 2, model = model, type = type)
-    res <<- res_tgas
+    # res <<- res_tgas
     
     if ((i == 1) & (ncol(res) != length(res_tgas$X)))
     {
@@ -787,7 +801,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   return(res)
 }
 
-tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", type = 0, model = 1, use = c(TRUE, TRUE, FALSE), dist_type = "TGAS_PX", filter_dist = "TGAS_PX", saveto = "")
+tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", type = 0, model = 1, use = c(TRUE, TRUE, FALSE), dist_type = "TGAS_PX", filter_dist = "TGAS_PX", saveto = "", g_b = c(-Inf, Inf))
 {
 
   #APASS photometry
@@ -800,6 +814,8 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
   conditions$use <- use;
   conditions$KinModel <- model
   conditions$KinModelType <- type
+  conditions$g_B <- g_b
+  conditions$SaveTo <- saveto
   
   conditions$Population <- population;
   if (population == "DISK")
@@ -834,9 +850,6 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
         distance_[,1] <- c(0.0 )
         distance_[,2] <- c(10.0)
       }
-      if (!dir.exists(paste0(saveto,"SG_Disk")))
-        dir.create(paste0(saveto,"SG_Disk"))
-      conditions$SaveTo <- paste0(saveto,"SG_Disk/SG")
     } else if (population == "GALO")
     {
       
@@ -851,9 +864,7 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
         distance_[,1] <- c(0.0)
         distance_[,2] <- c(10.0)
       }
-      if (!dir.exists(paste0(saveto,"SG_Galo")))
-        dir.create(paste0(saveto,"SG_Galo"))
-      conditions$SaveTo <- paste0(saveto, "SG_Galo/SG")
+      
     } else 
     {
       if (conditions$Filter_Dist == "TGAS_PX")
@@ -867,9 +878,6 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
         distance_[,1] <- c(0.0)
         distance_[,2] <- c(10.0)
       }
-      if (!dir.exists(paste0(saveto,"SG"))) 
-        dir.create(paste0(saveto,"SG"))
-      conditions$SaveTo <- paste0(saveto,"SG/SG")
     }
 
   } else if(lclass == 3)
@@ -895,9 +903,6 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
         distance_[,1] <- c(0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0)
         distance_[,2] <- c(0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.75, 2.0, 3)
       }
-      if (!dir.exists(paste0(saveto,"RG_Disk")))
-        dir.create(paste0(saveto,"RG_Disk"))
-      conditions$SaveTo <- paste0(saveto,"RG_Disk/RG")
     } else if (population == "GALO")
     {
       
@@ -912,9 +917,6 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
         distance_[,1] <- c(0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0)
         distance_[,2] <- c(0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 3)
       }
-      if (!dir.exists(paste0(saveto,"RG_Galo")))
-        dir.create(paste0(saveto,"RG_Galo"))
-      conditions$SaveTo <- paste0(saveto,"RG_Galo/RG")
     }else 
     {
       if (conditions$Filter_Dist == "TGAS_PX")
@@ -928,10 +930,6 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
         distance_[,1] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0 )
         distance_[,2] <- c(0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 3)
       }
-      
-      if (!dir.exists(paste0(saveto,"RG")))
-        dir.create(paste0(saveto,"RG"))
-      conditions$SaveTo <- paste0(saveto,"RG/RG")
     }
 
   } else if(lclass == 5)
@@ -940,21 +938,15 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
     
     conditions$BV <- c(-Inf, Inf)
     conditions$MG <- c(-Inf, Inf)
-    conditions$e_Px <- 0.5
+    conditions$e_Px <- Inf
     conditions$Z <- c(0, Inf)
-    if (!dir.exists(paste0(saveto,"MS")))
-      dir.create(paste0(saveto,"MS"))
-    conditions$SaveTo <- paste0(saveto,"MS/MS")
-
+    
     distance_ <- matrix(0, nrow = 14, ncol = 2)
     distance_[,1] <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5)
     distance_[,2] <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 2.0)
-  } else 
-  {
-    conditions$SaveTo <- paste0(saveto,"NC/NC")
-  }
+  } 
   
-  con <- file(paste0(conditions$SaveTo,"_description.txt"), "w")
+  con <- file(paste0(conditions$SaveTo,"description.txt"), "w")
   cat("B-V = ", conditions$BV, "\n", file=con)
   cat("M = ", conditions$MG, "\n", file=con)
   cat("ePX = ", conditions$e_Px, "\n", file=con)
@@ -967,6 +959,7 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
   cat("used equations (mu_l, mu_b, v_r) = ", conditions$use, "\n", file=con)
   cat("Kinematic model = ", conditions$KinModel, "\n", file=con)
   cat("Kinematic model type = ", conditions$KinModelType, "\n", file=con)
+  cat("gal B = ", conditions$g_B, "\n", file = con)
   
   close(con)
 
@@ -976,7 +969,8 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
                                 px_type = "DIST", distance = distance_, 
                                 save = conditions$SaveTo, 
                                 type = conditions$KinModelType, model = conditions$KinModel, 
-                                dist_type = dist_type, use = conditions$use)
+                                dist_type = dist_type, use = conditions$use, 
+                                g_b = conditions$g_B)
   
   solution$Conditions <- conditions
 
@@ -988,10 +982,10 @@ calc_physical_params <- function(solution, Rs = 8.09)
 {
    
   physical <- matrix(0, nrow = nrow(solution$Oort), ncol = 8)
-  colnames(physical) <- c("Vg", "P", "S", "F", "M", "L", "B", "Vs")
+  colnames(physical) <- c("Vg", "P", "S", "F", "M", "apex_L", "apex_B", "Vs")
   
   e_physical <- matrix(0, nrow = nrow(solution$Oort), ncol = 8)
-  colnames(e_physical) <- c("eVg", "eP", "eS", "eF", "eM", "eL", "eB", "eVs")
+  colnames(e_physical) <- c("eVg", "eP", "eS", "eF", "eM", "apex_eL", "apex_eB", "eVs")
   
   physical[,1] <- Rs * (solution$Oort[,1] - solution$Oort[,2]) # Vs - линейная скорость вращения галактики на расстоянии Rs
   physical[,2] <- (2 * pi * Rs * 3.086e+16 /  physical[,1]) / (86400*365*1000000)   # P - период вращения галактики
@@ -1039,28 +1033,54 @@ tgas_export_solution_xls <- function(res)
 {
   s_ <- paste0(res$Conditions$SaveTo, "_", res$Conditions$Src)
   
-  output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3], res$X[,4], res$S_X[,4], res$X[,5], res$S_X[,5], res$X[,6], res$S_X[,6],
-                  res$X[,7], res$S_X[,7], res$X[,8], res$S_X[,8], res$X[,9], res$S_X[,9], res$X[,10], res$S_X[,10], res$X[,11], res$S_X[,11], 
-                  res$Physical[,1], res$s_Physical[,1],res$Physical[,2], res$s_Physical[,2],res$Physical[,3], res$s_Physical[,3],res$Physical[,4], res$s_Physical[,4],
-                  res$Physical[,5], res$s_Physical[,5],res$Physical[,6], res$s_Physical[,6],res$Physical[,7], res$s_Physical[,7],res$Physical[,8], res$s_Physical[,8],
-                  res$Parameters[,1:6])
+  
+  output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3])
+  
+  for (i in 4:(ncol(res$X)))
+  {
+    output <- cbind(output, res$X[,i], res$S_X[,i])
+  }
+  
+  for (i in 1:(ncol(res$Physical)))
+  {
+    output <- cbind(output, res$Physical[,i], res$s_Physical[,i])
+  }
+  
+  output <- cbind(output, res$Parameters[,1:6])
+                  
+  # output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3], res$X[,4], res$S_X[,4], res$X[,5], res$S_X[,5], res$X[,6], res$S_X[,6],
+  #                 res$X[,7], res$S_X[,7], res$X[,8], res$S_X[,8], res$X[,9], res$S_X[,9], res$X[,10], res$S_X[,10], res$X[,11], res$S_X[,11], 
+  #                 res$Physical[,1], res$s_Physical[,1],res$Physical[,2], res$s_Physical[,2],res$Physical[,3], res$s_Physical[,3],res$Physical[,4], res$s_Physical[,4],
+  #                 res$Physical[,5], res$s_Physical[,5],res$Physical[,6], res$s_Physical[,6],res$Physical[,7], res$s_Physical[,7],res$Physical[,8], res$s_Physical[,8],
+  #                 res$Parameters[,1:6])
   output <- t(output)
-  output <- cbind(output, as.matrix(c(res$wX[1], res$s_wX[1], res$wX[2], res$s_wX[2], res$wX[3], res$s_wX[3], res$wX[4], res$s_wX[4], 
-                                      res$wX[5], res$s_wX[5], res$wX[6], res$s_wX[6], res$wX[7], res$s_wX[7], res$wX[8], res$s_wX[8], 
-                                      res$wX[9], res$s_wX[9], res$wX[10], res$s_wX[10], res$wX[11], res$s_wX[11], 
-                                      res$wPhysica[1], res$s_wPhysica[1], res$wPhysica[2], res$s_wPhysica[2], 
-                                      res$wPhysica[3], res$s_wPhysica[3], res$wPhysica[4], res$s_wPhysica[4], 
-                                      res$wPhysica[5], res$s_wPhysica[5], res$wPhysica[6], res$s_wPhysica[6],
-                                      res$wPhysica[7], res$s_wPhysica[7], res$wPhysica[8], res$s_wPhysica[8], 
-                                      rep(x = 0, 6))))
-  rownames(output)[1:38]<-c(colnames(res$X)[1], colnames(res$S_X)[1], colnames(res$X)[2], colnames(res$S_X)[2], colnames(res$X)[3], colnames(res$S_X)[3],
-                            colnames(res$X)[4], colnames(res$S_X)[4], colnames(res$X)[5], colnames(res$S_X)[5], colnames(res$X)[6], colnames(res$S_X)[6],
-                            colnames(res$X)[7], colnames(res$S_X)[7], colnames(res$X)[8], colnames(res$S_X)[8], colnames(res$X)[9], colnames(res$S_X)[9],
-                            colnames(res$X)[10], colnames(res$S_X)[10], colnames(res$X)[11], colnames(res$S_X)[11], 
-                            colnames(res$Physical)[1], colnames(res$s_Physical)[1], colnames(res$Physical)[2], colnames(res$s_Physical)[2],
-                            colnames(res$Physical)[3], colnames(res$s_Physical)[3], colnames(res$Physical)[4], colnames(res$s_Physical)[4], 
-                            colnames(res$Physical)[5], colnames(res$s_Physical)[5], colnames(res$Physical)[6], colnames(res$s_Physical)[6], 
-                            colnames(res$Physical)[7], colnames(res$s_Physical)[7], colnames(res$Physical)[8], colnames(res$s_Physical)[8]) 
+  
+  z <- c(as.vector(rbind(res$wX,res$s_wX)), as.vector(rbind(res$wPhysical, res$s_wPhysical)), rep(x = 0, 6))
+  output <- cbind(output, as.matrix(z))
+  # output <- cbind(output, as.matrix(c(res$wX[1], res$s_wX[1], res$wX[2], res$s_wX[2], res$wX[3], res$s_wX[3], res$wX[4], res$s_wX[4], 
+  #                                     res$wX[5], res$s_wX[5], res$wX[6], res$s_wX[6], res$wX[7], res$s_wX[7], res$wX[8], res$s_wX[8], 
+  #                                     res$wX[9], res$s_wX[9], res$wX[10], res$s_wX[10], res$wX[11], res$s_wX[11], 
+  #                                     res$wPhysica[1], res$s_wPhysica[1], res$wPhysica[2], res$s_wPhysica[2], 
+  #                                     res$wPhysica[3], res$s_wPhysica[3], res$wPhysica[4], res$s_wPhysica[4], 
+  #                                     res$wPhysica[5], res$s_wPhysica[5], res$wPhysica[6], res$s_wPhysica[6],
+  #                                     res$wPhysica[7], res$s_wPhysica[7], res$wPhysica[8], res$s_wPhysica[8], 
+  #                                     rep(x = 0, 6))))
+  
+  z <- c(as.vector(rbind(colnames(res$X),colnames(res$S_X))), 
+         as.vector(rbind(colnames(res$Physical), colnames(res$s_Physical))), 
+         colnames(res$Parameters))
+  
+  # nc <- c(colnames(res$X)[1], colnames(res$S_X)[1], colnames(res$X)[2], colnames(res$S_X)[2], colnames(res$X)[3], colnames(res$S_X)[3],
+  #                           colnames(res$X)[4], colnames(res$S_X)[4], colnames(res$X)[5], colnames(res$S_X)[5], colnames(res$X)[6], colnames(res$S_X)[6],
+  #                           colnames(res$X)[7], colnames(res$S_X)[7], colnames(res$X)[8], colnames(res$S_X)[8], colnames(res$X)[9], colnames(res$S_X)[9],
+  #                           colnames(res$X)[10], colnames(res$S_X)[10], colnames(res$X)[11], colnames(res$S_X)[11], 
+  #                           colnames(res$Physical)[1], colnames(res$s_Physical)[1], colnames(res$Physical)[2], colnames(res$s_Physical)[2],
+  #                           colnames(res$Physical)[3], colnames(res$s_Physical)[3], colnames(res$Physical)[4], colnames(res$s_Physical)[4], 
+  #                           colnames(res$Physical)[5], colnames(res$s_Physical)[5], colnames(res$Physical)[6], colnames(res$s_Physical)[6], 
+  #                           colnames(res$Physical)[7], colnames(res$s_Physical)[7], colnames(res$Physical)[8], colnames(res$s_Physical)[8]) 
+  
+  rownames(output)[1:length(z)]<- z
+  
   #colnames(res$Oort)[1], colnames(res$s_Oort)[1], colnames(res$Oort)[2], colnames(res$s_Oort)[2], 
   #colnames(res$Oort)[3], colnames(res$s_Oort)[3], colnames(res$Oort)[4], colnames(res$s_Oort)[4])
   write.xlsx2(x = output, file = paste0(s_,".xls"), sheetName = "Solution")
@@ -1075,7 +1095,8 @@ tgas_export_solution_txt <- function(res)
   
   output_txt <- paste0(sprintf("%.2f", output), "±", sprintf("%.2f", output_err))
   output_txt <- matrix(output_txt, ncol = ncol(output))
-  output_txt[,16] <- paste0(sprintf("%.1e", output[,16]), "±", sprintf("%.2e", output_err[,16]))
+  colnames(output_txt) <- c(colnames(res$X), colnames(res$Physical))
+  output_txt[,"M"] <- paste0(sprintf("%.1e", output[,"M"]), "±", sprintf("%.2e", output_err[,"eM"]))
   output_txt <- t(output_txt)
   output_txt <- rbind(output_txt, paste0(sprintf("%.2f", res$Parameters[,1]), "-", sprintf("%.2f", res$Parameters[,2]) ))
   output_txt <- rbind(output_txt, sprintf("%d", res$Parameters[,3]) )
@@ -1093,8 +1114,13 @@ my_san <- function (str, type = "latex", ...)
 
 tgas_export_solution_latex <- function(res)
 {
+  
+  if (res$Conditions$KinModel != 1)
+    return()
+  
   s_ <- paste0(res$Conditions$SaveTo, "_", res$Conditions$Src)
 
+  output <- cbind(res$X[,1:5], res$X[,7:9], res$X[,6:6], res$X[,10:11], res$Physical)
   output <- cbind(res$X[,1:5], res$X[,7:9], res$X[,6:6], res$X[,10:11], res$Physical)
   output_err <- cbind(res$S_X[,1:5], res$S_X[,7:9], res$S_X[,6:6], res$S_X[,10:11], res$s_Physical)
   colnames(output)[4] <- "\\Omega_x"
@@ -1139,19 +1165,19 @@ tgas_export_physical_latex <- function(res)
 {
   s_ <- paste0(res$Conditions$SaveTo, "_", res$Conditions$Src)
   
-  output <- cbind(res$X[,9], res$X[,6],  res$X[,10],  res$X[,11], res$Physical)
-  output_err <- cbind(res$S_X[,9], res$S_X[,6],  res$S_X[,10],  res$S_X[,11], res$s_Physical)
+  output <- cbind(res$Oort, res$Physical)
+  output_err <- cbind(res$s_Oort, res$s_Physical)
   
   colnames(output)[1] <- "A"
   colnames(output)[2] <- "B"
   colnames(output)[3] <- "C"
   colnames(output)[4] <- "K"
-  colnames(output)[10] <- "Apex L"
-  colnames(output)[11] <- "Apex B"
+  colnames(output)[12] <- "Apex L"
+  colnames(output)[13] <- "Apex B"
   
   output_txt <- paste0("$", sprintf("%.2f", output), "\\pm", sprintf("%.2f", output_err), "$")
-  output_txt <- matrix(output_txt, ncol = 12)
-  output_txt[,9] <- paste0("$", sprintf("%.1e", output[,9]), "\\pm", sprintf("%.2e", output_err[,9]), "$")
+  output_txt <- matrix(output_txt, ncol = 14)
+  output_txt[,11] <- paste0("$", sprintf("%.1e", output[,11]), "\\pm", sprintf("%.2e", output_err[,11]), "$")
   #output_txt <- t(matrix(output_txt, ncol = 15))
   output_txt <- t(output_txt)
   output_txt <- rbind(output_txt, paste0(sprintf("%.1f", res$Parameters[,1]), "-", sprintf("%.1f", res$Parameters[,2]) ))
@@ -1198,19 +1224,98 @@ tgas_export_all_solution <- function(solutions)
 tgas_draw_kinematic <- function (solution)
 {
   save <- paste0(solution$Conditions$SaveTo, "_", solution$Conditions$Src,"_")
-  g <- draw_OM(solution, title = paste("Ogorodnikov-Miln Model,", solution$Conditions$Src, " proper motions."))
-  ggsave(paste0(save, "OM-R", ".png"), plot = g, width = 10, height = 10)
-  ggsave(paste0(save, "OM-R", ".eps"), plot = g, width = 10, height = 10)
-  
-  g <- draw_Oort(solution, title = paste("Oort`s parameters,", solution$Conditions$Src, " proper motions."))
-  ggsave(paste0(save, "OL-R", ".png"), plot = g, width = 10, height = 10)
-  ggsave(paste0(save, "OL-R", ".eps"), plot = g, width = 10, height = 10)
   
   g <- draw_OM_Solar(solution, title = paste("Solar motion,", solution$Conditions$Src, " proper motions, Solar motion."))
   ggsave(paste0(save, "Solar-R", ".png"), plot = g, width = 10, height = 10)
   ggsave(paste0(save, "Solar-R", ".eps"), plot = g, width = 10, height = 10)
   
+  if (solution$Conditions$KinModel <=2 ){
+    g <- draw_Oort(solution, title = paste("Oort`s parameters,", solution$Conditions$Src, " proper motions."))
+    ggsave(paste0(save, "OL-R", ".png"), plot = g, width = 10, height = 10)
+    ggsave(paste0(save, "OL-R", ".eps"), plot = g, width = 10, height = 10)
+  }
+  
+  if (solution$Conditions$KinModel == 1){
+    g <- draw_OM(solution, title = paste("Ogorodnikov-Miln Model,", solution$Conditions$Src, " proper motions."))
+    ggsave(paste0(save, "OM-R", ".png"), plot = g, width = 10, height = 10)
+    ggsave(paste0(save, "OM-R", ".eps"), plot = g, width = 10, height = 10)
+  }
+
 }
+
+
+tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "")
+{
+  save <- paste0(saveto, src,"_")
+  
+  g <- draw_OMParameter(solutions,
+                        title = paste("Solar motion U, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarU-R", ".png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "SolarU-R", ".eps"), plot = g, width = 10, height = 5)
+  
+  g <- draw_OMParameter(solutions,
+                        parameter = 2,
+                        y_lim = c(10, 85, 10),
+                        title = paste("Solar motion V, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = 10, height = 5)
+  
+  g <- draw_OMParameter(solutions,
+                        parameter = 3,
+                        y_lim = c(5, 25, 5),
+                        title = paste("Solar motion W, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarW-R", ".png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "SolarW-R", ".eps"), plot = g, width = 10, height = 5)
+  
+  g <- draw_OortParameter(solutions, 
+                          title = paste("Oort`s parameter A, ", src, " proper motions."))
+  ggsave(paste0(save, "OortA-R", ".png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "OortA-R", ".eps"), plot = g, width = 10, height = 5)
+  
+  
+  g <- draw_OortParameter(solutions, 
+                          parameter = 2,
+                          title = paste("Oort`s parameter B, ", src, " proper motions."),
+                          x_lim = c(0, 4, 0.5), y_lim = c(-17, -7, 1))
+  ggsave(paste0(save, "OortB-R", ".png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = 10, height = 5)
+  
+  if ((solutions[[1]]$Conditions$KinModel==1) |
+      ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType>=1)))
+  {
+    g <- draw_OortParameter(solutions, 
+                            parameter = 3,
+                            title = paste("Oort`s parameter C, ", src, " proper motions."),
+                            x_lim = c(0, 4, 0.5), y_lim = c(-7, 3, 1))
+    ggsave(paste0(save, "OortC-R", ".png"), plot = g, width = 10, height = 5)
+    ggsave(paste0(save, "OortC-R", ".eps"), plot = g, width = 10, height = 5)
+    
+    g <- draw_OortParameter(solutions, 
+                            parameter = 4,
+                            title = paste("Oort`s parameter K, ", src, " proper motions."),
+                            x_lim = c(0, 4, 0.5), y_lim = c(-9, 2, 1))
+    ggsave(paste0(save, "OortK-R", ".png"), plot = g, width = 10, height = 5)
+    ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = 10, height = 5)  
+  }
+  
+  if ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType==2))
+  {
+    g <- draw_OortParameter(solutions, 
+                            parameter = 5,
+                            title = paste("Oort`s parameter Gx, ", src, " proper motions."),
+                            x_lim = c(0, 4, 0.5), y_lim = c(-40, 40, 2))
+    ggsave(paste0(save, "OortGx-R", ".png"), plot = g, width = 10, height = 5)
+    ggsave(paste0(save, "OortGx-R", ".eps"), plot = g, width = 10, height = 5)
+    
+    g <- draw_OortParameter(solutions, 
+                            parameter = 6,
+                            title = paste("Oort`s parameter Gy, ", src, " proper motions."),
+                            x_lim = c(0, 4, 0.5), y_lim = c(-40, 40, 3))
+    ggsave(paste0(save, "OortGy-R", ".png"), plot = g, width = 10, height = 5)
+    ggsave(paste0(save, "OortGy-R", ".eps"), plot = g, width = 10, height = 5)  
+  }
+}
+  
 
 tgas_draw_all_kinematic <- function(solutions, src = "TGAS", saveto = "")
 {
@@ -1219,60 +1324,16 @@ tgas_draw_all_kinematic <- function(solutions, src = "TGAS", saveto = "")
     tgas_draw_kinematic(solutions[[i]])
   }
   
-  save <- paste0(saveto, src,"_")
-  
-  g <- draw_OortParameter(solutions[c(1,2)], 
-                     title = paste("Oort`s parameter A, ", src, " proper motions."))
-  ggsave(paste0(save, "OortA-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "OortA-R", ".eps"), plot = g, width = 10, height = 5)
-  
-  
-  g <- draw_OortParameter(solutions[c(1,2)], 
-                     parameter = 2,
-                     title = paste("Oort`s parameter B, ", src, " proper motions."),
-                     x_lim = c(0, 4, 0.5), y_lim = c(-17, -7, 1))
-  ggsave(paste0(save, "OortB-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OortParameter(solutions[c(1,2)], 
-                     parameter = 3,
-                     title = paste("Oort`s parameter C, ", src, " proper motions."),
-                     x_lim = c(0, 4, 0.5), y_lim = c(-7, 3, 1))
-  ggsave(paste0(save, "OortC-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "OortC-R", ".eps"), plot = g, width = 10, height = 5)
-  
-  
-  g <- draw_OortParameter(solutions[c(1,2)], 
-                     parameter = 4,
-                     title = paste("Oort`s parameter K, ", src, " proper motions."),
-                     x_lim = c(0, 4, 0.5), y_lim = c(-9, 2, 1))
-  ggsave(paste0(save, "OortK-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OMParameter(solutions[c(1,2)],
-                   title = paste("Solar motion U, ", src, " proper motions."))
-  ggsave(paste0(save, "SolarU-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarU-R", ".eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OMParameter(solutions[c(1,2)],
-                   parameter = 2,
-                   y_lim = c(10, 85, 10),
-                   title = paste("Solar motion V, ", src, " proper motions."))
-  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OMParameter(solutions[c(1,2)],
-                   parameter = 3,
-                   y_lim = c(5, 25, 5),
-                   title = paste("Solar motion W, ", src, " proper motions."))
-  ggsave(paste0(save, "SolarW-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarW-R", ".eps"), plot = g, width = 10, height = 5)
-  
+  tgas_draw_all_kinematic_comp(solutions, src, saveto)
 }
 
 
 tgas_draw_physics <- function (solution, src = "TGAS", saveto = "")
 {
+  
+  if (solution[[1]]$Conditions$KinModel == 3)
+    return(0);
+  
   save <- paste0(saveto, src,"_")
   
   g <- draw_Physical(solution[c(1,2)], 
@@ -1455,25 +1516,154 @@ tgas_process_solution <- function(solution_)
 {
   solution_ <- calc_physical_params(solution_) 
   solution_ <- tgas_calc_solution_weighted(solution_)
+  tgas_export_solution_xls(solution_)
+  return(solution_)
 }
 
-tgas_make_all_solutions_dist <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
+
+tgas_export_all <- function(solutions, saveto_)
 {
-
-  tgas_make_all_solutions(dist_type = "TGAS_PX", filter_dist = "TGAS_PX")
-  tgas_make_all_solutions(dist_type = "rMoMW", filter_dist = "TGAS_PX")
-  tgas_make_all_solutions(dist_type = "rMoExp1", filter_dist = "TGAS_PX")
-  tgas_make_all_solutions(dist_type = "rMoExp2", filter_dist = "TGAS_PX")
   
-  tgas_make_all_solutions(dist_type = "TGAS_PX", filter_dist = "rMoMW")
-  tgas_make_all_solutions(dist_type = "rMoMW", filter_dist = "rMoMW")
-  tgas_make_all_solutions(dist_type = "rMoExp1", filter_dist = "rMoMW")
-  tgas_make_all_solutions(dist_type = "rMoExp2", filter_dist = "rMoMW")
+  cat("Export solutions...", "\n")
+  tgas_export_all_solution(solutions)
+  cat("Export kinematics...", "\n")
+  tgas_draw_all_kinematic(solutions, saveto_)
+  cat("Export physics...", "\n")
+  tgas_draw_physics(solutions, src, saveto_)
 }
 
 
+tgas_make_Oort_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS", name = "")
+{
+  tgas <- tgas_calc_LClass(tgas, dist_ = filter_dist)
+  
+  if (!dir.exists("solutions")) 
+    dir.create("solutions")
+  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", dist_type)
+  if (!dir.exists(saveto_)) 
+    dir.create(saveto_)
 
-tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
+  solutions <- list();
+  
+  # --------------------------------------
+  
+  saveto_2 <- paste0(saveto_, "/sphere")
+  if (!dir.exists(saveto_2)) 
+    dir.create(saveto_2)
+  
+  cat("Red Giants processing", "\n")
+  saveto_3 <- paste0(saveto_2, "/RG_ALL")
+  if (!dir.exists(saveto_3)) 
+    dir.create(saveto_3)
+  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", 
+                                         model = 2, type = 2, 
+                                         src = src, 
+                                         use = c(TRUE, FALSE, FALSE),
+                                         dist_type = dist_type, filter_dist = filter_dist, 
+                                         saveto = paste0(saveto_3, "/"))
+  solutions$RG_All$Name <- "Red Giants"
+  
+  cat("Main Sequence processing", "\n")
+  saveto_3 <- paste0(saveto_2, "/MS_ALL")
+  if (!dir.exists(saveto_3)) 
+    dir.create(saveto_3)
+  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "ALL", 
+                                         model = 2, type = 2, 
+                                         use = c(TRUE, FALSE, FALSE),
+                                         src = src, 
+                                         dist_type = dist_type, filter_dist = filter_dist, 
+                                         saveto = paste0(saveto_3, "/"))
+  solutions$MS_All$Name <- "Main Sequence"
+  
+  # --------------------------------------
+  
+  saveto_2 <- paste0(saveto_, "/north_hemisphere")
+  if (!dir.exists(saveto_2)) 
+    dir.create(saveto_2)
+  
+  cat("Red Giants processing North", "\n")
+  saveto_3 <- paste0(saveto_2, "/RG_North")
+  if (!dir.exists(saveto_3)) 
+    dir.create(saveto_3)
+  solutions$RG_North <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", 
+                                           model = 2, type = 3, 
+                                           use = c(TRUE, FALSE, FALSE),
+                                           src = src, 
+                                           dist_type = dist_type, filter_dist = filter_dist, 
+                                           g_b = c(0, Inf),
+                                           saveto = paste0(saveto_3, "/"))
+  solutions$RG_North$Name <- "Red Giants North"
+  
+  cat("Main Sequence processing North", "\n")
+  saveto_3 <- paste0(saveto_2, "/MS_North")
+  if (!dir.exists(saveto_3)) 
+    dir.create(saveto_3)
+  solutions$MS_North <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "ALL", 
+                                           model = 2, type = 3, 
+                                           use = c(TRUE, FALSE, FALSE),
+                                           src = src, 
+                                           dist_type = dist_type, filter_dist = filter_dist, 
+                                           g_b = c(0, Inf),
+                                           saveto = paste0(saveto_3, "/"))
+  
+  solutions$MS_North$Name <- "Main Sequence North"
+  
+  # --------------------------------------
+  
+  saveto_2 <- paste0(saveto_, "/south_hemisphere")
+  if (!dir.exists(saveto_2)) 
+    dir.create(saveto_2)
+  cat("Red Giants processing", "\n")
+  saveto_3 <- paste0(saveto_2, "/RG_South")
+  if (!dir.exists(saveto_3)) 
+    dir.create(saveto_3)
+  solutions$RG_South <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", 
+                                           model = 2, type = 3, 
+                                           use = c(TRUE, FALSE, FALSE),
+                                           src = src, 
+                                           dist_type = dist_type, filter_dist = filter_dist, 
+                                           g_b = c(-Inf, 0),
+                                           saveto = paste0(saveto_3, "/"))
+  solutions$RG_South$Name <- "Red Giants South"
+  
+  cat("Main Sequence processing", "\n")
+  saveto_3 <- paste0(saveto_2, "/MS_South")
+  if (!dir.exists(saveto_3)) 
+    dir.create(saveto_3)
+  solutions$MS_South <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "ALL", 
+                                           model = 2, type = 3, 
+                                           use = c(TRUE, FALSE, FALSE),
+                                           src = src, 
+                                           dist_type = dist_type, filter_dist = filter_dist, 
+                                           g_b = c(-Inf, 0),
+                                           saveto = paste0(saveto_3, "/"))
+  solutions$MS_South$Name <- "Main Sequence South"
+  
+  cat("Calc physical parameters...", "\n")
+  solutions <- calc_all_physical_params(solutions)
+  cat("Calc weited parameters...", "\n")
+  solutions <- tgas_calc_all_weighted(solutions)
+  
+  return(solutions)
+  
+}
+
+
+tgas_make_OM_solutions_dist <- function()
+{
+  
+  tgas_make_OM_solutions(dist_type = "TGAS_PX", filter_dist = "TGAS_PX")
+  tgas_make_OM_solutions(dist_type = "rMoMW", filter_dist = "TGAS_PX")
+  tgas_make_OM_solutions(dist_type = "rMoExp1", filter_dist = "TGAS_PX")
+  tgas_make_OM_solutions(dist_type = "rMoExp2", filter_dist = "TGAS_PX")
+  
+  tgas_make_OM_solutions(dist_type = "TGAS_PX", filter_dist = "rMoMW")
+  tgas_make_OM_solutions(dist_type = "rMoMW", filter_dist = "rMoMW")
+  tgas_make_OM_solutions(dist_type = "rMoExp1", filter_dist = "rMoMW")
+  tgas_make_OM_solutions(dist_type = "rMoExp2", filter_dist = "rMoMW")
+}
+
+tgas_make_OM_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX", src = "TGAS")
 {
   tgas <- tgas_calc_LClass(tgas, dist_ = filter_dist)
   
@@ -1482,16 +1672,21 @@ tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_P
   saveto_ <- paste0("solutions/solution_", filter_dist, "-", dist_type)
   if (!dir.exists(saveto_)) 
     dir.create(saveto_)
-  saveto_ <- paste0(saveto_, "/")
   
   solutions <- list();
   
   cat("Red Giants processing", "\n")
-  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", type = 1, model = 0, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = saveto_)
+  saveto_2 <- paste0(saveto_, "/RG_ALL")
+  if (!dir.exists(saveto_2)) 
+    dir.create(saveto_2)
+  solutions$RG_All <-  tgas_calc_OM_cond(tgas, lclass = 3, population = "ALL", type = 1, model = 1, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = paste0(saveto_2, "/"))
   solutions$RG_All$Name <- "Red Giants"
   
   cat("Main Sequence processing", "\n")
-  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "DISK", type = 1, model = 0, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = saveto_)
+  saveto_2 <- paste0(saveto_, "/MS_ALL")
+  if (!dir.exists(saveto_2)) 
+    dir.create(saveto_2)
+  solutions$MS_All <-  tgas_calc_OM_cond(tgas, lclass = 5, population = "ALL", type = 1, model = 1, src = src, dist_type = dist_type, filter_dist = filter_dist, saveto = paste0(saveto_2, "/"))
   solutions$MS_All$Name <- "Main Sequence"
   
   # cat("Red Giants Disk processing", "\n")
@@ -1529,13 +1724,13 @@ tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_P
   #g <- tgas_draw_HR_facet(solutions$SG_ALL, M_lim = c(-2, -10), BV_lim = c(-1, 3))
   #ggsave(file = paste0(saveto_, "SG_HR_all.png"), plot = g, width = 15, height = 12)
    
-  cat("Draw RG HR facet...")
-  g <- tgas_draw_HR_facet(solutions$RG_All, M_lim = c(3, -2), BV_lim = c(0.5, 2.5))
-  ggsave(file = paste0(saveto_, "RG_ALL_HR_all.png"), plot = g, width = 15, height = 12)
+  #cat("Draw RG HR facet...")
+  #g <- tgas_draw_HR_facet(solutions$RG_All, M_lim = c(3, -2), BV_lim = c(0.5, 2.5))
+  #ggsave(file = paste0(saveto_, "RG_ALL_HR_all.png"), plot = g, width = 15, height = 12)
    
-  cat("Draw MS HR facet...")
-  g <- tgas_draw_HR_facet(solutions$MS_All, M_lim = c(10, -3), BV_lim = c(-0.5, 2.5))
-  ggsave(file = paste0(saveto_, "MS_HR_all.png"), plot = g, width = 15, height = 12)
+  #cat("Draw MS HR facet...")
+  #g <- tgas_draw_HR_facet(solutions$MS_All, M_lim = c(10, -3), BV_lim = c(-0.5, 2.5))
+  #ggsave(file = paste0(saveto_, "MS_HR_all.png"), plot = g, width = 15, height = 12)
    
   # g <- tgas_draw_HR_facet(solutions$RG_Disk, M_lim = c(3, -2), BV_lim = c(0.5, 2.5))
   # ggsave(file = paste0(saveto_, "RG_DISK_HR_all.png"), plot = g, width = 15, height = 12)
@@ -1543,7 +1738,7 @@ tgas_make_all_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_P
   # g <- tgas_draw_HR_facet(solutions$RG_Galo, M_lim = c(3, -2), BV_lim = c(0.5, 2.5))
   # ggsave(file = paste0(saveto_, "RG_GALO_HR_all.png"), plot = g, width = 15, height = 12)
   
-  save(solutions, file = paste0("solution_",filter_dist, "-",dist_type,".Rdata"))
+  #save(solutions, file = paste0("solution_",filter_dist, "-",dist_type,".Rdata"))
 
   return(solutions)
 }
@@ -2000,15 +2195,19 @@ min_M <- function(bv)
 {
   m <- numeric(length(bv))
   
-  #i1 <- bv < 0.75
-  #m[i1] <- 5.73 * bv[i1] - 2.32222;
-  i1 <- bv < 0.8
-  m[i1] <- 5.7 * bv[i1] - 1.22222;
+  # Верхняя граница поднята относительно Бови
+  i1 <- bv < 0.75
+  m[i1] <- 5.73 * bv[i1] - 2.32222;
   
-  i2 <- (bv>=0.8)&(bv<1.0)
-  m[i2] <- (13 * bv[i2] - 7)
-  #i2 <- (bv>=0.75)&(bv<1.0)
-  #m[i2] <- (16 * bv[i2] - 10)
+  i2 <- (bv>=0.75)&(bv<1.0)
+  m[i2] <- (16 * bv[i2] - 10)
+  
+  #i1 <- bv < 0.8
+  #m[i1] <- 5.7 * bv[i1] - 1.22222;
+  
+  #i2 <- (bv>=0.8)&(bv<1.0)
+  #m[i2] <- (13 * bv[i2] - 7)
+  
   
   i3 <- (bv>=1.0)&(bv<1.5)
   m[i3] <- (4 * bv[i3] + 2)
@@ -2407,8 +2606,8 @@ draw_Oort <- function(res, title = "Oort`s parameters")
   
   #min_y <- (min(res$Oort)%/%1) - 1
   #max_y <- (max(res$Oort)%/%1) + 1
-  min_y <- -17
-  max_y <- 18
+  min_y <- -30
+  max_y <- 30
   
   
   g <- ggplot() +
@@ -2418,17 +2617,23 @@ draw_Oort <- function(res, title = "Oort`s parameters")
     #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
     scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
-    scale_colour_manual("Parameters",  breaks = colnames(res$Oort)[1:4],
-                        values = c("green", "blue", "brown", "black")) +
-    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,1], colour = colnames(res$Oort)[1]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,1] - res$s_Oort[,1], ymax = res$Oort[,1] + res$s_Oort[,1], colour = colnames(res$Oort)[1])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,2], colour = colnames(res$Oort)[2]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,2] - res$s_Oort[,2], ymax = res$Oort[,2] + res$s_Oort[,2], colour = colnames(res$Oort)[2])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,3], colour = colnames(res$Oort)[3]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,3] - res$s_Oort[,3], ymax = res$Oort[,3] + res$s_Oort[,3], colour = colnames(res$Oort)[3])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$Oort[,4], colour = colnames(res$Oort)[4]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,4] - res$s_Oort[,4], ymax = res$Oort[,4] + res$s_Oort[,4], colour = colnames(res$Oort)[4])) +
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
+    scale_colour_manual("Parameters",  breaks = colnames(res$Oort)[1:6],
+                        values = c("green", "blue", "brown", "black", "gray", "orange"))
+  
+  for (i in 1:ncol(res$Oort))
+  {
+    g <- g + geom_line(aes_string(x = res$Parameters[,4], y = res$Oort[,i], colour = shQuote(colnames(res$Oort)[i])), size = 1) +
+         geom_errorbar(aes_string(x = res$Parameters[,4], ymin = res$Oort[,i] - res$s_Oort[,i], ymax = res$Oort[,i] + res$s_Oort[,i], colour = shQuote(colnames(res$Oort)[i])))
+  }
+    # geom_line(aes(x = res$Parameters[,4], y = res$Oort[,1], colour = colnames(res$Oort)[1]), size = 1) +
+    # geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,1] - res$s_Oort[,1], ymax = res$Oort[,1] + res$s_Oort[,1], colour = colnames(res$Oort)[1])) +
+    # geom_line(aes(x = res$Parameters[,4], y = res$Oort[,2], colour = colnames(res$Oort)[2]), size = 1) +
+    # geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,2] - res$s_Oort[,2], ymax = res$Oort[,2] + res$s_Oort[,2], colour = colnames(res$Oort)[2])) +
+    # geom_line(aes(x = res$Parameters[,4], y = res$Oort[,3], colour = colnames(res$Oort)[3]), size = 1) +
+    # geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,3] - res$s_Oort[,3], ymax = res$Oort[,3] + res$s_Oort[,3], colour = colnames(res$Oort)[3])) +
+    # geom_line(aes(x = res$Parameters[,4], y = res$Oort[,4], colour = colnames(res$Oort)[4]), size = 1) +
+    # geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,4] - res$s_Oort[,4], ymax = res$Oort[,4] + res$s_Oort[,4], colour = colnames(res$Oort)[4])) +
+    # geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
@@ -2614,7 +2819,7 @@ draw_OMParameter <- function(solution,
                                parameter = 1,
                                title = "", 
                                x_lim = c(0, 4, 0.5), y_lim = c(5, 40, 5), 
-                               clr = c("blue", "green4", "brown", "black", "red"))
+                               clr = c("blue", "green4", "brown", "black", "red", "orange"))
 {
   
   names <- vector("character", 0)
@@ -2634,8 +2839,8 @@ draw_OMParameter <- function(solution,
     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
-    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25)) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5))  
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6))  
   
   for (i in 1:length(solution))
   {
@@ -2666,7 +2871,7 @@ draw_OortParameter <- function(solution,
                        parameter = 1,
                        title = "Oort`s parameter A", 
                        x_lim = c(0, 3.5, 0.5), y_lim = c(8, 18, 1), 
-                       clr = c("blue", "green4", "brown", "black", "red"))
+                       clr = c("blue", "green4", "brown", "black", "red", "orange"))
 {
   
   names <- vector("character", 0)
@@ -2681,8 +2886,8 @@ draw_OortParameter <- function(solution,
     xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
-    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25)) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5))  
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6))  
   
   for (i in 1:length(solution))
   {
