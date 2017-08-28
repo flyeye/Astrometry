@@ -10,4 +10,4 @@ NumSpacesForTab: 2
 Encoding: CP1251
 
 RnwWeave: Sweave
-LaTeX: pdfLaTeX
+LaTeX: XeLaTeX

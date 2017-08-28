@@ -2,15 +2,23 @@
 # ---------------------------------  libraries ----------------------------------
 tgas_libs_required <- function()
 {
-  library("readr", lib.loc="~/R/win-library/3.3")
-  library("readxl", lib.loc="~/R/win-library/3.3")
-  library("tidyverse", lib.loc="~/R/win-library/3.3")
-  library("xlsx", lib.loc="~/R/win-library/3.3")
-  library("stargazer", lib.loc="~/R/win-library/3.3")
-  library("scales", lib.loc="~/R/win-library/3.3")
-  library("gdata", lib.loc="~/R/win-library/3.3")
-  library("xtable", lib.loc="~/R/win-library/3.3")
-  library("gridExtra", lib.loc="~/R/win-library/3.3")
+  #library("tidyverse", lib.loc="~/R/win-library/3.4")
+  #library("readxl", lib.loc="~/R/win-library/3.4")
+  #library("xlsx", lib.loc="~/R/win-library/3.4")
+  #library("stargazer", lib.loc="~/R/win-library/3.4")
+  #library("scales", lib.loc="~/R/win-library/3.4")
+  #library("gdata", lib.loc="~/R/win-library/3.4")
+  #library("xtable", lib.loc="~/R/win-library/3.4")
+  #library("gridExtra", lib.loc="~/R/win-library/3.4")
+  
+  library("tidyverse")
+  library("readxl")
+  library("xlsx")
+  library("stargazer")
+  library("scales")
+  library("gdata")
+  library("xtable")
+  library("gridExtra")
 }
 
 

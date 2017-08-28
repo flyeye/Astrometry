@@ -1,27 +1,27 @@
 
 
 # min_px, max_px - mas
-filter_tgs_px <- function(tgs, 
-                          px = c(-Inf,Inf), 
-                          e_px = Inf, 
-                          bv = c(-Inf,Inf), 
-                          Mg = c(-Inf,Inf), 
-                          z_lim = c(0, Inf), 
-                          r_lim = c(0, Inf), 
-                          g_b = c(-Inf, Inf))
+filter_tgs_px <- function(tgs,                     #  catalog (data frame)
+                          px = c(-Inf,Inf),        #  limits on parallax
+                          e_px = Inf,              #  limits on parallax error
+                          bv_lim = c(-Inf,Inf),    #  limits on B-V
+                          Mg = c(-Inf,Inf),        #  limits on absolute magnitude applied to M column in data
+                          z_lim = c(0, Inf),       #  limits on distance from galactic equator
+                          r_lim = c(0, Inf),       #  limits on solar distance applied to R column in data
+                          g_b = c(-Inf, Inf))      #  limits on galactic lalitude
 {
-  #print(bv)
+  #print(bv_lim)
   #print(Mg)
   #print(px)
   #print(e_px)
-  cat(px, "\n")
-  cat(r_lim, "\n")
+  #cat(px, "\n")
+  #cat(r_lim, "\n")
   
   tgs <- CalcGalXYZ(tgs)
   tgs <- tgs %>% filter(!is.na(B_V) & !is.na(M)) %>%
     filter( (gPx > px[1]) & (gPx <= px[2])) %>%  #mas
     filter( (R>r_lim[1]) & (R<=r_lim[2]) ) %>%  #pc
-    filter( (B_V>bv[1]) & (B_V<bv[2]) ) %>%
+    filter( (B_V>bv_lim[1]) & (B_V<bv_lim[2]) ) %>%
     filter( (M>Mg[1]) & (M<Mg[2])) %>%
     filter( (parallax_error/gPx) < e_px ) %>% 
     filter( (abs(z)>=z_lim[1]) & (abs(z)<z_lim[2])) %>% #kpc
@@ -75,11 +75,159 @@ tgas_calc_gpm <- function(tgas_)
 }
 
 
+### =======================================================
+### -------------------------------------------------------
+
+tgas_calc_OM_seq_2 <- function(tgas_ = tgas, src_ = "TGAS", px_type = "ANGLE", distance = c(0.001, 100), save = NULL, type = 0, model = 1, bv = c(-Inf, Inf),  dist_type = "TGAS_PX", use = c(TRUE, TRUE, FALSE),...)
+{
+  distance <- matrix(distance, ncol = 2)
+  bv <- matrix(bv, ncol = 2)
+  q <- nrow(distance) * nrow(bv)
+  
+  res <- matrix(0, q, 11)
+  err <- matrix(0, q, 11)
+  par <- matrix(0, q, 9)
+  sol <- matrix(0, q, 3)
+  colnames(sol) <- c("X", "Y", "Z")
+  oort <- matrix(0, q, 6)
+  oort_err <- matrix(0, q, 6)
+  
+  solution <- list();
+  
+  for (k in 1:nrow(distance))
+  {
+    
+    for (j in 1:nrow(bv))
+    {
+      
+      i <- (k-1) * nrow(bv) + j
+      
+      par[i, 1] <- distance[k,1]
+      par[i, 2] <- distance[k,2]
+      
+      par[i, 7] <- bv[j,1]
+      par[i, 8] <- bv[j,2]
+      bvl <- c(par[i, 7], par[i, 8])
+      
+      if (px_type!="ANGLE")
+      {
+        px_ <- c(-1, Inf)   #c(1/par[i,2], 1/par[i,1])
+        dist_ <- c(par[i,1], par[i,2])*1000
+        colnames(par) <- c("r_min","r_max","number of stars","r_mean", "px_err", "r_mean_model", "B-V_min", "B-V_max", "B-V_mean")
+      } else
+      {
+        px_ <- c(par[i,1], par[i,2])
+        dist_ <- c(0, Inf)
+        colnames(par) <- c("px_min","px_max","number of stars","px_mean", "px_err", "r_mean_model", "B-V_min", "B-V_max", "B-V_mean")
+      }
+      
+      cat("filtering...", "\n")
+      cat("B-V", bvl, "\n")
+      cat("dist", dist_, "\n")
+      tgas_sample <- filter_tgs_px(tgas_, px = px_, bv_lim = bvl, r_lim = dist_, ...);
+
+      if (nrow(tgas_sample)<12)
+      {
+        cat("Not enough samples in data:", nrow(tgas_sample), "\n")
+        par[i,3:9] <- 0
+        res[i, ] <- c(rep(0, 11))
+        err[i, ] <- c(rep(0, 11))
+        sol[i, ] <- c(rep(0, 3))
+        next()
+      } else 
+      {
+        cat("Stars after filetering:", nrow(tgas_sample),"\n")
+      }
+      
+      cat("EQ to GAL converting...", "\n")
+      tgas_sample <- tgas_calc_gpm(tgas_sample)
+      cat("Stars after EQ to gal converting:", nrow(tgas_sample),"\n")
+      
+      par[i,4] <- mean(tgas_sample$R)/1000
+      cat("Mean filtering distance:", par[i,4], "\n")
+      
+      par[i,9] <- mean(tgas_sample$B_V)
+      cat("Mean sample B-V:", par[i,7], "\n")
+      
+      tgas_sample <- tgas_calc_distance(tgas_sample, dist_type)
+      tgas_sample <- tgas_sample %>% filter(R<50000)
+      
+      #tgas_sample$M <- (tgas_sample$apasm_v + 5 - 5*log10(tgas_sample$R))
+      cat("Stars after distance re-calc:", nrow(tgas_sample),"\n")
+      
+      # sample_ <<- tgas_sample
+      
+      if(!is.null(save))
+      {
+        cat("Saving...", "\n")
+        s <- paste0(save, "_", src_, "_", par[i,1], "-",par[i,2], "_", par[i,7], "-",par[i,8])
+        # write_csv(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v), paste0(s, "_sample.csv"), col_names = TRUE)
+        x = as.matrix(select(tgas_sample, RA, DE, gpmRA, gpmDE, tyc_pmRA, tyc_pmDE, gl, gb, R, gpm_l, gpm_b, tpm_l, tpm_b, apasm_b, apasm_v, parallax_error, TYC))
+        write.fwf(x, file = paste0(s, "_sample.txt"), colnames = TRUE, sep = "   ")
+        
+        cat("draw HR...", "\n")
+        hrd <- HRDiagram(tgas_sample, save = s, photometric = "none")
+        
+        max_dist <- max(tgas_sample$R/1000) %/% 1 + 1;
+        cat(max_dist)
+        cat("draw XY...", "\n")
+        DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = max_dist)
+        cat("draw XZ...", "\n")
+        DrawGalaxyPlane(tgas_sample, plane = "XZ", save = s, dscale = max_dist)
+        cat("draw YZ...", "\n")
+        DrawGalaxyPlane(tgas_sample, plane = "YZ", save = s, dscale = max_dist)
+      }
+      
+      cat("Equation of conditions forming...", "\n")
+      stars <- tgas_get_stars(tgas_sample, src_)
+      # stars_ <<- stars;
+      
+      par[i,3] <- nrow(stars)
+      par[i,6] <- mean(stars[,3])
+      par[i,5] <- mean(tgas_sample$parallax_error)
+      cat("Solution calculation...", "\n")
+      
+      res_tgas <- Calc_OM_Model(stars, use = use, mode = 2, model = model, type = type)
+      # res <<- res_tgas
+      
+      if ((i == 1) & (ncol(res) != length(res_tgas$X)))
+      {
+        res <- matrix(0, q, length(res_tgas$X))
+        err <- matrix(0, q, length(res_tgas$X))
+      }
+      
+      res[i, ] <- res_tgas$X
+      err[i, ] <- res_tgas$s_X
+      sol[i, ] <- res_tgas$X[1:3]/par[i,6]
+      oort[i, ] <- res_tgas$Oort
+      oort_err[i, ] <- res_tgas$s_Oort
+      cat(par[i,], "\n")
+      cat(res_tgas$X, "\n")
+      cat(res_tgas$s_X, "\n")
+      res_tgas$HR <- hrd;
+      solution[[i]] <- res_tgas
+    }
+  }
+  colnames(res) <- names(res_tgas$X)
+  colnames(err) <- names(res_tgas$s_X)
+  colnames(oort) <- names(res_tgas$Oort)
+  colnames(oort_err) <- names(res_tgas$s_Oort)
+  
+  res <- list(X = res, S_X = err, Sol = sol, Parameters = par, Oort = oort, s_Oort = oort_err)
+  res$SolutionR <- solution;
+  
+  return(res)
+}
+
+### -------------------------------------------------------
+### =======================================================
+
 
 tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1, q = 2, px_type = "ANGLE", distance = NULL, save = NULL, type = 0, model = 1, dist_type = "TGAS_PX", use = c(TRUE, TRUE, FALSE),...)
 {
   if (!is.null(distance))
     q <- nrow(distance)
+  
   res <- matrix(0, q, 11)
   err <- matrix(0, q, 11)
   par <- matrix(0, q, 6)
@@ -123,7 +271,7 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     
     
     cat("filtering...", "\n")
-    tgas_sample <- filter_tgs_px(tgas_, px = px_, r_lim = dist_, ...);
+    tgas_sample <- filter_tgs_px(tgas_, px = px_, r_lim = dist_, bv_lim = bv, ...);
     if (nrow(tgas_sample)<12)
     {
       cat("Not enough samples in data:", nrow(tgas_sample), "\n")
@@ -209,7 +357,16 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
   return(res)
 }
 
-tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", type = 0, model = 1, use = c(TRUE, TRUE, FALSE), dist_type = "TGAS_PX", filter_dist = "TGAS_PX", saveto = "", g_b = c(-Inf, Inf))
+
+# BV <- matrix(0, nrow = 1, ncol = 2)
+# BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
+# BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+
+tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src = "TGAS", 
+                              type = 0, model = 1, 
+                              use = c(TRUE, TRUE, FALSE), dist_type = "TGAS_PX", filter_dist = "TGAS_PX", 
+                              saveto = "", 
+                              g_b = c(-Inf, Inf))
 {
   
   #APASS photometry
@@ -386,6 +543,27 @@ tgas_calc_OM_cond <- function(tgas_ = tgas, lclass = 3, population = "ALL", src 
   
 }
 
+tgas_write_conditions <- function(conditions)
+{
+  con <- file(paste0(conditions$SaveTo,"description.txt"), "w")
+  cat("B-V = ", conditions$BV, "\n", file=con)
+  cat("M = ", conditions$MG, "\n", file=con)
+  cat("ePX = ", conditions$e_Px, "\n", file=con)
+  cat("z = ", conditions$Z, "\n", file=con)
+  cat("LClass = ", conditions$LClass , "\n", file=con)
+  cat("Distance = ", distance_ , "\n", file=con)
+  cat("Population = ", conditions$Population , "\n", file=con)
+  cat("Distance type = ", conditions$Dist_Type, "\n", file=con)
+  cat("Filtering Distance type = ", conditions$Filter_Dist, "\n", file=con)
+  cat("used equations (mu_l, mu_b, v_r) = ", conditions$use, "\n", file=con)
+  cat("Kinematic model = ", conditions$KinModel, "\n", file=con)
+  cat("Kinematic model type = ", conditions$KinModelType, "\n", file=con)
+  cat("gal B = ", conditions$g_B, "\n", file = con)
+  
+  close(con)
+}
+  
+
 calc_physical_params <- function(solution, Rs = 8.09)
 {
   
@@ -454,7 +632,8 @@ tgas_export_solution_xls <- function(res)
     output <- cbind(output, res$Physical[,i], res$s_Physical[,i])
   }
   
-  output <- cbind(output, res$Parameters[,1:6])
+  #output <- cbind(output, res$Parameters[,1:6])
+  output <- cbind(output, res$Parameters)
   
   # output <- cbind(res$X[,1], res$S_X[,1], res$X[,2], res$S_X[,2], res$X[,3], res$S_X[,3], res$X[,4], res$S_X[,4], res$X[,5], res$S_X[,5], res$X[,6], res$S_X[,6],
   #                 res$X[,7], res$S_X[,7], res$X[,8], res$S_X[,8], res$X[,9], res$S_X[,9], res$X[,10], res$S_X[,10], res$X[,11], res$S_X[,11], 
@@ -463,7 +642,7 @@ tgas_export_solution_xls <- function(res)
   #                 res$Parameters[,1:6])
   output <- t(output)
   
-  z <- c(as.vector(rbind(res$wX,res$s_wX)), as.vector(rbind(res$wPhysical, res$s_wPhysical)), rep(x = 0, 6))
+  z <- c(as.vector(rbind(res$wX,res$s_wX)), as.vector(rbind(res$wPhysical, res$s_wPhysical)), rep(x = 0, ncol(res$Parameters)))
   output <- cbind(output, as.matrix(z))
   # output <- cbind(output, as.matrix(c(res$wX[1], res$s_wX[1], res$wX[2], res$s_wX[2], res$wX[3], res$s_wX[3], res$wX[4], res$s_wX[4], 
   #                                     res$wX[5], res$s_wX[5], res$wX[6], res$s_wX[6], res$wX[7], res$s_wX[7], res$wX[8], res$s_wX[8], 
@@ -835,7 +1014,15 @@ tgas_draw_all_OM_sol <- function(sol1, sol2, sol1_name, sol2_name, saveto = "")
 # tgas_draw_all_OM_sol_comp(list(solutions_mw$RG_All, solutions_mw_px$RG_All, solutions_Exp1$RG_All, solutions_Exp2$RG_All), 
 # ylims  = matrix(data = c(5, 35, 15, 55, 0, 25, -3, 7, -5, 5, -20, -10, -5, 5, -8, 2 , 7, 20, -7, 3, -10, 5), nrow = 2))
 
-tgas_draw_all_OM_sol_comp <- function(solutions, ylims, saveto = "")
+ # tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
+ #                           ylims  = matrix(data = c(5, 20, 0, 25, 0, 15, -2, 10, -5, 2, -18, -8, -5, 5, -8, 3 , 5, 25, -7, 3, -10, 5), nrow = 2),
+ #                           xlims = c(-0.5, 1.1, 0.1),
+ #                           xpar = 9, 
+ #                           xtitle = "B-V", 
+ #                           saveto = "solutions/")
+
+
+tgas_draw_all_OM_sol_comp <- function(solutions, ylims, xlims = c(0, 2.5, 0.5), xpar = 4, xtitle = "<r>, kpc", saveto = "")
 {
   
   for (i in 1:ncol(solutions[[1]]$X))
@@ -843,7 +1030,11 @@ tgas_draw_all_OM_sol_comp <- function(solutions, ylims, saveto = "")
     g <-draw_OMParameter(solutions, 
                          parameter = i, 
                          y_lim = c(ylims[1, i], ylims[2, i], 1), 
-                         x_lim = c(0, 2.5, 0.5))
+                         x_lim = xlims, 
+                         x_title = xtitle, 
+                         x_par = xpar, 
+                         title = colnames(solutions[[1]]$X)[i])
+    
     ggsave(paste0(saveto, "OM_", colnames(solutions[[1]]$X)[i],".png"), plot = g, width = 10, height = 5)
     ggsave(paste0(saveto, "OM_", colnames(solutions[[1]]$X)[i],".eps"), plot = g, width = 10, height = 5)
     

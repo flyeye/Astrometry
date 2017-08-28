@@ -333,7 +333,9 @@ draw_OMParameter <- function(solution,
                              parameter = 1,
                              title = "", 
                              x_lim = c(0, 4, 0.5), y_lim = c(5, 40, 5), 
-                             clr = c("blue", "green4", "brown", "black", "red", "orange"))
+                             clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                             x_par = 4,
+                             x_title = "<r>, kpc")
 {
   
   names <- vector("character", 0)
@@ -350,7 +352,7 @@ draw_OMParameter <- function(solution,
   g <- ggplot() +
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
-    xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+    xlab(x_title) + ylab("km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
@@ -359,18 +361,18 @@ draw_OMParameter <- function(solution,
   for (i in 1:length(solution))
   {
     
-    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$X[,parameter], 
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,x_par], y = solution[[i]]$X[,parameter], 
                                    colour = shQuote(solution[[i]]$Name), 
                                    linetype = shQuote(solution[[i]]$Name)
     ), 
     size = 1)
     
-    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$X[,parameter],
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,x_par], y = solution[[i]]$X[,parameter],
                                    fill = shQuote(solution[[i]]$Name),
                                    shape = shQuote(solution[[i]]$Name)
     ))
     
-    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,4],
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,x_par],
                                       ymin = solution[[i]]$X[,parameter] - solution[[i]]$S_X[,parameter],
                                       ymax = solution[[i]]$X[,parameter] + solution[[i]]$S_X[,parameter],
                                       colour = shQuote(solution[[i]]$Name)
@@ -385,7 +387,9 @@ draw_OortParameter <- function(solution,
                                parameter = 1,
                                title = "Oort`s parameter A", 
                                x_lim = c(0, 3.5, 0.5), y_lim = c(8, 18, 1), 
-                               clr = c("blue", "green4", "brown", "black", "red", "orange"))
+                               clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                               x_par = 4,
+                               x_title = "<r>, kpc")  # 4 - фактическое среднее расстояние выборки
 {
   
   names <- vector("character", 0)
@@ -397,7 +401,7 @@ draw_OortParameter <- function(solution,
   g <- ggplot() +
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
-    xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+    xlab(x_title) + ylab("km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
@@ -406,18 +410,18 @@ draw_OortParameter <- function(solution,
   for (i in 1:length(solution))
   {
     
-    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$Oort[,parameter], 
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,x_par], y = solution[[i]]$Oort[,parameter], 
                                    colour = shQuote(solution[[i]]$Name), 
                                    linetype = shQuote(solution[[i]]$Name)
     ), 
     size = 1)
     
-    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,4], y = solution[[i]]$Oort[,parameter],
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,x_par], y = solution[[i]]$Oort[,parameter],
                                    fill = shQuote(solution[[i]]$Name),
                                    shape = shQuote(solution[[i]]$Name)
     ))
     
-    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,4],
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,x_par],
                                       ymin = solution[[i]]$Oort[,parameter] - solution[[i]]$s_Oort[,parameter],
                                       ymax = solution[[i]]$Oort[,parameter] + solution[[i]]$s_Oort[,parameter],
                                       colour = shQuote(solution[[i]]$Name)

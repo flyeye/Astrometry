@@ -884,12 +884,12 @@ Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 
     
     if (type == 0)
     {
-      res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], 0.5*res$X["M11*"], 0.5*(res$X["M11*"]-2*res$X["M33*"]))
-      res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], 0.5*res$s_X["eM11*"], sqrt((0.5*res$s_X["eM11*"])**2 + res$s_X["eM33*"]**2))
+      res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], 0.5*res$X["M11*"], 0.5*(res$X["M11*"]-2*res$X["M33*"]), NA, NA)
+      res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], 0.5*res$s_X["eM11*"], sqrt((0.5*res$s_X["eM11*"])**2 + res$s_X["eM33*"]**2), NA, NA)
     } else
     {
-      res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], res$X["C"], res$X["K"])
-      res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], res$s_X["eC"], res$s_X["eK"])
+      res$Oort <- c(res$X["M12(A)"], res$X["Wz(B)"], res$X["C"], res$X["K"], NA, NA)
+      res$s_Oort <- c(res$s_X["eM12(A)"], res$s_X["eWz(B)"], res$s_X["eC"], res$s_X["eK"], NA, NA)
     }
     
   } else if (model == 2)
