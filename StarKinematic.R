@@ -15,6 +15,7 @@ get_galaxy <- function(e)
 
 
   aa <- e[,1]-Leo;
+  
   sa <- sin(aa);
   ca <- cos(aa);
 
@@ -473,6 +474,70 @@ OL_Gy_R <- function( l, b, r)  # not implemented
 }
 
 
+#------------------------  Bottlinger model ---------------------
+
+Bottlinger_W0_R <- function( l, b, r, R0, R)
+{
+  return( 0 )
+}
+
+Bottlinger_W0_L <- function( l, b, r, R0, R)
+{
+  return( -cos(b))
+}
+
+Bottlinger_W0_B <- function( l, b, r, R0, R)
+{
+  return(0)
+}
+
+Bottlinger_W1_R <- function( l, b, r, R0, R)
+{
+  return( R0*(R-R0)*sin(l)*cos(b) )
+}
+
+Bottlinger_W1_L <- function( l, b, r, R0, R)
+{
+  return( (R-R0)*(R0*cos(l) - r*cos(b))/r )
+}
+
+Bottlinger_W1_B <- function( l, b, r, R0, R)
+{
+  return( -R0*(R-R0)*sin(l)*sin(b)/r )
+}
+
+Bottlinger_W2_R <- function( l, b, r, R0, R)
+{
+  return( 0.5*R0*((R-R0)^2)*sin(l)*cos(b))
+}
+
+Bottlinger_W2_L <- function( l, b, r, R0, R)
+{
+  return( 0.5*((R-R0)^2)*(R0*cos(l) - r*cos(b))/r )
+}
+
+Bottlinger_W2_B <- function( l, b, r, R0, R)
+{
+  return( -0.5*R0*((R-R0)^2)*sin(l)*sin(b)/r )
+}
+
+Bottlinger_K_R <- function( l, b, r, R0, R)
+{
+  return(r*cos(b)*cos(b))
+}
+
+Bottlinger_K_L <- function( l, b, r, R0, R)
+{
+  return(0)
+}
+
+Bottlinger_K_B <- function( l, b, r, R0, R)
+{
+  return(-cos(b)*sin(b))
+}
+
+
+
 #-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
@@ -486,11 +551,12 @@ OL_Gy_R <- function( l, b, r)  # not implemented
 #          1 - расширенный вариант с С и К
 #          2 - расширенный вариант с С, К, Gx и  Gy
 #   3 - Эри-Ковальского, 
+#   4 - Модель Боттлингера с W(W0), W'(W1), W" (W2) и K. 
 # use - массив флагов используемых скоростей
 #   1 - mu_l
 #   2 - mu_b
 #   3 - v_r
-MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
+MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0, R0 = 8.0)
 {
   n <- nrow(stars)
   
@@ -675,6 +741,36 @@ MakeOMCoef <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0)
       a3[,12] <- OM_M22_R(stars[,1], stars[,2], stars[,3])
     } 
     
+  } else if (model == 4)  # Модель Боттлингера
+  {
+    
+    R <- sqrt( (stars[,3]*cos(stars[,2]))^2 - 2*R0*stars[,3]*cos(stars[,2])*cos(stars[,1]) + R0^2 )
+    
+    colnames(a1)[4:7] <- c("W0", "W1", "W2", "K")
+    
+    if (use[1] == TRUE)
+    {
+      a1[,4] <- Bottlinger_W0_L(stars[,1], stars[,2], stars[,3], R0, R)
+      a1[,5] <- Bottlinger_W1_L(stars[,1], stars[,2], stars[,3], R0, R)
+      a1[,6] <- Bottlinger_W2_L(stars[,1], stars[,2], stars[,3], R0, R)
+      a1[,7] <- Bottlinger_K_L(stars[,1], stars[,2], stars[,3], R0, R)
+    }
+    
+    if (use[2] == TRUE){
+      a2[,4] <- Bottlinger_W0_B(stars[,1], stars[,2], stars[,3], R0, R)
+      a2[,5] <- Bottlinger_W1_B(stars[,1], stars[,2], stars[,3], R0, R)
+      a2[,6] <- Bottlinger_W2_B(stars[,1], stars[,2], stars[,3], R0, R)
+      a2[,7] <- Bottlinger_K_B(stars[,1], stars[,2], stars[,3], R0, R)
+    }
+    
+    if (use[3] == TRUE)
+    {
+      a3[,4] <- Bottlinger_W1_R(stars[,1], stars[,2], stars[,3], R0, R)
+      a3[,5] <- Bottlinger_W1_R(stars[,1], stars[,2], stars[,3], R0, R)
+      a3[,6] <- Bottlinger_W2_R(stars[,1], stars[,2], stars[,3], R0, R)
+      a3[,7] <- Bottlinger_K_R(stars[,1], stars[,2], stars[,3], R0, R)
+    }
+      
   }
   
   
@@ -838,11 +934,11 @@ MakeOMCoef_old <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0
 # ef - количество переменных, не содержащих ошибки, см. TLS_Gen
 # model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского
 # type - вариант модели, см. в MakeOmCoef()
-Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 0, ef = -1, model = 1, type = 0)
+Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 0, ef = -1, model = 1, type = 0, R0 = 8.0)
 {
   #  calculate equation of conditions
   # l, b, px, mu_l, mu_b, vr
-  a <- MakeOMCoef(stars = stars, use = use, model = model, type = type)
+  a <- MakeOMCoef(stars = stars, use = use, model = model, type = type, R0 = R0)
   
   b <- PrepareOMRightSide(stars = stars, use = use)
   #b <- rowSums(t(t(a)*GetOM_Default()))
@@ -907,6 +1003,14 @@ Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 
       res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"], res$s_X["eGx"], res$s_X["eGy"])
     }
     
+  } else if (model == 4)
+  {
+    res$Oort <- c(-0.5*R0*res$X["W1"], -res$X["W0"] - 0.5*R0*res$X["W1"], NA, res$X["K"], NA, NA)
+    res$s_Oort <- c(0.5*R0*res$s_X["eW1"], sqrt(res$s_X["eW0"]^2 + (0.5*R0*res$s_X["eW1"])^2), NA, res$s_X["eK"], NA, NA)
+    res$X["A"] <- res$Oort[1]
+    res$s_X["eA"] <- res$s_Oort[1]
+    res$X["B"] <- res$Oort[2] 
+    res$s_X["eB"] <- res$s_Oort[2] 
   } else if (model == 3)
   {
     res$Oort <- c(NA, NA, NA, NA, NA, NA)

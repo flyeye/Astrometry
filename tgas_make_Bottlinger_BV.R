@@ -1,5 +1,5 @@
 
-tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV")
+tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV")
 {
 
   solutions_bv <- list()
@@ -155,8 +155,8 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
                      clr = c("blue", "green4", "brown", "black", "red", "orange"),
                      x_par = 9, 
                      x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_OL_A.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_OL_A.eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_A.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_A.eps"), plot = g, width = 10, height = 5)
   
   g <- draw_OortParameter(solutions_bv, parameter = 2,
                           title = "Oort`s parameter B", 
@@ -164,17 +164,8 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_OL_B.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_OL_B.eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OortParameter(solutions_bv, parameter = 3,
-                          title = "Oort`s parameter C", 
-                          x_lim = c(-0.5, 1.1, 0.1), y_lim = c(-10, 6, 2), 
-                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
-                          x_par = 9, 
-                          x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_OL_C.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_OL_C.eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_B.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_B.eps"), plot = g, width = 10, height = 5)
   
   g <- draw_OortParameter(solutions_bv, parameter = 4,
                           title = "Oort`s parameter K", 
@@ -182,15 +173,15 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_OL_K.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_K.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
   
   tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
-                            ylims  = matrix(data = c(5, 20, 0, 25, 0, 15, -2, 10, -5, 2, -18, -8, -5, 5, -8, 3 , 5, 25, -7, 3, -10, 5), nrow = 2),
+                            ylims  = matrix(data = c(5, 20, 0, 25, 0, 15, 15, 35, -10, 0, -3, 13, -7, 3, 5, 25, -15, -5), nrow = 2),
                             xlims = c(-0.5, 1.1, 0.1),
                             xpar = 9, 
                             xtitle = "B-V", 
-                            saveto = paste0("solutions/", filter_dist,"_"))
+                            saveto = paste0("solutions/Bottlinger", filter_dist,"_"))
   
   
   return(solutions_bv)
