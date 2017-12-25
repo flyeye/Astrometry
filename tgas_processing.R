@@ -575,7 +575,7 @@ calc_physical_params <- function(solution, Rs = 8.09)
   
   physical[,1] <- Rs * (solution$Oort[,1] - solution$Oort[,2]) # Vs - линейная скорость вращения галактики на расстоянии Rs
   physical[,2] <- (2 * pi * Rs * 3.086e+16 /  physical[,1]) / (86400*365*1000000)   # P - период вращения галактики
-  physical[,3] <- solution$Oort[,1] + solution$Oort[,2]        # S - наклон кривой вращения галактикки
+  physical[,3] <- -(solution$Oort[,1] + solution$Oort[,2])        # S - наклон кривой вращения галактикки
   physical[,4] <- 2 * sqrt(-solution$Oort[,2]/(solution$Oort[,1] - solution$Oort[,2])) # отношение эпициклической частоты к угловой скорости вращения Галактики в окресностях Солнца
   physical[,5] <- (Rs*3.086e+19) * ((physical[,1]*1000)**2) / 132712438e+12 #6.67408e-11           # масса вещества галактики, сосредоточенная внутри орбиты Солнца
   physical[,6] <- (180/pi) * atan2(solution$X[,2], solution$X[,1])        # L
@@ -808,6 +808,77 @@ tgas_export_all_solution <- function(solutions)
 }
 
 
+#------------------------------------------------------
+# стоит сразу и сводные диаграммы (все параметры на одной диаграмме) для всех решений
+# и отдельные диаграммы для каждого параметра (все решения для каждого параметра на одной диаграмме)
+tgas_draw_all_kinematic <- function(solutions, src = "TGAS", saveto = "")
+{
+  for(i in 1:length(solutions))
+  {
+    tgas_draw_kinematic(solutions[[i]])
+  }
+  
+  tgas_draw_all_kinematic_comp(solutions, src, saveto)
+}
+
+
+# tgas_draw_all_OM_sol_comp(list(solutions_mw$MS_All, solutions_mw_px$MS_All, solutions_Exp1$MS_All, solutions_Exp2$MS_All), 
+# ylims  = matrix(data = c(5, 15, 10, 25, 0, 15, -5, 5, -5, 5, -15, -10, -5, 5, -3, 7 , 10, 20, -7, 3, -8, 2), nrow = 2))
+
+# tgas_draw_all_OM_sol_comp(list(solutions_mw$RG_All, solutions_mw_px$RG_All, solutions_Exp1$RG_All, solutions_Exp2$RG_All), 
+# ylims  = matrix(data = c(5, 35, 15, 55, 0, 25, -3, 7, -5, 5, -20, -10, -5, 5, -8, 2 , 7, 20, -7, 3, -10, 5), nrow = 2))
+
+# tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
+#                           ylims  = matrix(data = c(5, 20, 0, 25, 0, 15, -2, 10, -5, 2, -18, -8, -5, 5, -8, 3 , 5, 25, -7, 3, -10, 5), nrow = 2),
+#                           xlims = c(-0.5, 1.1, 0.1),
+#                           xpar = 9, 
+#                           xtitle = "B-V", 
+#                           saveto = "solutions/")
+
+
+# строит отдельные диаграмм для каждого параметра в данном решении
+tgas_draw_all_OM_sol_comp <- function(solutions, ylims, xlims = c(0, 2.5, 0.5), xpar = 4, xtitle = "<r>, kpc", saveto = "")
+{
+  
+  for (i in 1:ncol(solutions[[1]]$X))
+  {
+    g <-draw_OMParameter(solutions, 
+                         parameter = i, 
+                         y_lim = c(ylims[1, i], ylims[2, i], 1), 
+                         x_lim = xlims, 
+                         x_title = xtitle, 
+                         x_par = xpar, 
+                         title = colnames(solutions[[1]]$X)[i])
+    
+    ggsave(paste0(saveto, "OM_", colnames(solutions[[1]]$X)[i],".png"), plot = g, width = 10, height = 5)
+    ggsave(paste0(saveto, "OM_", colnames(solutions[[1]]$X)[i],".eps"), plot = g, width = 10, height = 5)
+    
+  }
+}
+
+#------------------------------------------------------
+# строит диаграммы для всех параметров решения по двум солюшинам для сравнения
+
+tgas_draw_all_OM_sol <- function(sol1, sol2, sol1_name, sol2_name, saveto = "")
+{
+  for (i in 1:ncol(sol1$X))
+  {
+    cname <- colnames(sol1$X)[i]
+    g <- draw_OMParComp(parameter = i, sol1 = sol1, sol2 = sol2, 
+                        title = cname, 
+                        xat = paste(cname, "km/s/kpc,", sol1_name), 
+                        yat = paste(cname, "km/s/kpc,", sol2_name))
+    ggsave(paste0(saveto, "OM_", cname, "_", sol1_name, "-", sol2_name,  ".png"), plot = g, width = 5, height = 5)
+    ggsave(paste0(saveto, "OM_", cname, "_", sol1_name, "-", sol2_name,  ".eps"), plot = g, width = 5, height = 5)
+  }
+  
+}
+
+
+#----------------------------------------------------
+
+# строит три отдельные диграммы для заданного решения: все параметры Оорта, все Солнечные члены и все параметры модели ОМ
+
 tgas_draw_kinematic <- function (solution)
 {
   save <- paste0(solution$Conditions$SaveTo, "_", solution$Conditions$Src,"_")
@@ -830,92 +901,183 @@ tgas_draw_kinematic <- function (solution)
   
 }
 
+#----------------------------------------------------
 
-tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "")
+## Строит отдельные диаграммы для каждого параметра со всем решениями на каждой диаграмме
+
+## tgas_draw_all_kinematic_comp(solutions_bv, src = "TGAS", saveto = "solutions/bottlinger_kin_", x_par = 9, x_lim = c(-0.5, 1.2,0.2), x_title = "B-V", is_legend = FALSE, width = 4, height = 4)
+
+
+tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "", 
+                                         x_par = 4, x_lim = c(0, 4, 0.5), x_title = "<r>, kpc",
+                                         is_legend = TRUE, 
+                                         width = 10, height = 5)
 {
   save <- paste0(saveto, src,"_")
   
   g <- draw_OMParameter(solutions,
+                        parameter = 1,
+                        x_par = x_par,
+                        x_lim = x_lim, 
+                        x_title = x_title,
+                        y_lim = c(0, 20, 5),
+                        y_title = "Компонент движения Солнца U, км/с",
+                        is_legend = is_legend,
                         title = paste("Solar motion U, ", src, " proper motions."))
-  ggsave(paste0(save, "SolarU-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarU-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "SolarU-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "SolarU-R", ".eps"), plot = g, width = width, height = height)
   
   g <- draw_OMParameter(solutions,
                         parameter = 2,
-                        y_lim = c(10, 85, 10),
-                        title = paste("Solar motion V, ", src, " proper motions."))
-  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = 10, height = 5)
+                        x_par = x_par,
+                        x_lim = x_lim, 
+                        x_title = x_title,
+                        y_lim = c(0, 25, 5),
+                        y_title = "Компонент движения Солнца V, км/с",
+                        is_legend = is_legend,
+                        title = paste("Компонент движения Солнца V, ", src, " proper motions."))
+  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = width, height = height)
   
   g <- draw_OMParameter(solutions,
                         parameter = 3,
-                        y_lim = c(5, 25, 5),
+                        x_par = x_par,
+                        x_lim = x_lim,
+                        x_title = x_title,
+                        y_lim = c(0, 15, 3), 
+                        y_title = "Компонент движения Солнца W, км/с",
+                        is_legend = is_legend,
                         title = paste("Solar motion W, ", src, " proper motions."))
-  ggsave(paste0(save, "SolarW-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarW-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "SolarW-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "SolarW-R", ".eps"), plot = g, width = width, height = height)
   
   g <- draw_OortParameter(solutions, 
+                          parameter = 1,
+                          x_lim = x_lim, 
+                          x_par = x_par,
+                          x_title = x_title,
+                          is_legend = is_legend,
+                          y_lim = c(0, 25, 5), 
+                          y_title = "Параметр Оорта A, км/с/кпк",
                           title = paste("Oort`s parameter A, ", src, " proper motions."))
-  ggsave(paste0(save, "OortA-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "OortA-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "OortA-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "OortA-R", ".eps"), plot = g, width = width, height = height)
   
   
   g <- draw_OortParameter(solutions, 
                           parameter = 2,
+                          x_lim = x_lim, 
+                          x_par = x_par,
+                          x_title = x_title,
+                          is_legend = is_legend,
                           title = paste("Oort`s parameter B, ", src, " proper motions."),
-                          x_lim = c(0, 4, 0.5), y_lim = c(-17, -7, 1))
-  ggsave(paste0(save, "OortB-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = 10, height = 5)
+                          y_lim = c(-20, -5, 5), 
+                          y_title = "Параметр Оорта B, км/с/кпк")
+  ggsave(paste0(save, "OortB-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = width, height = height)
   
   if ((solutions[[1]]$Conditions$KinModel==1) |
-      ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType>=1)))
+      ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType>=1)) |
+      (solutions[[1]]$Conditions$KinModel==4)
+      )
   {
     g <- draw_OortParameter(solutions, 
                             parameter = 3,
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
                             title = paste("Oort`s parameter C, ", src, " proper motions."),
-                            x_lim = c(0, 4, 0.5), y_lim = c(-7, 3, 1))
-    ggsave(paste0(save, "OortC-R", ".png"), plot = g, width = 10, height = 5)
-    ggsave(paste0(save, "OortC-R", ".eps"), plot = g, width = 10, height = 5)
+                            y_lim = c(-15, 5, 5), 
+                            y_title = "Параметр Оорта С, км/с/кпк")
+    ggsave(paste0(save, "OortC-R", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "OortC-R", ".eps"), plot = g, width = width, height = height)
     
     g <- draw_OortParameter(solutions, 
                             parameter = 4,
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
                             title = paste("Oort`s parameter K, ", src, " proper motions."),
-                            x_lim = c(0, 4, 0.5), y_lim = c(-9, 2, 1))
-    ggsave(paste0(save, "OortK-R", ".png"), plot = g, width = 10, height = 5)
-    ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = 10, height = 5)  
+                            y_lim = c(-15, 5, 5), 
+                            y_title = "Параметр Оорта K, км/с/кпк")
+    ggsave(paste0(save, "OortK-R", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = width, height = height)  
   }
   
   if ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType==2))
   {
     g <- draw_OortParameter(solutions, 
                             parameter = 5,
-                            title = paste("Oort`s parameter Gx, ", src, " proper motions."),
-                            x_lim = c(0, 4, 0.5), y_lim = c(-40, 40, 2))
-    ggsave(paste0(save, "OortGx-R", ".png"), plot = g, width = 10, height = 5)
-    ggsave(paste0(save, "OortGx-R", ".eps"), plot = g, width = 10, height = 5)
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
+                            title = paste("Gx, ", src, " proper motions."),
+                            y_title = "Gx, km/s/kpc", 
+                            y_lim = c(-40, 40, 2))
+    ggsave(paste0(save, "OortGx-R", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "OortGx-R", ".eps"), plot = g, width = width, height = height)
     
     g <- draw_OortParameter(solutions, 
                             parameter = 6,
-                            title = paste("Oort`s parameter Gy, ", src, " proper motions."),
-                            x_lim = c(0, 4, 0.5), y_lim = c(-40, 40, 3))
-    ggsave(paste0(save, "OortGy-R", ".png"), plot = g, width = 10, height = 5)
-    ggsave(paste0(save, "OortGy-R", ".eps"), plot = g, width = 10, height = 5)  
-  }
-}
-
-
-tgas_draw_all_kinematic <- function(solutions, src = "TGAS", saveto = "")
-{
-  for(i in 1:length(solutions))
-  {
-    tgas_draw_kinematic(solutions[[i]])
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
+                            title = paste("Gy, ", src, " proper motions."),
+                            y_title = "Gy, km/s/kpc", 
+                            y_lim = c(-40, 40, 3))
+    ggsave(paste0(save, "OortGy-R", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "OortGy-R", ".eps"), plot = g, width = width, height = height)  
   }
   
-  tgas_draw_all_kinematic_comp(solutions, src, saveto)
+  if (solutions[[1]]$Conditions$KinModel==4) 
+  {
+    g <- draw_OMParameter(solutions, 
+                            parameter = 4,
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
+                            title = paste("Bottlinger`s parameter W, ", src, " proper motions."),
+                            y_title = expression(Omega[0]*", км/с/кпк"), 
+                            y_lim = c(15, 40, 5))
+    ggsave(paste0(save, "Bottlinger_W", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "Bottlinger_W", ".eps"), plot = g, width = width, height = height)
+    
+    g <- draw_OMParameter(solutions, 
+                            parameter = 5,
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
+                            title = paste("Bottlinger`s parameter W', ", src, " proper motions."),
+                            y_title = expression(Omega[0]*"', км/с/кпк"^2), 
+                            y_lim = c(-7, 0, 1))
+    ggsave(paste0(save, "Bottlinger_W1", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "Bottlinger_W1", ".eps"), plot = g, width = width, height = height)
+    
+    g <- draw_OMParameter(solutions, 
+                            parameter = 6,
+                            x_par = x_par,
+                            x_lim = x_lim, 
+                            x_title = x_title,
+                            is_legend = is_legend,
+                            title = paste("Bottlinger`s parameter W\", ", src, " proper motions."),
+                          y_title = expression(Omega[0]*"'', км/с/кпк"^3), 
+                            y_lim = c(-4, 5, 1))
+    ggsave(paste0(save, "Bottlinger_W2", ".png"), plot = g, width = width, height = height)
+    ggsave(paste0(save, "Bottlinger_W2", ".eps"), plot = g, width = width, height = height)  
+  }
 }
 
 
-tgas_draw_physics <- function (solution, src = "TGAS", saveto = "")
+#----------------------------------------------------
+
+
+tgas_draw_physics <- function (solution, src = "TGAS", saveto = "", is_legend = TRUE, width = 10, height = 5)
 {
   
   if (solution[[1]]$Conditions$KinModel == 3)
@@ -923,123 +1085,205 @@ tgas_draw_physics <- function (solution, src = "TGAS", saveto = "")
   
   save <- paste0(saveto, src,"_")
   
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
+                     x_par = 4,
+                     is_legend = is_legend,
                      title = paste("Linear galactic velocity at Solar distance, ", src, " proper motions."))
-  ggsave(paste0(save, "V-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "V-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "V-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "V-R", ".eps"), plot = g, width = width, height = height)
   
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 2,
                      title = paste("Galaxy rotation period, ", src, " proper motions."),
-                     y_lim = c(205, 260, 10),
+                     x_par = 4,
+                     y_lim = c(205, 300, 10),
+                     is_legend = is_legend,
                      y_title = "million years")
-  ggsave(paste0(save, "Period-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "Period-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "Period-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "Period-R", ".eps"), plot = g, width = width, height = height)
   
   #draw_GalRotationCurveTilt(solution)
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 3,
                      title = paste("Galaxy rotation curve inclination, ", src, " proper motions."),
+                     x_par = 4,
                      y_lim = c(-7, 7, 1),
+                     is_legend = is_legend,
                      y_title = "km/s/kpc")
-  ggsave(paste0(save, "S-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "S-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "S-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "S-R", ".eps"), plot = g, width = width, height = height)
   
   #draw_GalF(solution)
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 4,
                      title = paste("Epicyclic frequency to angular velocity, ", src, " proper motions."),
+                     x_par = 4,
                      y_lim = c(1.2, 1.6, 0.1),
+                     is_legend = is_legend,
                      y_title = "")
-  ggsave(paste0(save, "F-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "F-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "F-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "F-R", ".eps"), plot = g, width = width, height = height)
   
   #draw_GalMass(solution)
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 5,
                      title = paste("Galaxy mass inside Solar orbit, ", src, " proper motions."),
-                     y_lim = c(6.5e10, 11e10, 1e10),
+                     x_par = 4,
+                     y_lim = c(5.0e10, 11e10, 1e10),
+                     is_legend = is_legend,
                      y_title = "Solar mass")
-  ggsave(paste0(save, "M-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "M-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "M-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "M-R", ".eps"), plot = g, width = width, height = height)
   
   #draw_ApexL(solution)
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 6,
                      title = paste("Solar motion apex L, ", src, " proper motions."),
+                     x_par = 4,
                      y_lim = c(55, 74, 1),
+                     is_legend = is_legend,
                      y_title = "degree")
-  ggsave(paste0(save, "ApexL-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "ApexL-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "ApexL-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "ApexL-R", ".eps"), plot = g, width = width, height = height)
   
   #draw_ApexB(solution)
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 7,
                      title = paste("Solar motion apex B, ", src, " proper motions."),
+                     x_par = 4,
                      y_lim = c(11, 23, 1),
+                     is_legend = is_legend,
                      y_title = "degree")
-  ggsave(paste0(save, "ApexB-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "ApexB-R", ".eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(save, "ApexB-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "ApexB-R", ".eps"), plot = g, width = width, height = height)
   
   #draw_SolarV(solution)
-  g <- draw_Physical(solution[c(1,2)], 
+  g <- draw_Physical(solution, 
                      parameter = 8,
                      title = paste("Solar velocity, ", src, " proper motions."),
+                     x_par = 4,
                      y_lim = c(10, 100, 10),
+                     is_legend = is_legend,
                      y_title = "km/s")
-  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = 10, height = 5)
-}
-
-tgas_draw_all_OM_sol <- function(sol1, sol2, sol1_name, sol2_name, saveto = "")
-{
-  for (i in 1:ncol(sol1$X))
-  {
-    cname <- colnames(sol1$X)[i]
-    g <- draw_OMParComp(parameter = i, sol1 = sol1, sol2 = sol2, 
-                        title = cname, 
-                        xat = paste(cname, "km/s/kpc,", sol1_name), 
-                        yat = paste(cname, "km/s/kpc,", sol2_name))
-    ggsave(paste0(saveto, "OM_", cname, "_", sol1_name, "-", sol2_name,  ".png"), plot = g, width = 5, height = 5)
-    ggsave(paste0(saveto, "OM_", cname, "_", sol1_name, "-", sol2_name,  ".eps"), plot = g, width = 5, height = 5)
-  }
-  
+  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = width, height = height)
 }
 
 
+## tgas_draw_physics_BV(solutions_bv, src = "TGAS", saveto = "solutions/bottlinger_physycs_", x_lim = c(-0.5, 1.2, 0.2), is_legend = FALSE, width = 4, height = 4)
 
-# tgas_draw_all_OM_sol_comp(list(solutions_mw$MS_All, solutions_mw_px$MS_All, solutions_Exp1$MS_All, solutions_Exp2$MS_All), 
-# ylims  = matrix(data = c(5, 15, 10, 25, 0, 15, -5, 5, -5, 5, -15, -10, -5, 5, -3, 7 , 10, 20, -7, 3, -8, 2), nrow = 2))
-
-# tgas_draw_all_OM_sol_comp(list(solutions_mw$RG_All, solutions_mw_px$RG_All, solutions_Exp1$RG_All, solutions_Exp2$RG_All), 
-# ylims  = matrix(data = c(5, 35, 15, 55, 0, 25, -3, 7, -5, 5, -20, -10, -5, 5, -8, 2 , 7, 20, -7, 3, -10, 5), nrow = 2))
-
- # tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
- #                           ylims  = matrix(data = c(5, 20, 0, 25, 0, 15, -2, 10, -5, 2, -18, -8, -5, 5, -8, 3 , 5, 25, -7, 3, -10, 5), nrow = 2),
- #                           xlims = c(-0.5, 1.1, 0.1),
- #                           xpar = 9, 
- #                           xtitle = "B-V", 
- #                           saveto = "solutions/")
-
-
-tgas_draw_all_OM_sol_comp <- function(solutions, ylims, xlims = c(0, 2.5, 0.5), xpar = 4, xtitle = "<r>, kpc", saveto = "")
+tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c(-1, 2, 0.1), is_legend = TRUE, width = 10, height = 5)
 {
   
-  for (i in 1:ncol(solutions[[1]]$X))
-  {
-    g <-draw_OMParameter(solutions, 
-                         parameter = i, 
-                         y_lim = c(ylims[1, i], ylims[2, i], 1), 
-                         x_lim = xlims, 
-                         x_title = xtitle, 
-                         x_par = xpar, 
-                         title = colnames(solutions[[1]]$X)[i])
-    
-    ggsave(paste0(saveto, "OM_", colnames(solutions[[1]]$X)[i],".png"), plot = g, width = 10, height = 5)
-    ggsave(paste0(saveto, "OM_", colnames(solutions[[1]]$X)[i],".eps"), plot = g, width = 10, height = 5)
-    
-  }
+  if (solution[[1]]$Conditions$KinModel == 3)
+    return(0);
+  
+  save <- paste0(saveto, src,"_")
+  
+  g <- draw_Physical(solution, 
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     y_lim = c(150, 300, 25),
+                     is_legend = is_legend,
+                     y_title = "Линейная скорость Солнца V, км/с",
+                     title = paste("Linear galactic velocity at Solar distance, ", src, " proper motions."))
+  ggsave(paste0(save, "V-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "V-R", ".eps"), plot = g, width = width, height = height)
+  
+  g <- draw_Physical(solution, 
+                     parameter = 2,
+                     title = paste("Период вращения Галактики, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(175, 275, 10),
+                     y_title = "Период вращения Галактики, миллионы лет")
+  ggsave(paste0(save, "Period-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "Period-R", ".eps"), plot = g, width = width, height = height)
+  
+  #draw_GalRotationCurveTilt(solution)
+  g <- draw_Physical(solution, 
+                     parameter = 3,
+                     title = paste("Galaxy rotation curve inclination, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(-16, 14, 2),
+                     y_title = "Наклон кривой вращения Галактики, км/с/кпк")
+  ggsave(paste0(save, "S-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "S-R", ".eps"), plot = g, width = width, height = height)
+  
+  #draw_GalF(solution)
+  g <- draw_Physical(solution, 
+                     parameter = 4,
+                     title = paste("Epicyclic frequency to angular velocity, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(0.8, 1.8, 0.1),
+                     y_title = "F")
+  ggsave(paste0(save, "F-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "F-R", ".eps"), plot = g, width = width, height = height)
+  
+  #draw_GalMass(solution)
+  g <- draw_Physical(solution, 
+                     parameter = 5,
+                     title = paste("Galaxy mass inside Solar orbit, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(5.0e10, 12e10, 1e10),
+                     y_title = "масса Галактики, масса Солнца")
+  ggsave(paste0(save, "M-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "M-R", ".eps"), plot = g, width = width, height = height)
+  
+  #draw_ApexL(solution)
+  g <- draw_Physical(solution, 
+                     parameter = 6,
+                     title = paste("Solar motion apex L, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(30, 70, 5),
+                     y_title = "Долгота апекса Солнца L, градусы")
+  ggsave(paste0(save, "ApexL-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "ApexL-R", ".eps"), plot = g, width = width, height = height)
+  
+  #draw_ApexB(solution)
+  g <- draw_Physical(solution, 
+                     parameter = 7,
+                     title = paste("Solar motion apex B, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(10, 30, 5),
+                     y_title = "Широта апекса Солнца B, градусы")
+  ggsave(paste0(save, "ApexB-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "ApexB-R", ".eps"), plot = g, width = width, height = height)
+  
+  #draw_SolarV(solution)
+  g <- draw_Physical(solution, 
+                     parameter = 8,
+                     title = paste("Solar velocity, ", src, " proper motions."),
+                     x_par = 9, 
+                     x_title = "B-V",
+                     x_lim = x_lim,
+                     is_legend = is_legend,
+                     y_lim = c(5, 35, 5),
+                     y_title = "скорость Cолнца относительно центроида, км/с")
+  ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = width, height = height)
+  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = width, height = height)
 }
+
+
+#------------------------------------------------------
 
 tgas_draw_HR_facet <- function(solution, M_lim = c(10,-10), BV_lim = c(-1, 3))
 {
@@ -1057,6 +1301,8 @@ tgas_draw_HR_facet <- function(solution, M_lim = c(10,-10), BV_lim = c(-1, 3))
   
   return (g)
 }
+
+#------------------------------------------------------
 
 tgas_calc_weighted_mean <- function(X, sX)
 {
