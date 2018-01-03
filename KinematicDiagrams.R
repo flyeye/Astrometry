@@ -361,10 +361,10 @@ draw_OMParameter <- function(solution,
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6)) + 
     coord_cartesian(ylim = c(y_lim[1],y_lim[2]), xlim =c(x_lim[1],x_lim[2])) 
   
   for (i in 1:length(solution))
@@ -388,7 +388,7 @@ draw_OMParameter <- function(solution,
                            width = 0.05)
   }
   
-  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.0)))
+  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.2)))
     
   if (is_legend == FALSE)
   {
@@ -427,10 +427,10 @@ draw_OortParameter <- function(solution,
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6)) + 
     coord_cartesian(ylim = c(y_lim[1],y_lim[2]), xlim =c(x_lim[1],x_lim[2])) 
   
   for (i in 1:length(solution))
@@ -454,7 +454,7 @@ draw_OortParameter <- function(solution,
                             width = 0.05)
   }
   
-  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.0)))
+  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.2)))
   
   if (is_legend == FALSE)
   {
@@ -475,7 +475,7 @@ draw_Physical <- function(solution,
                           parameter = 1,
                           title = "Linear galactic velocity at Solar distance", 
                           x_lim = c(0, 4, 0.5), y_lim = c(185, 245, 10), 
-                          clr = c("blue", "green4", "brown", "black", "red"), 
+                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 4,  # 4 - фактическое среднее расстояние выборки
                           x_title = "<r>, kpc", 
                           y_title = "km/s", 
@@ -492,10 +492,10 @@ draw_Physical <- function(solution,
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
-    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25)) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5)) 
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26))
   
   
   for (i in 1:length(solution))
@@ -518,7 +518,7 @@ draw_Physical <- function(solution,
     #  g <- g + geom_point(aes(x = solution$MS_All$Parameters[,x_par], y = rep(0,nrow(solution$MS_All$Parameters))))
   }
   
-  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.0)))
+  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.2)))
   
   if (is_legend == FALSE)
   {

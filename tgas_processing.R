@@ -920,36 +920,36 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                         x_par = x_par,
                         x_lim = x_lim, 
                         x_title = x_title,
-                        y_lim = c(0, 20, 5),
+                        y_lim = c(5, 25, 5),
                         y_title = "Компонент движения Солнца U, км/с",
                         is_legend = is_legend,
                         title = paste("Solar motion U, ", src, " proper motions."))
   ggsave(paste0(save, "SolarU-R", ".png"), plot = g, width = width, height = height)
-  ggsave(paste0(save, "SolarU-R", ".eps"), plot = g, width = width, height = height)
+  #ggsave(paste0(save, "SolarU-R", ".eps"), plot = g, width = width, height = height)
   
   g <- draw_OMParameter(solutions,
                         parameter = 2,
                         x_par = x_par,
                         x_lim = x_lim, 
                         x_title = x_title,
-                        y_lim = c(0, 25, 5),
+                        y_lim = c(5, 25, 5),
                         y_title = "Компонент движения Солнца V, км/с",
                         is_legend = is_legend,
                         title = paste("Компонент движения Солнца V, ", src, " proper motions."))
   ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = width, height = height)
-  ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = width, height = height)
+  #ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = width, height = height)
   
   g <- draw_OMParameter(solutions,
                         parameter = 3,
                         x_par = x_par,
                         x_lim = x_lim,
                         x_title = x_title,
-                        y_lim = c(0, 15, 3), 
+                        y_lim = c(5, 25, 3), 
                         y_title = "Компонент движения Солнца W, км/с",
                         is_legend = is_legend,
                         title = paste("Solar motion W, ", src, " proper motions."))
   ggsave(paste0(save, "SolarW-R", ".png"), plot = g, width = width, height = height)
-  ggsave(paste0(save, "SolarW-R", ".eps"), plot = g, width = width, height = height)
+  #ggsave(paste0(save, "SolarW-R", ".eps"), plot = g, width = width, height = height)
   
   g <- draw_OortParameter(solutions, 
                           parameter = 1,
@@ -957,11 +957,11 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                           x_par = x_par,
                           x_title = x_title,
                           is_legend = is_legend,
-                          y_lim = c(0, 25, 5), 
+                          y_lim = c(5, 25, 5), 
                           y_title = "Параметр Оорта A, км/с/кпк",
                           title = paste("Oort`s parameter A, ", src, " proper motions."))
   ggsave(paste0(save, "OortA-R", ".png"), plot = g, width = width, height = height)
-  ggsave(paste0(save, "OortA-R", ".eps"), plot = g, width = width, height = height)
+  #ggsave(paste0(save, "OortA-R", ".eps"), plot = g, width = width, height = height)
   
   
   g <- draw_OortParameter(solutions, 
@@ -974,7 +974,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                           y_lim = c(-20, -5, 5), 
                           y_title = "Параметр Оорта B, км/с/кпк")
   ggsave(paste0(save, "OortB-R", ".png"), plot = g, width = width, height = height)
-  ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = width, height = height)
+  #ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = width, height = height)
   
   if ((solutions[[1]]$Conditions$KinModel==1) |
       ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType>=1)) |
@@ -991,7 +991,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             y_lim = c(-15, 5, 5), 
                             y_title = "Параметр Оорта С, км/с/кпк")
     ggsave(paste0(save, "OortC-R", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "OortC-R", ".eps"), plot = g, width = width, height = height)
+    #ggsave(paste0(save, "OortC-R", ".eps"), plot = g, width = width, height = height)
     
     g <- draw_OortParameter(solutions, 
                             parameter = 4,
@@ -1003,7 +1003,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             y_lim = c(-15, 5, 5), 
                             y_title = "Параметр Оорта K, км/с/кпк")
     ggsave(paste0(save, "OortK-R", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = width, height = height)  
+    #ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = width, height = height)  
   }
   
   if ((solutions[[1]]$Conditions$KinModel==2) & (solutions[[1]]$Conditions$KinModelType==2))
@@ -1018,7 +1018,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             y_title = "Gx, km/s/kpc", 
                             y_lim = c(-40, 40, 2))
     ggsave(paste0(save, "OortGx-R", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "OortGx-R", ".eps"), plot = g, width = width, height = height)
+    #ggsave(paste0(save, "OortGx-R", ".eps"), plot = g, width = width, height = height)
     
     g <- draw_OortParameter(solutions, 
                             parameter = 6,
@@ -1030,7 +1030,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             y_title = "Gy, km/s/kpc", 
                             y_lim = c(-40, 40, 3))
     ggsave(paste0(save, "OortGy-R", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "OortGy-R", ".eps"), plot = g, width = width, height = height)  
+    #ggsave(paste0(save, "OortGy-R", ".eps"), plot = g, width = width, height = height)  
   }
   
   if (solutions[[1]]$Conditions$KinModel==4) 
@@ -1043,9 +1043,9 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             is_legend = is_legend,
                             title = paste("Bottlinger`s parameter W, ", src, " proper motions."),
                             y_title = expression(Omega[0]*", км/с/кпк"), 
-                            y_lim = c(15, 40, 5))
+                            y_lim = c(20, 40, 5))
     ggsave(paste0(save, "Bottlinger_W", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "Bottlinger_W", ".eps"), plot = g, width = width, height = height)
+    #ggsave(paste0(save, "Bottlinger_W", ".eps"), plot = g, width = width, height = height)
     
     g <- draw_OMParameter(solutions, 
                             parameter = 5,
@@ -1055,9 +1055,9 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             is_legend = is_legend,
                             title = paste("Bottlinger`s parameter W', ", src, " proper motions."),
                             y_title = expression(Omega[0]*"', км/с/кпк"^2), 
-                            y_lim = c(-7, 0, 1))
+                            y_lim = c(-7, -2, 1))
     ggsave(paste0(save, "Bottlinger_W1", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "Bottlinger_W1", ".eps"), plot = g, width = width, height = height)
+    #ggsave(paste0(save, "Bottlinger_W1", ".eps"), plot = g, width = width, height = height)
     
     g <- draw_OMParameter(solutions, 
                             parameter = 6,
@@ -1067,9 +1067,9 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             is_legend = is_legend,
                             title = paste("Bottlinger`s parameter W\", ", src, " proper motions."),
                           y_title = expression(Omega[0]*"'', км/с/кпк"^3), 
-                            y_lim = c(-4, 5, 1))
+                            y_lim = c(-2, 5, 1))
     ggsave(paste0(save, "Bottlinger_W2", ".png"), plot = g, width = width, height = height)
-    ggsave(paste0(save, "Bottlinger_W2", ".eps"), plot = g, width = width, height = height)  
+    #ggsave(paste0(save, "Bottlinger_W2", ".eps"), plot = g, width = width, height = height)  
   }
 }
 
@@ -1184,7 +1184,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_par = 9, 
                      x_title = "B-V",
                      x_lim = x_lim,
-                     y_lim = c(150, 300, 25),
+                     y_lim = c(175, 300, 25),
                      is_legend = is_legend,
                      y_title = "Линейная скорость Солнца V, км/с",
                      title = paste("Linear galactic velocity at Solar distance, ", src, " proper motions."))
@@ -1198,8 +1198,8 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(175, 275, 10),
-                     y_title = "Период вращения Галактики, миллионы лет")
+                     y_lim = c(175, 255, 10),
+                     y_title = "Период вращения Галактики, млн.лет")
   ggsave(paste0(save, "Period-R", ".png"), plot = g, width = width, height = height)
   ggsave(paste0(save, "Period-R", ".eps"), plot = g, width = width, height = height)
   
@@ -1211,7 +1211,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(-16, 14, 2),
+                     y_lim = c(-15, 5, 3),
                      y_title = "Наклон кривой вращения Галактики, км/с/кпк")
   ggsave(paste0(save, "S-R", ".png"), plot = g, width = width, height = height)
   ggsave(paste0(save, "S-R", ".eps"), plot = g, width = width, height = height)
@@ -1224,7 +1224,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(0.8, 1.8, 0.1),
+                     y_lim = c(0.8, 1.6, 0.1),
                      y_title = "F")
   ggsave(paste0(save, "F-R", ".png"), plot = g, width = width, height = height)
   ggsave(paste0(save, "F-R", ".eps"), plot = g, width = width, height = height)
@@ -1237,7 +1237,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(5.0e10, 12e10, 1e10),
+                     y_lim = c(7.0e10, 12e10, 1e10),
                      y_title = "масса Галактики, масса Солнца")
   ggsave(paste0(save, "M-R", ".png"), plot = g, width = width, height = height)
   ggsave(paste0(save, "M-R", ".eps"), plot = g, width = width, height = height)
@@ -1250,7 +1250,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(30, 70, 5),
+                     y_lim = c(40, 70, 5),
                      y_title = "Долгота апекса Солнца L, градусы")
   ggsave(paste0(save, "ApexL-R", ".png"), plot = g, width = width, height = height)
   ggsave(paste0(save, "ApexL-R", ".eps"), plot = g, width = width, height = height)
@@ -1276,7 +1276,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(5, 35, 5),
+                     y_lim = c(10, 30, 5),
                      y_title = "скорость Cолнца относительно центроида, км/с")
   ggsave(paste0(save, "SolarV-R", ".png"), plot = g, width = width, height = height)
   ggsave(paste0(save, "SolarV-R", ".eps"), plot = g, width = width, height = height)
