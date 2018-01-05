@@ -17,9 +17,14 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   conditions$KinModel <- 4
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
-  conditions$BV <- matrix(0, nrow = 7, ncol = 2)
-  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
-  conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+  #conditions$BV <- matrix(0, nrow = 7, ncol = 2)
+  #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
+  #conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+ 
+  conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
+  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
+  conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
+  
   conditions$Z <- c(0, Inf)
   conditions$MG <- c(-Inf, Inf)
   conditions$e_Px <- Inf

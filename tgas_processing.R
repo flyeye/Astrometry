@@ -86,7 +86,7 @@ tgas_calc_OM_seq_2 <- function(tgas_ = tgas, src_ = "TGAS", px_type = "ANGLE", d
   
   res <- matrix(0, q, 11)
   err <- matrix(0, q, 11)
-  par <- matrix(0, q, 9)
+  par <- matrix(0, q, 10)
   sol <- matrix(0, q, 3)
   colnames(sol) <- c("X", "Y", "Z")
   oort <- matrix(0, q, 6)
@@ -113,12 +113,12 @@ tgas_calc_OM_seq_2 <- function(tgas_ = tgas, src_ = "TGAS", px_type = "ANGLE", d
       {
         px_ <- c(-1, Inf)   #c(1/par[i,2], 1/par[i,1])
         dist_ <- c(par[i,1], par[i,2])*1000
-        colnames(par) <- c("r_min","r_max","number of stars","r_mean", "px_err", "r_mean_model", "B-V_min", "B-V_max", "B-V_mean")
+        colnames(par) <- c("r_min","r_max","number of stars","r_mean", "px_err", "r_mean_model", "B-V_min", "B-V_max", "B-V_mean", "s0")
       } else
       {
         px_ <- c(par[i,1], par[i,2])
         dist_ <- c(0, Inf)
-        colnames(par) <- c("px_min","px_max","number of stars","px_mean", "px_err", "r_mean_model", "B-V_min", "B-V_max", "B-V_mean")
+        colnames(par) <- c("px_min","px_max","number of stars","px_mean", "px_err", "r_mean_model", "B-V_min", "B-V_max", "B-V_mean", "s0")
       }
       
       cat("filtering...", "\n")
@@ -206,6 +206,7 @@ tgas_calc_OM_seq_2 <- function(tgas_ = tgas, src_ = "TGAS", px_type = "ANGLE", d
       cat(res_tgas$s_X, "\n")
       res_tgas$HR <- hrd;
       solution[[i]] <- res_tgas
+      par[i, 10] <- res_tgas$s0
     }
   }
   colnames(res) <- names(res_tgas$X)
@@ -642,7 +643,9 @@ tgas_export_solution_xls <- function(res)
   #                 res$Parameters[,1:6])
   output <- t(output)
   
-  z <- c(as.vector(rbind(res$wX,res$s_wX)), as.vector(rbind(res$wPhysical, res$s_wPhysical)), rep(x = 0, ncol(res$Parameters)))
+  z <- c(as.vector(rbind(res$wX,res$s_wX)), 
+         as.vector(rbind(res$wPhysical, res$s_wPhysical)), 
+         rep(x = 0, ncol(res$Parameters)))
   output <- cbind(output, as.matrix(z))
   # output <- cbind(output, as.matrix(c(res$wX[1], res$s_wX[1], res$wX[2], res$s_wX[2], res$wX[3], res$s_wX[3], res$wX[4], res$s_wX[4], 
   #                                     res$wX[5], res$s_wX[5], res$wX[6], res$s_wX[6], res$wX[7], res$s_wX[7], res$wX[8], res$s_wX[8], 
@@ -1066,7 +1069,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             x_title = x_title,
                             is_legend = is_legend,
                             title = paste("Bottlinger`s parameter W\", ", src, " proper motions."),
-                          y_title = expression(Omega[0]*"'', κμ/ρ/κοκ"^3), 
+                            y_title = expression(Omega[0]*"'', κμ/ρ/κοκ"^3), 
                             y_lim = c(-2, 5, 1))
     ggsave(paste0(save, "Bottlinger_W2", ".png"), plot = g, width = width, height = height)
     #ggsave(paste0(save, "Bottlinger_W2", ".eps"), plot = g, width = width, height = height)  

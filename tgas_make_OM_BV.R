@@ -14,12 +14,18 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   conditions$Src <- "TGAS";
   conditions$Filter_Dist <- filter_dist;
   conditions$use <- c(TRUE, TRUE, FALSE);
-  conditions$KinModel <- 4
+  conditions$KinModel <- 1
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
-  conditions$BV <- matrix(0, nrow = 7, ncol = 2)
-  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
-  conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+  
+  #conditions$BV <- matrix(0, nrow = 7, ncol = 2)
+  #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
+  #conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+  
+  conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
+  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
+  conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
+  
   conditions$Z <- c(0, Inf)
   conditions$MG <- c(-Inf, Inf)
   conditions$e_Px <- Inf
@@ -29,7 +35,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
 # ----------------------------------------------------------  
   conditions$Dist_Type <- "TGAS_PX"
   
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_M", conditions$KinModel)
+  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
   if (!dir.exists(saveto_)) 
     dir.create(saveto_)
   
@@ -62,7 +68,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   # ----------------------------------------------------------  
   conditions$Dist_Type <- "rMoMW"
   
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_M", conditions$KinModel)
+  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
   if (!dir.exists(saveto_)) 
     dir.create(saveto_)
   
@@ -92,7 +98,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   conditions$Dist_Type <- "rMoExp1"
   
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_M", conditions$KinModel)
+  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
   if (!dir.exists(saveto_)) 
     dir.create(saveto_)
   
@@ -122,7 +128,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   conditions$Dist_Type <- "rMoExp2"
   
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_M", conditions$KinModel)
+  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
   if (!dir.exists(saveto_)) 
     dir.create(saveto_)
   
@@ -151,7 +157,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   # ----------------------------------------------------------      
   g <- draw_OortParameter(solutions_bv, parameter = 1,
                      title = "Oort`s parameter A", 
-                     x_lim = c(-0.5, 1.1, 0.1), y_lim = c(6, 24, 2), 
+                     x_lim = c(-0.3, 1.2, 0.3), y_lim = c(6, 24, 2), 
                      clr = c("blue", "green4", "brown", "black", "red", "orange"),
                      x_par = 9, 
                      x_title = "B-V")
@@ -160,7 +166,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   g <- draw_OortParameter(solutions_bv, parameter = 2,
                           title = "Oort`s parameter B", 
-                          x_lim = c(-0.5, 1.1, 0.1), y_lim = c(-18, -8, 2), 
+                          x_lim = c(-0.3, 1.2, 0.3), y_lim = c(-18, -8, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
@@ -169,7 +175,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   g <- draw_OortParameter(solutions_bv, parameter = 3,
                           title = "Oort`s parameter C", 
-                          x_lim = c(-0.5, 1.1, 0.1), y_lim = c(-10, 6, 2), 
+                          x_lim = c(-0.3, 1.2, 0.3), y_lim = c(-10, 6, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
@@ -178,7 +184,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   g <- draw_OortParameter(solutions_bv, parameter = 4,
                           title = "Oort`s parameter K", 
-                          x_lim = c(-0.5, 1.1, 0.1), y_lim = c(-10, 6, 2), 
+                          x_lim = c(-0.3, 1.2, 0.3), y_lim = c(-10, 6, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
