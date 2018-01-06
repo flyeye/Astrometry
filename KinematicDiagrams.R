@@ -533,3 +533,73 @@ draw_Physical <- function(solution,
   
   return(g)
 }
+
+
+
+#----------------------------------------------------
+
+
+draw_S0 <- function(solution, 
+                    title = expression(sigma[0]), 
+                    x_lim = c(-0.6, 1.8, 0.3), 
+                    y_lim = c(0, 200, 10), 
+                    clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                    x_par = 4,
+                    x_title = "B-V, mag", 
+                    y_title = "", 
+                    is_legend = TRUE)
+{
+  
+  names <- vector("character", 0)
+  for (i in 1:length(solution))
+  {
+    names[i] <- solution[[i]]$Name
+  }
+
+  g <- ggplot() +
+    #scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2)) +
+    #scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2)) +
+    scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
+    scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
+    xlab(x_title) + ylab(y_title) +
+    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
+    scale_colour_manual("Parameters",  breaks = names, values = clr) +
+    scale_fill_manual("Parameters",  breaks = names, values = clr) +    
+    scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
+    coord_cartesian(ylim = c(y_lim[1],y_lim[2]), xlim =c(x_lim[1],x_lim[2])) 
+  
+  for (i in 1:length(solution))
+  {
+    
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[,x_par], y = solution[[i]]$Parameters[,10], 
+                                   colour = shQuote(solution[[i]]$Name), 
+                                   linetype = shQuote(solution[[i]]$Name)
+    ), 
+    size = 1)
+    
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[,x_par], y = solution[[i]]$Parameters[,10],
+                                   fill = shQuote(solution[[i]]$Name),
+                                   shape = shQuote(solution[[i]]$Name)
+    ))
+    
+    # g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[,x_par],
+    #                                   ymin = solution[[i]]$X[,parameter] - solution[[i]]$S_X[,parameter],
+    #                                   ymax = solution[[i]]$X[,parameter] + solution[[i]]$S_X[,parameter],
+    #                                   colour = shQuote(solution[[i]]$Name)),
+    #                        width = 0.05)
+  }
+  
+  g <- g + theme_bw() + theme(axis.text=element_text(size=rel(1.2)))
+  
+  if (is_legend == FALSE)
+  {
+    g <- g + guides(colour = "none", shape = "none", fill = "none", linetype = "none")
+    ## theme(axis.text=element_text(size=18,face="bold"))      
+  }
+  else {
+    g <- g + ggtitle(title)
+    
+  }
+  
+  return(g)
+}
