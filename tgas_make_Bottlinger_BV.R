@@ -21,9 +21,13 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
   #conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
  
+  #conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
+  #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
+  #conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
+  
   conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
-  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
-  conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
+  conditions$BV[,1] <- c(-Inf, seq(-0.3, 1.4, 0.1))
+  conditions$BV[,2] <- c(seq(-0.3, 1.4, 0.1), Inf)
   
   conditions$Z <- c(0, Inf)
   conditions$MG <- c(-Inf, Inf)
@@ -156,7 +160,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   # ----------------------------------------------------------      
   g <- draw_OortParameter(solutions_bv, parameter = 1,
                      title = "Oort`s parameter A", 
-                     x_lim = c(-0.5, 1.1, 0.1), y_lim = c(6, 24, 2), 
+                     x_lim = c(-0.5, 1.6, 0.1), y_lim = c(6, 24, 2), 
                      clr = c("blue", "green4", "brown", "black", "red", "orange"),
                      x_par = 9, 
                      x_title = "B-V")
@@ -165,7 +169,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   
   g <- draw_OortParameter(solutions_bv, parameter = 2,
                           title = "Oort`s parameter B", 
-                          x_lim = c(-0.5, 1.1, 0.1), y_lim = c(-18, -8, 2), 
+                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-18, -8, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
@@ -174,7 +178,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   
   g <- draw_OortParameter(solutions_bv, parameter = 4,
                           title = "Oort`s parameter K", 
-                          x_lim = c(-0.5, 1.1, 0.1), y_lim = c(-10, 6, 2), 
+                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
@@ -182,8 +186,8 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   ggsave(paste0("solutions/Bottlinger",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
   
   tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
-                            ylims  = matrix(data = c(5, 20, 0, 25, 0, 15, 15, 35, -10, 0, -3, 13, -7, 3, 5, 25, -15, -5), nrow = 2),
-                            xlims = c(-0.5, 1.1, 0.1),
+                            ylims  = matrix(data = c(-5, 25, 0, 25, 0, 15, 15, 35, -10, 0, -7, 10, -10, 5, 5, 25, -20, -5), nrow = 2),
+                            xlims = c(-0.5, 1.6, 0.1),
                             xpar = 9, 
                             xtitle = "B-V", 
                             saveto = paste0("solutions/Bottlinger", filter_dist,"_"))
