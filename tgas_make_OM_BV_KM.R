@@ -22,9 +22,9 @@ tgas_make_OM_solutions_bv_KM <- function(filter_dist = "TGAS_PX", src = "TGAS", 
   conditions$BV[,1] <- c(-Inf, seq(-0.3, 0.8, 0.1))
   conditions$BV[,2] <- c(seq(-0.3, 0.8, 0.1), Inf)
   
-  conditions$Z <- c(0, Inf)
+  conditions$Z <- c(0.25, Inf)
   conditions$MG <- c(-Inf, Inf)
-  conditions$e_Px <- 0.1
+  conditions$e_Px <- Inf
   conditions$distance_ <- c(0, Inf)
   conditions$LClass <- 5
   
@@ -195,10 +195,15 @@ tgas_make_OM_solutions_bv_KM <- function(filter_dist = "TGAS_PX", src = "TGAS", 
                             xtitle = "B-V", 
                             saveto = paste0("solutions/", filter_dist,"_"))
   
+  saveRDS(solutions_bv_km_thin, paste0(saveto_ , "/solution.RData"))
   
   return(solutions_bv)
   
 }
+
+#tgas_draw_all_kinematic_comp(solutions_bv_km_thick, src = "TGAS", saveto = "solutions/om_kin_thick", x_par = 9, x_lim = c(-0.6, 1.3,0.3), x_title = "B-V", is_legend = FALSE, width = 3.7, height = 3.7)
+
+
 
 
 

@@ -742,9 +742,64 @@ read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
   return(res)
 }
 
-read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
+read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE, is_hip = TRUE)
 {
 
+  if(is_hip)
+  {
+    # u4supl.dat = data for supplement stars and cross reference to Hipparcos
+    # 
+    # This ASCII file contains all UCAC4 stars which have a match to the
+    # Hipparcos catalog and all stars which are supplemented, i.e. those
+    # without UCAC CCD observations (bright stars).  There are 128631 lines
+    # (unique stars) in this file.  These are exactly all those stars with
+    # unique star number (col.51 of the main data)  rnm < 1,000,000.
+    # 
+    # 1         0      0  0  7  0
+    # 2         0      0  0  7  0
+    # 3         0      0  3  7  0
+    # 4         0      0  3  7  0
+    # ...
+    # 7019         0      0  3  7  0
+    # 7020         0      0  3  7  0
+    # 7021         0      0  3  7  0
+    # 200001         0  43636  2  7  0
+    # 200002         0 107949  2  7  0
+    # 200003         0 115928  2  7  0
+    # ...
+    # 321607 181870335  11767  7  6  3
+    # 321608 181882163 101884  6  3  0
+    # 321609 181883754   3128  7  3  0
+    # 321610 181888489  47953  7  3  0
+    # 
+    # col  explanation
+    # 1  rnm  = unique star ID number from UCAC4 (col. 51 main data)
+    # 2  MPOS = mean position file (CCD data) internal record number,
+    # or zero if not observed with UCAC astrograph
+    # 3  hipn = Hipparcos Catalogue star number
+    # 4  htsf = FK6-Hipparcos-Tycho source flag (see note 15 main file)
+    # 5  objt = object type flag (see note 4 main file)
+    # 6  stfl = substitute flag, accumulated from following cases:
+    #   0 = no substitute data, use UCAC if available, else external data,
+    # else replace UCAC position, proper motion by external data because of:
+    #   1 = no "good" image from CCD observation
+    #   2 = star is flagged as blended image
+    #   4 = position difference to external data is too large (> 50 mas)
+    
+    cat("Reading UCAC<->HIP indexes... \n")
+    start_pos <- c(1, 11, 21, 28, 31, 34);
+    end_pos <- c(9, 19, 26, 29, 32, 35);
+    var_names <- c("uc4_id", "MPOS", "HIP", "htsf", "odjt", "stfl");
+    types <- "iiiiii";
+    
+    filename <- paste0(path, "u4i/u4supl.dat")
+    u4hip_index <- read_fwf(filename, col_positions = fwf_positions(start_pos, end_pos, var_names),
+                           col_types = types)
+    
+    u4hip_index <- u4hip_index[unique(u4hip_index$HIP),]
+    
+  }
+  
   if(is_tyc_only)
   {
     cat("Reading UCAC<->Tycho-2 indexes... \n")
@@ -843,15 +898,20 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
     gi <- gi + readed
 
 
-    if (is_tyc_only)
+      
+    if (is_hip)
+    {
+      data <- data %>% left_join(u4hip_index[ , names(u4hip_index) %in% c("HIP", "uc4_id", "stfl")], by = "uc4_id")
+      data <- data[!(is.na(data$HIP)),]
+      cat("filtered HIP records:", nrow(data), "\n") 
+    } else if (is_tyc_only)
     {
 
       data <- data %>% left_join(u4xt_index[ , names(u4xt_index) %in% c("TYC", "uc4_id")], by = "uc4_id")
-
       data <- data[!(is.na(data$TYC)),]
-      cat("filtered (TYC records):", nrow(data), "\n")
-    }
-
+      cat("filtered (TYC records):", nrow(rbdata), "\n")
+    } 
+    
     ucac4_data <- rbind(ucac4_data, data)
 
     cat("Total records in catalogue:", nrow(ucac4_data), "\n")
@@ -862,10 +922,10 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE)
   return(ucac4_data)
 }
 
-  read_ucac4_default <- function(start = 1, n = Inf, is_tyc_only = TRUE)
+  read_ucac4_default <- function(start = 1, n = Inf, is_tyc_only = TRUE, is_hip = FALSE)
   {
     ucac4_path <- "X:/Data/Catalogues/UCAC4/"
-    ucac4_data <- read_ucac4(ucac4_path, start, n, is_tyc_only)
+    ucac4_data <- read_ucac4(ucac4_path, start, n, is_tyc_only, is_hip)
     return (ucac4_data)
   }
 
@@ -976,3 +1036,8 @@ tgas_apply_APASS <- function(tgas_)
   return(tgas_)
 }
 
+
+fix_TYC <- function(cat)
+{
+  cat[!is.na(cat$TYC.y),]$TYC.x <- cat[!is.na(cat$TYC.y),]$TYC.y
+}
