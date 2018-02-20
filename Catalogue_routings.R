@@ -94,7 +94,7 @@ read_hip2 <- function(path)
   hip_data <- read_fwf(path, col_positions = fwf_positions(c(1, 8,  12, 14, 16, 30, 44, 52, 61, 70, 77, 84, 91, 98,  105, 109, 115, 118, 125, 130, 138, 145, 151, 153, 160, 166),
                                                            c(6, 10, 12, 14, 28, 42, 50, 59, 68, 75, 82, 89, 96, 103, 107, 113, 116, 123, 128, 136, 143, 149, 151, 158, 164, 171),
                                                            c("HIP", "Sn", "So", "Nc", "RA", "DE", "Px", "pmRA", "pmDE", "e_RA", "e_DE", "e_Px", "e_pmRA", "e_pmDE",
-                                                             "Ntr", "F2", "F1", "var", "ic", "Mag", "e_Mag", "sHp", "VA", "B_V", "e_B_V", "V_I")),
+                                                             "Ntr", "F2", "F1", "var", "ic", "hMag", "e_hMag", "sHp", "VA", "hBV", "e_hBV", "hVI")),
                        col_types = "iiiiddddddddddidididddiddd")
 
   return(hip_data)
@@ -109,7 +109,7 @@ read_hip2_default <- function()
 
 get_hip2_OB <- function(hip_data)
 {
-  hip1 <- hip_data %>% filter(Px > 0.5) %>% filter(Px < 1.5)  %>% filter(B_V<0.75)
+  hip1 <- hip_data %>% filter(Px > 0.5) %>% filter(Px < 1.5)  %>% filter(hBV<0.75)
   print(paste("stars in sample:", nrow(hip1)))
   return(hip1)
 }
@@ -292,8 +292,8 @@ read_tyc2 <- function(path, start = 1, n = Inf, is_short = TRUE)
   tyc2_data <- tyc2_data %>% filter(pflag != "X") %>% filter(pflag != "P")
 
   tyc2_data <- tyc2_data %>% mutate(Px = 1,
-                                    B_V = (0.850*(BT-VT)),
-                                    Mag = (VT - 0.090*(BT-VT)),
+                                    tyc_BV = (0.850*(BT-VT)),
+                                    tyc_m = (VT - 0.090*(BT-VT)),
                                     RA = RA*pi/180,
                                     DE = DE*pi/180,
                                     TYC = paste(TYC1, TYC2, TYC3, sep = "-"))
@@ -668,55 +668,105 @@ read_tgas_default <- function(start = 1, n = Inf, is_short = TRUE)
 #          78 = total number of bytes per star record
 
 
-make_ucac4_df <- function()
+make_ucac4_df <- function(num = 0)
 {
-  res <-data.frame(ra = integer(0), spd = integer(0), u_magm = integer(0), u_maga = integer(0), smag = integer(0),
-                   objt=integer(0), cdf=integer(0), sigra=integer(0), sigdc=integer(0),
-                   na1=integer(0), nu1=integer(0),cu1=integer(0),
-                   cepra=integer(0), cepdc=integer(0), pmrac=integer(0), pmdc=integer(0), sigpmra=integer(0), sigpmdc=integer(0),
-                   pts_key=integer(0), j_m=integer(0), h_m=integer(0), k_m=integer(0),
-                   icqflag_1=integer(0),icqflag_2=integer(0), icqflag_3=integer(0),
-                   e2mpho_1=integer(0), e2mpho_2=integer(0),  e2mpho_3=integer(0),
-                   apasm_b=integer(0), apasm_v=integer(0), apasm_g=integer(0), apasm_r=integer(0), apasm_i=integer(0),
-                   eapasm_b=integer(0), eapasm_v=integer(0), eapasm_g=integer(0), eapasm_r=integer(0), eapasm_i=integer(0),
-                   gcflg=integer(0), icf=integer(0), leda=integer(0), x2m=integer(0), uc4_id=integer(0), zn2=integer(0), rn2=integer(0),
-                   isHIP = character(0))
+  res <-data.frame(ra = integer(num), spd = integer(num), u_magm = integer(num), u_maga = integer(num), smag = integer(num),
+                   objt=integer(num), cdf=integer(num), sigra=integer(num), sigdc=integer(num),
+                   na1=integer(num), nu1=integer(num),cu1=integer(num),
+                   cepra=integer(num), cepdc=integer(num), pmrac=integer(num), pmdc=integer(num), sigpmra=integer(num), sigpmdc=integer(num),
+                   pts_key=integer(num), j_m=integer(num), h_m=integer(num), k_m=integer(num),
+                   icqflag_1=integer(num),icqflag_2=integer(num), icqflag_3=integer(num),
+                   e2mpho_1=integer(num), e2mpho_2=integer(num),  e2mpho_3=integer(num),
+                   apasm_b=integer(num), apasm_v=integer(num), apasm_g=integer(num), apasm_r=integer(num), apasm_i=integer(num),
+                   eapasm_b=integer(num), eapasm_v=integer(num), eapasm_g=integer(num), eapasm_r=integer(num), eapasm_i=integer(num),
+                   gcflg=integer(num), icf=integer(num), leda=integer(num), x2m=integer(num), uc4_id=integer(num), zn2=integer(num), rn2=integer(num),
+                   isHIP = character(num))
   return(res)
+}
+
+read_ucac4_bin_rec <- function(con, num = 1)
+{
+  if (num == 1)
+  {
+    res <- vector(length = 45)
+    res[1:2] <- readBin(con, "integer", n = 2L, size = 4)
+    res[3:4] <- readBin(con, "integer", n = 2L, size = 2)
+    res[5:12] <- readBin(con, "integer", n = 8L, size = 1)
+    res[13:16] <- readBin(con, "integer", n = 4L, size = 2)
+    res[17:18] <- readBin(con, "integer", n = 2L, size = 1)
+    res[19] <- readBin(con, "integer", n = 1L, size = 4)
+    res[20:22] <- readBin(con, "integer", n = 3L, size = 2)
+    res[23:28] <- readBin(con, "integer", n = 6L, size = 1)
+    res[29:33] <- readBin(con, "integer", n = 5L, size = 2)
+    res[34:38] <- readBin(con, "integer", n = 5L, size = 1)
+    res[39] <- readBin(con, "integer", n = 1L, size = 1)
+    res[40] <- readBin(con, "integer", n = 1L, size = 4)
+    res[41:42] <- readBin(con, "integer", n = 2L, size = 1)
+    res[43] <- readBin(con, "integer", n = 1L, size = 4)
+    res[44] <- readBin(con, "integer", n = 1L, size = 2)
+    res[45] <- readBin(con, "integer", n = 1L, size = 4)
+    return(res)
+  } else if (num>1)
+  {
+    rec_size <- 78
+    raw <- readBin(con, "raw", n = (num * rec_size))
+    
+    res <- make_ucac4_df(num)
+    res[,1:2] <- t(matrix(readBin(raw[rep(0:(num-1), each=8)*rec_size + 1:8], "integer", n = 2L*num, size = 4), nrow = 2))
+    res[,3:4] <- t(matrix(readBin(raw[rep(0:(num-1), each=4)*rec_size + 1:4 + 8], "integer", n = 2L*num, size = 2), nrow = 2))
+    res[,5:12] <- t(matrix(readBin(raw[rep(0:(num-1), each=8)*rec_size + 1:8 + 12], "integer", n = 8L*num, size = 1), nrow = 8))
+    res[,13:16] <- t(matrix(readBin(raw[rep(0:(num-1), each=8)*rec_size + 1:8 + 20], "integer", n = 4L*num, size = 2), nrow = 4))
+    res[,17:18] <- t(matrix(readBin(raw[rep(0:(num-1), each=2)*rec_size + 1:2 + 28], "integer", n = 2L*num, size = 1), nrow = 2))
+    res[,19] <- readBin(raw[rep(0:(num-1), each=4)*rec_size + 1:4 + 30], "integer", n = num, size = 4)
+    res[,20:22] <- t(matrix(readBin(raw[rep(0:(num-1), each=6)*rec_size + 1:6 + 34], "integer", n = 3L*num, size = 2), nrow = 3))   
+    res[,23:28] <- t(matrix(readBin(raw[rep(0:(num-1), each=6)*rec_size + 1:6 + 40], "integer", n = 6L*num, size = 1), nrow = 6))   
+    res[,29:33] <- t(matrix(readBin(raw[rep(0:(num-1), each=10)*rec_size + 1:10 + 46], "integer", n = 5L*num, size = 2), nrow = 5))   
+    res[,34:38] <- t(matrix(readBin(raw[rep(0:(num-1), each=5)*rec_size + 1:5 + 56], "integer", n = 5L*num, size = 1), nrow = 5))
+    res[,39] <- readBin(raw[rep(0:(num-1), each=1)*rec_size + 1 + 61], "integer", n = num, size = 1)
+    res[,40] <- readBin(raw[rep(0:(num-1), each=4)*rec_size + 1:4 + 62], "integer", n = num, size = 4)
+    res[,41:42] <- t(matrix(readBin(raw[rep(0:(num-1), each=2)*rec_size + 1:2 + 66], "integer", n = 2L*num, size = 1), nrow = 2))
+    res[,43] <- readBin(raw[rep(0:(num-1), each=4)*rec_size + 1:4 + 68], "integer", n = num, size = 4)
+    res[,44] <- readBin(raw[rep(0:(num-1), each=2)*rec_size + 1:2 + 72], "integer", n = num, size = 2)
+    res[,45] <- readBin(raw[rep(0:(num-1), each=4)*rec_size + 1:4 + 74], "integer", n = num, size = 4)
+    
+    return(res);
+  } 
+  return (0);
+  
 }
 
 read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
 {
   res <- make_ucac4_df()
 
-  #t1 <- system.time(
-  for (i in 1:num)
+  cat("reading...\n")
+  
+  if (is.null(index))
   {
-    if (!is.null(index))
+    t0 <- system.time({res <- read_ucac4_bin_rec(con, num)})
+    # t0 <- system.time(
+    # for (i in 1:num)
+    # {
+    #   res[i,1:45] <- read_ucac4_bin_rec(con)
+    # }
+    # )
+    
+    cat("reading time per record:", t0/num,"\n")
+  } else 
+  {
+    t1 <- system.time(
+    for (i in 1:num)
     {
       seek(con, where = (index[i]-1)*78, rw = "read")
+      res[i,1:45] <- read_ucac4_bin_rec(con)
     }
-
-    res[i,1:2] <- readBin(con, "integer", n = 2L, size = 4)
-    res[i,3:4] <- readBin(con, "integer", n = 2L, size = 2)
-    res[i,5:12] <- readBin(con, "integer", n = 8L, size = 1)
-    res[i,13:16] <- readBin(con, "integer", n = 4L, size = 2)
-    res[i,17:18] <- readBin(con, "integer", n = 2L, size = 1)
-    res[i,19] <- readBin(con, "integer", n = 1L, size = 4)
-    res[i,20:22] <- readBin(con, "integer", n = 3L, size = 2)
-    res[i,23:28] <- readBin(con, "integer", n = 6L, size = 1)
-    res[i,29:33] <- readBin(con, "integer", n = 5L, size = 2)
-    res[i,34:38] <- readBin(con, "integer", n = 5L, size = 1)
-    res[i,39] <- readBin(con, "integer", n = 1L, size = 1)
-    res[i,40] <- readBin(con, "integer", n = 1L, size = 4)
-    res[i,41:42] <- readBin(con, "integer", n = 2L, size = 1)
-    res[i,43] <- readBin(con, "integer", n = 1L, size = 4)
-    res[i,44] <- readBin(con, "integer", n = 1L, size = 2)
-    res[i,45] <- readBin(con, "integer", n = 1L, size = 4)
+    )
+    cat("reading time per record:", t1/num,"\n")
   }
-  #)
-
-  #cat(t1,"\n")
-  #t2 <- system.time({
+  
+  cat("filtring...\n")
+  
+  t2 <- system.time({
   if( !is.null(id))
   {
     res <- res %>% filter(uc4_id %in% id)
@@ -737,8 +787,8 @@ read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
   res$apasm_i[res$apasm_i!=20000] <- res$apasm_i[res$apasm_i!=20000] / 1000;
   res$apasm_i[res$apasm_i==20000] <- NA;
   res <- mutate(res, isHIP = substr(as.character(icf), 1, 1))
-  #})
-  #cat(t2,"\n")
+  })
+  cat("filtering time per record:",t2/num,"\n")
   return(res)
 }
 
@@ -1014,8 +1064,8 @@ make_tgas_exp <- function(tgas_data, tyc2_data, tyc2_sp_data, hip_data)
    tgas_data <- tgas_data %>% left_join(tyc2_sp_data[ , names(tyc2_sp_data) %in% c("TYC", "TClass", "SClass", "LClass", "SpType")], by = "TYC")
 
    # ?? Hipparcos`?: hPx
-   tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px")], by = "HIP")
-
+   tgas_data <- tgas_data %>% left_join(hip_data[ , names(hip_data) %in% c("HIP", "Px", "e_Px", "hMag", "hBV", "e_hBV", "e_hMag")], by = "HIP")
+   
    tgas_data <- tgas_data %>% left_join(ucac[ , names(ucac) %in% c("TYC", "u_magm", "u_maga", "smag", "objt", "cdf",
                                                          "j_m", "h_m", "k_m", "pts_key",
                                                          "apasm_b", "apasm_v", "apasm_g", "apasm_r", "apasm_i", "uc4_id")], by = "TYC")
@@ -1030,9 +1080,23 @@ tgas_apply_APASS <- function(tgas_)
   tgas_$B_V <- NA
   tgas_$M <- NA
   tgas_$Mag <- NA
-  index <-(tgas_$gPx>0)&(!is.na(tgas_$apasm_b))&(!is.na(tgas_$apasm_v))
+  #index <-(tgas_$gPx>0)&(!is.na(tgas_$apasm_b))&(!is.na(tgas_$apasm_v))
+  index <- (!is.na(tgas_$apasm_b))&(!is.na(tgas_$apasm_v))
   tgas_$B_V[index] <- (tgas_$apasm_b[index] - tgas_$apasm_v[index])
   tgas_$Mag[index] <- tgas_$apasm_v[index]
+  return(tgas_)
+}
+
+tgas_apply_HIP_photometry <- function(tgas_)
+{
+  tgas_$B_V <- NA
+  tgas_$M <- NA
+  tgas_$Mag <- NA
+  # index <-(tgas_$gPx>0)&(!is.na(tgas_$hBV))&(!is.na(tgas_$hMag))
+  index <- (!is.na(tgas_$hBV))&(!is.na(tgas_$hMag)&(!is.na(tgas_$e_hBV)))
+  index2 <- (tgas_$e_hBV!=0)
+  tgas_$B_V[index & index2] <- (tgas_$hBV[index & index2])
+  tgas_$Mag[index & index2] <- tgas_$hMag[index & index2]
   return(tgas_)
 }
 

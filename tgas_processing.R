@@ -65,13 +65,122 @@ tgas_calc_gpm <- function(tgas_)
   tgas_ <- mutate(tgas_, gpm_l = pm_l, gpm_b = pm_b)
   
   # TYCHO-2 proper motions
-  tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
+  #tgas_ <- filter(tgas_ , !is.na(tyc_pmRA))
   tgas_$pmRA <- tgas_$tyc_pmRA
   tgas_$pmDE <- tgas_$tyc_pmDE
   tgas_ <- cat_eq2gal(tgas_)
   tgas_ <- mutate(tgas_, tpm_l = pm_l, tpm_b = pm_b)
   
   return(tgas_)
+}
+
+
+tgas_calc_distance <- function(tgas_, dist_type = "TGAS_PX")
+{
+  tgas_$R <- 0;
+  
+  if (dist_type == "TGAS_PX")
+  {
+    tgas_$R[tgas_$gPx>0.01] <- 1000/tgas_$gPx[tgas_$gPx>0.01]
+    tgas_$R[tgas_$gPx<=0.01] <- Inf
+  }else if (dist_type == "HIP")
+  {
+    tgas_$R[tgas_$Px>0.01] <- 1000/tgas_$Px[tgas_$Px>0.01]
+    tgas_$R[tgas_$Px<=0.01] <- Inf
+  }else if (dist_type == "rMoMW")
+  {
+    tgas_ <- mutate(tgas_, R = rMoMW)
+  } else if (dist_type == "rMoExp2")
+  {
+    tgas_ <- mutate(tgas_, R = rMoExp2)
+  } else if (dist_type == "rMoExp1")
+  {
+    tgas_ <- mutate(tgas_, R = rMoExp1)
+  }
+  return(tgas_)
+}
+
+tgas_calc_absolute_mag <- function(tgas_)
+{
+  index <- (!is.na(tgas_$R)) & (!is.na(tgas_$Mag))   
+  tgas_$M[index] <- (tgas_$Mag[index] + 5 - 5*log10(tgas_$R[index]))
+  #tgas_$M[index] <- tgas_$apasm_v[index] + 5 + 5*log10(tgas_$gPx[index]/1000)  
+  return (tgas_) 
+}
+
+tgas_calc_LClass <- function(tgas_, dist_ = "TGAS_PX", ph = "APASS")
+{
+  if (ph == "APASS")
+  {
+    tgas_ <- tgas_apply_APASS(tgas_)
+  } else if (ph == "HIP")
+  {
+    tgas_ <- tgas_apply_HIP_photometry(tgas_)  
+  }
+  tgas_ <- tgas_calc_distance(tgas_, dist_) 
+  tgas_ <- tgas_calc_absolute_mag(tgas_)
+  
+  tgas_a <- tgas_[(!is.na(tgas_$B_V)) & (!is.na(tgas_$M)),]
+  
+  tgas_a <- mutate(tgas_a, LClass_apass = 0)
+  tgas_a$LClass_apass[is_main_sequence(tgas_a$B_V, tgas_a$M)] <- 5
+  tgas_a$LClass_apass[tgas_a$M<(-2)& (tgas_a$M>(-Inf))] <- 1
+  tgas_a$LClass_apass[(tgas_a$M>-1.5)&(tgas_a$M<2.5)&(tgas_a$B_V>0.8)&(tgas_a$B_V<2.5)] <- 3
+  
+  tgas_ <- within(tgas_, rm("LClass_apass"))
+  tgas_ <- tgas_ %>% left_join(tgas_a[ , names(tgas_a) %in% c("source_id", "LClass_apass")], by = "source_id")
+  tgas_$LClass_apass[is.na(tgas_$LClass_apass)] <- 0
+  
+  return(tgas_)
+}
+
+min_M <- function(bv)
+{
+  m <- numeric(length(bv))
+  
+  # Верхняя граница поднята относительно Бови
+  i1 <- bv < 0.75
+  m[i1] <- 5.73 * bv[i1] - 2.32222;
+  
+  i2 <- (bv>=0.75)&(bv<1.0)
+  m[i2] <- (16 * bv[i2] - 10)
+  
+  #i1 <- bv < 0.8
+  #m[i1] <- 5.7 * bv[i1] - 1.22222;
+  
+  #i2 <- (bv>=0.8)&(bv<1.0)
+  #m[i2] <- (13 * bv[i2] - 7)
+  
+  
+  i3 <- (bv>=1.0)&(bv<1.5)
+  m[i3] <- (4 * bv[i3] + 2)
+  
+  i4 <- (bv>=1.5)
+  m[i4] <- (10 * bv[i4] - 7)
+  
+  return(m)
+}
+
+max_M <- function(bv)
+{
+  m <- numeric(length(bv))
+  
+  i1 <- bv < 0.5
+  m[i1] <- 6.3333333 * bv[i1] + 2.4333333;
+  
+  i2 <- (bv>=0.5)&(bv<1.3)
+  m[i2] <- (4.25 * bv[i2] + 3.475)
+  
+  i3 <- (bv>=1.3)
+  m[i3] <- (20 * bv[i3] - 17)
+  
+  return (m)
+}
+
+
+is_main_sequence <- function(bv, M)
+{
+  return( (M<max_M(bv)) & (M>min_M(bv)))
 }
 
 
@@ -1679,106 +1788,6 @@ tgas_make_OM_solutions <- function(dist_type = "TGAS_PX", filter_dist = "TGAS_PX
 
 #draw_OM_Solar_diff(res2, title = paste("Ogorodnikov-Miln Model, difference TGAS-TYCHO, Solar motions. Photometry:",ph))
 #ggsave(paste0(SaveTo, "Solar-PX_TGAS-TYCHO_02-",ph,".png"), width = 10, height = 10)
-
-tgas_calc_distance <- function(tgas_, dist_type = "TGAS_PX")
-{
-  tgas_$R <- 0;
-  
-  if (dist_type == "TGAS_PX")
-  {
-    tgas_$R[tgas_$gPx>0.01] <- 1000/tgas_$gPx[tgas_$gPx>0.01]
-    tgas_$R[tgas_$gPx<=0.01] <- Inf
-  } else if (dist_type == "rMoMW")
-  {
-    tgas_ <- mutate(tgas_, R = rMoMW)
-  } else if (dist_type == "rMoExp2")
-  {
-    tgas_ <- mutate(tgas_, R = rMoExp2)
-  } else if (dist_type == "rMoExp1")
-  {
-    tgas_ <- mutate(tgas_, R = rMoExp1)
-  }
-  return(tgas_)
-}
-
-tgas_calc_absolute_mag <- function(tgas_)
-{
-  index <- (!is.na(tgas_$R)) & (!is.na(tgas_$Mag))   
-  tgas_$M[index] <- (tgas_$Mag[index] + 5 - 5*log10(tgas_$R[index]))
-  #tgas_$M[index] <- tgas_$apasm_v[index] + 5 + 5*log10(tgas_$gPx[index]/1000)  
-  return (tgas_) 
-}
-
-tgas_calc_LClass <- function(tgas_, dist_ = "TGAS_PX")
-{
-  tgas_ <- tgas_apply_APASS(tgas_)
-  tgas_ <- tgas_calc_distance(tgas_, dist_) 
-  tgas_ <- tgas_calc_absolute_mag(tgas_)
-  
-  tgas_a <- tgas_[(!is.na(tgas_$B_V)) & (!is.na(tgas_$M)),]
-  
-  tgas_a <- mutate(tgas_a, LClass_apass = 0)
-  tgas_a$LClass_apass[is_main_sequence(tgas_a$B_V, tgas_a$M)] <- 5
-  tgas_a$LClass_apass[tgas_a$M<(-2)& (tgas_a$M>(-Inf))] <- 1
-  tgas_a$LClass_apass[(tgas_a$M>-1.5)&(tgas_a$M<2.5)&(tgas_a$B_V>0.8)&(tgas_a$B_V<2.5)] <- 3
-  
-  tgas_ <- within(tgas_, rm("LClass_apass"))
-  tgas_ <- tgas_ %>% left_join(tgas_a[ , names(tgas_a) %in% c("source_id", "LClass_apass")], by = "source_id")
-  tgas_$LClass_apass[is.na(tgas_$LClass_apass)] <- 0
-  
-  return(tgas_)
-}
-
-
-min_M <- function(bv)
-{
-  m <- numeric(length(bv))
-  
-  # Верхняя граница поднята относительно Бови
-  i1 <- bv < 0.75
-  m[i1] <- 5.73 * bv[i1] - 2.32222;
-  
-  i2 <- (bv>=0.75)&(bv<1.0)
-  m[i2] <- (16 * bv[i2] - 10)
-  
-  #i1 <- bv < 0.8
-  #m[i1] <- 5.7 * bv[i1] - 1.22222;
-  
-  #i2 <- (bv>=0.8)&(bv<1.0)
-  #m[i2] <- (13 * bv[i2] - 7)
-  
-  
-  i3 <- (bv>=1.0)&(bv<1.5)
-  m[i3] <- (4 * bv[i3] + 2)
-  
-  i4 <- (bv>=1.5)
-  m[i4] <- (10 * bv[i4] - 7)
-  
-  return(m)
-}
-
-max_M <- function(bv)
-{
-  m <- numeric(length(bv))
-  
-  i1 <- bv < 0.5
-  m[i1] <- 6.3333333 * bv[i1] + 2.4333333;
-  
-  i2 <- (bv>=0.5)&(bv<1.3)
-  m[i2] <- (4.25 * bv[i2] + 3.475)
-  
-  i3 <- (bv>=1.3)
-  m[i3] <- (20 * bv[i3] - 17)
-  
-  return (m)
-}
-
-
-is_main_sequence <- function(bv, M)
-{
-  return( (M<max_M(bv)) & (M>min_M(bv)))
-}
-
 
 
 # -----------------------------------------------------------------------------

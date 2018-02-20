@@ -93,7 +93,7 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
   
   if(!is.null(save))
   {
-    ggsave(paste0(save, "-HR.png"), width = 10, height = 10)
+    ggsave(paste0(save, "-HR.jpg"), width = 10, height = 10)
     ggsave(paste0(save, "-HR.eps"), width = 10, height = 10)
   }
   

@@ -1,5 +1,5 @@
 
-tgas_make_OM_solutions_bv_KM <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV_KM")
+tgas_make_OM_solutions_bv_KM <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV_KM", ph = "APASS")
 {
 
   solutions_bv <- list()
@@ -17,12 +17,13 @@ tgas_make_OM_solutions_bv_KM <- function(filter_dist = "TGAS_PX", src = "TGAS", 
   conditions$KinModel <- 1
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
+  conditions$Photometry <- ph
   
   conditions$BV <- matrix(0, nrow = 13, ncol = 2) 
   conditions$BV[,1] <- c(-Inf, seq(-0.3, 0.8, 0.1))
   conditions$BV[,2] <- c(seq(-0.3, 0.8, 0.1), Inf)
   
-  conditions$Z <- c(0.25, Inf)
+  conditions$Z <- c(0, Inf)
   conditions$MG <- c(-Inf, Inf)
   conditions$e_Px <- Inf
   conditions$distance_ <- c(0, Inf)

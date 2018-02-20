@@ -1,5 +1,5 @@
 
-tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV")
+tgas_make_OM_solutions_bv <- function(data, filter_dist = "TGAS_PX", src = "TGAS", name = "BV", ph = "APASS")
 {
 
   solutions_bv <- list()
@@ -7,7 +7,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   if (!dir.exists("solutions")) 
     dir.create("solutions")
   
-  tgas_ <- tgas_calc_LClass(tgas, dist_ = filter_dist)
+  tgas_ <- tgas_calc_LClass(data, dist_ = filter_dist, ph = ph)
   tgas_ <- tgas_[tgas_$LClass_apass == 5,]
   
   conditions <- list();
@@ -17,6 +17,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   conditions$KinModel <- 1
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
+  conditions$Photometry <- ph
   
   #conditions$BV <- matrix(0, nrow = 7, ncol = 2)
   #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
@@ -32,7 +33,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   conditions$Z <- c(0, Inf)
   conditions$MG <- c(-Inf, Inf)
-  conditions$e_Px <- 0.1
+  conditions$e_Px <- Inf
   conditions$distance_ <- c(0, Inf)
   conditions$LClass <- 5
   
@@ -70,94 +71,94 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   gc()
   
   # ----------------------------------------------------------  
-  conditions$Dist_Type <- "rMoMW"
-  
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
-  if (!dir.exists(saveto_)) 
-    dir.create(saveto_)
-  
-  saveto_2 <- paste0(saveto_, "/MS_ALL")
-  if (!dir.exists(saveto_2)) 
-    dir.create(saveto_2)
-  
-  conditions$SaveTo <- paste0(saveto_2, "/")
-  
-  solution_bv  <- tgas_calc_OM_seq_2(tgas_, src_ = conditions$Src,
-                                     z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
-                                     px_type = "DIST", distance = distance_,
-                                     save = conditions$SaveTo,
-                                     type = conditions$KinModelType, model = conditions$KinModel,
-                                     dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B)
-  solution_bv$Conditions <- conditions
-  tgas_write_conditions(conditions)
-  
-  solution_bv <- tgas_process_solution(solution_bv)
-  solutions_bv$MS_ALL_rMoMW <- solution_bv
-  solutions_bv$MS_ALL_rMoMW$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  #solutions_bv$MS_ALL_rMoMW$Name <- "Main sequence Rpi-rMoMW"
-
-  gc()
-  # ----------------------------------------------------------    
-  
-  conditions$Dist_Type <- "rMoExp1"
-  
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
-  if (!dir.exists(saveto_)) 
-    dir.create(saveto_)
-  
-  saveto_2 <- paste0(saveto_, "/MS_ALL")
-  if (!dir.exists(saveto_2)) 
-    dir.create(saveto_2)
-  
-  conditions$SaveTo <- paste0(saveto_2, "/")
-  
-  solution_bv  <- tgas_calc_OM_seq_2(tgas_, src_ = conditions$Src,
-                                     z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
-                                     px_type = "DIST", distance = distance_,
-                                     save = conditions$SaveTo,
-                                     type = conditions$KinModelType, model = conditions$KinModel,
-                                     dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B)
-  solution_bv$Conditions <- conditions
-  tgas_write_conditions(conditions)
-  
-  solution_bv <- tgas_process_solution(solution_bv)
-  solutions_bv$MS_ALL_rMoExp1 <- solution_bv
-  #solutions_bv$MS_ALL_rMoExp1$Name <- "Main sequence Rpi-rMoExp1"
-  solutions_bv$MS_ALL_rMoExp1$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  
-  gc()
-  # ----------------------------------------------------------    
-  
-  conditions$Dist_Type <- "rMoExp2"
-  
-  saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
-  if (!dir.exists(saveto_)) 
-    dir.create(saveto_)
-  
-  saveto_2 <- paste0(saveto_, "/MS_ALL")
-  if (!dir.exists(saveto_2)) 
-    dir.create(saveto_2)
-  
-  conditions$SaveTo <- paste0(saveto_2, "/")
-  
-  solution_bv  <- tgas_calc_OM_seq_2(tgas_, src_ = conditions$Src,
-                                     z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
-                                     px_type = "DIST", distance = distance_,
-                                     save = conditions$SaveTo,
-                                     type = conditions$KinModelType, model = conditions$KinModel,
-                                     dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B)
-  solution_bv$Conditions <- conditions
-  tgas_write_conditions(conditions)
-  
-  solution_bv <- tgas_process_solution(solution_bv)
-  solutions_bv$MS_ALL_rMoExp2 <- solution_bv
-  #solutions_bv$MS_ALL_rMoExp2$Name <- "Main sequence Rpi-rMoExp2"
-  solutions_bv$MS_ALL_rMoExp2$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  
-  gc()
+  # conditions$Dist_Type <- "rMoMW"
+  # 
+  # saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
+  # if (!dir.exists(saveto_)) 
+  #   dir.create(saveto_)
+  # 
+  # saveto_2 <- paste0(saveto_, "/MS_ALL")
+  # if (!dir.exists(saveto_2)) 
+  #   dir.create(saveto_2)
+  # 
+  # conditions$SaveTo <- paste0(saveto_2, "/")
+  # 
+  # solution_bv  <- tgas_calc_OM_seq_2(tgas_, src_ = conditions$Src,
+  #                                    z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
+  #                                    px_type = "DIST", distance = distance_,
+  #                                    save = conditions$SaveTo,
+  #                                    type = conditions$KinModelType, model = conditions$KinModel,
+  #                                    dist_type = conditions$Dist_Type, use = conditions$use,
+  #                                    g_b = conditions$g_B)
+  # solution_bv$Conditions <- conditions
+  # tgas_write_conditions(conditions)
+  # 
+  # solution_bv <- tgas_process_solution(solution_bv)
+  # solutions_bv$MS_ALL_rMoMW <- solution_bv
+  # solutions_bv$MS_ALL_rMoMW$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  # #solutions_bv$MS_ALL_rMoMW$Name <- "Main sequence Rpi-rMoMW"
+  # 
+  # gc()
+  # # ----------------------------------------------------------    
+  # 
+  # conditions$Dist_Type <- "rMoExp1"
+  # 
+  # saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
+  # if (!dir.exists(saveto_)) 
+  #   dir.create(saveto_)
+  # 
+  # saveto_2 <- paste0(saveto_, "/MS_ALL")
+  # if (!dir.exists(saveto_2)) 
+  #   dir.create(saveto_2)
+  # 
+  # conditions$SaveTo <- paste0(saveto_2, "/")
+  # 
+  # solution_bv  <- tgas_calc_OM_seq_2(tgas_, src_ = conditions$Src,
+  #                                    z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
+  #                                    px_type = "DIST", distance = distance_,
+  #                                    save = conditions$SaveTo,
+  #                                    type = conditions$KinModelType, model = conditions$KinModel,
+  #                                    dist_type = conditions$Dist_Type, use = conditions$use,
+  #                                    g_b = conditions$g_B)
+  # solution_bv$Conditions <- conditions
+  # tgas_write_conditions(conditions)
+  # 
+  # solution_bv <- tgas_process_solution(solution_bv)
+  # solutions_bv$MS_ALL_rMoExp1 <- solution_bv
+  # #solutions_bv$MS_ALL_rMoExp1$Name <- "Main sequence Rpi-rMoExp1"
+  # solutions_bv$MS_ALL_rMoExp1$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  # 
+  # gc()
+  # # ----------------------------------------------------------    
+  # 
+  # conditions$Dist_Type <- "rMoExp2"
+  # 
+  # saveto_ <- paste0("solutions/solution_", name, "_", filter_dist, "-", conditions$Dist_Type, "_OM", conditions$KinModel)
+  # if (!dir.exists(saveto_)) 
+  #   dir.create(saveto_)
+  # 
+  # saveto_2 <- paste0(saveto_, "/MS_ALL")
+  # if (!dir.exists(saveto_2)) 
+  #   dir.create(saveto_2)
+  # 
+  # conditions$SaveTo <- paste0(saveto_2, "/")
+  # 
+  # solution_bv  <- tgas_calc_OM_seq_2(tgas_, src_ = conditions$Src,
+  #                                    z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
+  #                                    px_type = "DIST", distance = distance_,
+  #                                    save = conditions$SaveTo,
+  #                                    type = conditions$KinModelType, model = conditions$KinModel,
+  #                                    dist_type = conditions$Dist_Type, use = conditions$use,
+  #                                    g_b = conditions$g_B)
+  # solution_bv$Conditions <- conditions
+  # tgas_write_conditions(conditions)
+  # 
+  # solution_bv <- tgas_process_solution(solution_bv)
+  # solutions_bv$MS_ALL_rMoExp2 <- solution_bv
+  # #solutions_bv$MS_ALL_rMoExp2$Name <- "Main sequence Rpi-rMoExp2"
+  # solutions_bv$MS_ALL_rMoExp2$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  # 
+  # gc()
   # ----------------------------------------------------------      
   g <- draw_OortParameter(solutions_bv, parameter = 1,
                      title = "Oort`s parameter A", 
@@ -171,7 +172,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   
   g <- draw_OortParameter(solutions_bv, parameter = 2,
                           title = "Oort`s parameter B", 
-                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-18, -8, 2), 
+                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-22, -5, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
@@ -197,7 +198,7 @@ tgas_make_OM_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", nam
   ggsave(paste0("solutions/",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
   
   tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
-                            ylims  = matrix(data = c(0, 20, 0, 25, 0, 15, -2, 10, -5, 2, -18, -8, -5, 5, -8, 5 , 5, 25, -10, 3, -10, 5), nrow = 2),
+                            ylims  = matrix(data = c(0, 20, 0, 35, 0, 15, -2, 10, -5, 2, -25, -5, -5, 5, -8, 5 , 5, 30, -10, 3, -10, 5), nrow = 2),
                             xlims = c(-0.5, 1.6, 0.1),
                             xpar = 9, 
                             xtitle = "B-V", 
