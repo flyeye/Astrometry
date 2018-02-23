@@ -21,7 +21,7 @@ filter_tgs_px <- function(tgs,                     #  catalog (data frame)
   tgs <- tgs %>% filter(!is.na(B_V) & !is.na(M)) %>%
     filter( (gPx > px[1]) & (gPx <= px[2])) %>%  #mas
     filter( (R>r_lim[1]) & (R<=r_lim[2]) ) %>%  #pc
-    filter( (B_V>bv_lim[1]) & (B_V<bv_lim[2]) ) %>%
+    filter( (B_V>bv_lim[1]) & (B_V<=bv_lim[2]) ) %>%
     filter( (M>Mg[1]) & (M<Mg[2])) %>%
     filter( (parallax_error/gPx) < e_px ) %>% 
     filter( (abs(z)>=z_lim[1]) & (abs(z)<z_lim[2])) %>% #kpc
