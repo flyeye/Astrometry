@@ -1,5 +1,5 @@
 
-tgas_make_Bottlinger_solutions_bv_l3 <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV")
+tgas_make_Bottlinger_solutions_bv_l3 <- function(data, filter_dist = "TGAS_PX", src = "TGAS", name = "BV", ph = "APASS")
 {
 
   solutions_bv <- list()
@@ -7,7 +7,7 @@ tgas_make_Bottlinger_solutions_bv_l3 <- function(filter_dist = "TGAS_PX", src = 
   if (!dir.exists("solutions")) 
     dir.create("solutions")
   
-  tgas_ <- tgas_calc_LClass(tgas, dist_ = filter_dist)
+  tgas_ <- tgas_calc_LClass(data, dist_ = filter_dist, ph = ph)
   tgas_ <- tgas_[tgas_$LClass_apass == 3,]
   
   conditions <- list();

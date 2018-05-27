@@ -3,11 +3,11 @@
 draw_tgas_hist_Z <- function(tgas_, name_){
   tgas_ <- CalcGalXYZ(tgas_)
   g<- ggplot(data = tgas_) + geom_histogram(aes(x = z), fill = "gray70", colour = "gray10") + 
-    scale_x_continuous(breaks=seq(-1,1,by=0.1), minor_breaks=seq(-1,1,by=0.025), limits = c(-1,1)) #+ 
+    scale_x_continuous(breaks=seq(-0.5,0.5,by=0.1), minor_breaks=seq(-0.5,0.5,by=0.05), limits = c(-0.5,0.5)) #+ 
     #scale_y_continuous(breaks=seq(0,250000,by=25000), minor_breaks=seq(0,250000,by=12500)) + 
     theme_bw()
   
-  ggsave(filename = paste0(name_, ".jpeg"), width = 10, height = 10)
+  ggsave(filename = paste0(name_, ".jpeg"), width = 5, height = 5)
          
   return(g);
 }
@@ -41,4 +41,15 @@ tgas_make_z_hist <- function(tgas)
   
 }
 
-
+tgas_make_all_diagrams_by_sample <- function(tgas_, name)
+{
+  draw_tgas_hist_Z(tgas_, name_ = paste0(name, "_Z_M-stars"))
+  ggplot(data = tgas_) + geom_histogram(aes(x = Mag), fill = "gray70", colour = "gray10") +
+    scale_x_continuous(breaks=seq(7,15,by=1), minor_breaks=seq(7,15,by=0.25), limits = c(7,15)) +
+    theme_bw()
+  ggsave(filename = paste0(name, "_M_APASS_V.jpeg"), width = 5, height = 5)
+  HRDiagram(tgas_, save = name, photometric = "none")
+  DrawGalaxyPlane(tgas_, plane = "XY", save = name, dscale = 0.5)
+  DrawGalaxyPlane(tgas_, plane = "XZ", save = name, dscale = 0.5)
+  DrawGalaxyPlane(tgas_, plane = "YZ", save = name, dscale = 0.5)
+}

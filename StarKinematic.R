@@ -867,6 +867,141 @@ PrepareOMRightSide_old <- function(stars, use_vr = TRUE)
 }
 
 #-----------------------------------------------------------------
+
+Calc_VSF_Coef <- function(stars, use = c(TRUE, FALSE, FALSE), mode = 2, scaling = 0, ef = -1, R0 = 8.0, J = 5)
+  # вычисление гармоник сферических функций для заданного множества звезд 
+  # stars - матрица положений и скоростей звезд (l, b, px, mu_l, mu_b, v_r)
+  # use - флаг (mu_l, mu_b, v_r) - использовать соответствующую скорость или нет
+  # mode - способ решения, 1 - TLS через SVD, 2 TLS-LS через собственные числа, см. TLS_Gen()
+  # scaling - способ масштабирования, см. TLS_Gen()
+  # ef - количество переменных, не содержащих ошибки, см. TLS_Gen
+{
+  
+  #  calculate equation of conditions
+  # l, b, px, mu_l, mu_b, vr
+  a <- GetSphFuncK_matrix(J, stars[,1], stars[,2])
+  
+  
+  b <- PrepareOMRightSide(stars = stars, use = use)
+  
+  if (ef == -1)
+    ef <-  ncol(a)
+  res <- TLS_Gen(a, b, mode = mode, scaling = scaling, ef = ef);
+  
+  return(res)
+}
+
+
+GetOM_B_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( sphK[GetJbyNKP(0, 0, 1)+1]/2.784)
+  } else if (ver == 2)
+  {
+    return (sphK[GetJbyNKP(2, 0, 1)+1]/-0.778)
+  } else if (ver == 3)
+  {
+    return (sphK[GetJbyNKP(4, 0, 1)+1]/-0.130)
+  } else if (ver == 4)
+  {
+    return (sphK[GetJbyNKP(6, 0, 1)+1]/-0.049)
+  } else if (ver == 5)
+  {
+    return (sphK[GetJbyNKP(8, 0, 1)+1]/-0.024)
+  }
+  return(0);
+}
+
+GetOM_A_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( sphK[GetJbyNKP(2, 2, 1)+1]/2.022)
+  } else if (ver == 2)
+  {
+    return (sphK[GetJbyNKP(4, 2, 1)+1]/0.292)
+  } else if (ver == 3)
+  {
+    return (sphK[GetJbyNKP(6, 2, 1)+1]/0.106)
+  } else if (ver == 4)
+  {
+    return (sphK[GetJbyNKP(8, 2, 1)+1]/0.053)
+  } 
+  return(0);
+}
+
+GetOM_C_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( sphK[GetJbyNKP(2, 2, 0)+1]/-2.022)
+  } else if (ver == 2)
+  {
+    return (sphK[GetJbyNKP(4, 2, 0)+1]/-0.292)
+  } else if (ver == 3)
+  {
+    return (sphK[GetJbyNKP(6, 2, 0)+1]/-0.106)
+  } else if (ver == 4)
+  {
+    return (sphK[GetJbyNKP(8, 2, 0)+1]/-0.053)
+  } 
+  return(0);
+}
+
+GetOM_UR_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( 0.5531*sphK[GetJbyNKP(1, 1, 0)+1] - 0.5912*sphK[GetJbyNKP(3, 1, 0)+1])
+  } else if (ver == 2)
+  {
+    return( 7.3249*sphK[GetJbyNKP(5, 1, 0)+1] - 5.9988*sphK[GetJbyNKP(7, 1, 0)+1])
+  } 
+  
+  return(0);
+}
+
+GetOM_VR_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( -0.5531*sphK[GetJbyNKP(1, 1, 1)+1] + 0.5912*sphK[GetJbyNKP(3, 1, 1)+1])
+  } else if (ver == 2)
+  {
+    return( -7.3249*sphK[GetJbyNKP(5, 1, 1)+1] + 5.9988*sphK[GetJbyNKP(7, 1, 1)+1])
+  } 
+  
+  return(0);
+}
+
+
+GetOM_Gx_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( 0.3261*sphK[GetJbyNKP(1, 1, 0)+1] - 1.3933*sphK[GetJbyNKP(3, 1, 0)+1])
+  } else if (ver == 2)
+  {
+    return( 5.4927*sphK[GetJbyNKP(5, 1, 0)+1] - 8.8086*sphK[GetJbyNKP(7, 1, 0)+1])
+  } 
+  
+  return(0);
+}
+
+GetOM_Gy_SphK <- function(sphK, ver)
+{
+  if (ver == 1)
+  {
+    return( 0.3261*sphK[GetJbyNKP(1, 1, 1)+1] - 1.3933*sphK[GetJbyNKP(3, 1, 1)]+1)
+  } else if (ver == 2)
+  {
+    return( 5.4927*sphK[GetJbyNKP(5, 1, 1)+1] - 8.8086*sphK[GetJbyNKP(7, 1, 1)]+1)
+  } 
+  
+  return(0);
+}
+#-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
 # model - кинематическая модель, 
@@ -925,14 +1060,13 @@ MakeOMCoef_old <- function(stars, use = c(TRUE, TRUE, TRUE), model = 1, type = 0
 }
 
 
-
 # вычисление параметров заданной кинематической модели
 # stars - матрица положений и скоростей звезд (l, b, px, mu_l, mu_b, v_r)
-# use_vr - флаг использовать лучевые скорости или нет для модели Огородникова-Милна
+# use - флаг (mu_l, mu_b, v_r) - использовать соответствующую скорость или нет
 # mode - способ решения, 1 - TLS через SVD, 2 TLS-LS через собственные числа, см. TLS_Gen()
 # scaling - способ масштабирования, см. TLS_Gen()
 # ef - количество переменных, не содержащих ошибки, см. TLS_Gen
-# model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского
+# model - кинематическая модель, 1 - Огородникова Милна, 2 - Оорта-Линдблада, 3 - Эри-Ковальского, 4 - Боттлингера
 # type - вариант модели, см. в MakeOmCoef()
 Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 0, ef = -1, model = 1, type = 0, R0 = 8.0)
 {
@@ -1040,8 +1174,40 @@ Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 
 
 GetOM_Default <- function ()
 {
-  result <- c(10.3, 15.2, 8.0, -2, 1, -15,  -1, 15, 0.5, -0.5, 0.5,-0.5);
+  result <- c(10.3, 15.2, 8.0, -2,  1, -15,  -1, 15, 0.5, -0.5, 0.5,-0.5);
   return(result)
+}
+
+GetSphCoefDefault <- function(U = 10.3, V = 15.2, W = 8.0, A = 15.0, B = -15.0, C = -4.0, Gx = -3.0, Gy = 3.0, r = 8.0)
+{
+ result <- c( 
+   2.784*B,  # 001
+   0,        # 101
+   2.411*U/r - 1.023*Gx, # 110
+   -2.411*U/r - 1.023*Gx, # 111
+   -0.778*B, #201
+   0,          # 210
+   0,          # 211
+   -2.022*C,   #220
+   -2.022*A,   #221
+   0,          # 301
+   0.564*U/r - 0.957*Gx,    # 310
+   -0.564*V/r - 0.957*Gy,   # 311
+   0,   # 320
+   0,   # 321
+   0,   # 330
+   0,   # 331
+   -0.130*B,   # 401
+   0,  # 410
+   0,  # 411
+   -0.292*C, # 420
+   -0.292*A, # 421
+   0,    # 430
+   0,    # 431
+   0,    # 440
+   0    # 441
+   ) 
+ return(result)
 }
 
 #--------------------------------
@@ -1054,6 +1220,22 @@ MakeTestStars <- function (n)
   stars[,3]  <- runif(n, min = 0.1, max = 3)  # px
 
   return(stars)
+}
+
+Make_Sph_Test <- function()
+{
+  tgas_sample <- filter_tgs_px(tgas, r_lim = c(950, 1050))
+  tgas_sample <- tgas_calc_gpm(tgas_sample)
+  stars <- tgas_get_stars(tgas_sample)
+  
+  
+  a0 <- GetSphFuncK_matrix(24, stars[,1], stars[,2])
+  
+  Sph_0 <- GetSphCoefDefault()
+  b0 <- rowSums(t(t(a0)*Sph_0))
+  
+  res <- TLS_Gen(a0, b0, mode = 1, scaling = 0, ef = -1);
+
 }
 
 #--------------------------------

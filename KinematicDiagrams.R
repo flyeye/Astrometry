@@ -338,7 +338,7 @@ draw_OMParameter <- function(solution,
                              x_lim = c(0, 4, 0.5), 
                              y_lim = c(5, 40, 5), 
                              data_x_lim = c(NA, NA), 
-                             clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                             clr = c("black", "blue", "green4", "red", "brown", "orange"),
                              x_par = 4,
                              x_title = "<r>, kpc", 
                              y_title = "km/s/kpc", 
@@ -368,7 +368,7 @@ draw_OMParameter <- function(solution,
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6, 7)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +
@@ -416,7 +416,7 @@ draw_OortParameter <- function(solution,
                                x_lim = c(0, 3.5, 0.5), 
                                data_x_lim = c(NA, NA), 
                                y_lim = c(8, 18, 1), 
-                               clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                               clr = c("black", "blue", "green4", "brown", "red", "orange"),
                                x_par = 4,  # 4 - фактическое среднее расстояние выборки
                                x_title = "<r>, kpc", 
                                y_title = "km/s/kpc", 
@@ -442,7 +442,7 @@ draw_OortParameter <- function(solution,
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
     #expand_limits(x = data_x_lim, y = data_y_lim) + 
-    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26))
@@ -492,7 +492,7 @@ draw_Physical <- function(solution,
                           title = "Linear galactic velocity at Solar distance", 
                           x_lim = c(0, 4, 0.5), y_lim = c(185, 245, 10), 
                           data_x_lim = c(NA, NA), 
-                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                          clr = c("black", "blue", "green4", "brown", "red", "orange"),
                           x_par = 4,  # 4 - фактическое среднее расстояние выборки
                           x_title = "<r>, kpc", 
                           y_title = "km/s", 
@@ -516,7 +516,7 @@ draw_Physical <- function(solution,
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26))
@@ -567,7 +567,7 @@ draw_S0 <- function(solution,
                     title = expression(sigma[0]), 
                     x_lim = c(-0.6, 1.8, 0.3), 
                     y_lim = c(0, 200, 10), 
-                    clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                    clr = c("black", "blue", "green4", "brown", "red", "orange"),
                     x_par = 4,
                     x_title = "B-V, mag", 
                     y_title = "", 
@@ -586,7 +586,7 @@ draw_S0 <- function(solution,
     scale_y_continuous(breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]), minor_breaks=seq(y_lim[1],y_lim[2],by=y_lim[3]/2), limits = c(y_lim[1],y_lim[2])) +
     scale_x_continuous(breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]), minor_breaks=seq(x_lim[1],x_lim[2],by=x_lim[3]/2), limits = c(x_lim[1],x_lim[2])) +
     xlab(x_title) + ylab(y_title) +
-    scale_linetype_manual("Parameters", breaks = names, values = c(4, 2, 3, 1, 5, 6)) + 
+    scale_linetype_manual("Parameters", breaks = names, values = c(1, 2, 3, 4, 5, 6)) + 
     scale_colour_manual("Parameters",  breaks = names, values = clr) +
     scale_fill_manual("Parameters",  breaks = names, values = clr) +    
     scale_shape_manual("Parameters", breaks = names, values = c(21, 22, 23, 24, 25, 26)) +

@@ -774,8 +774,9 @@ read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
 
   res <- mutate(res, ra = ra / 3600000, spd = (spd/3600000) - 90, u_magm = u_magm/1000, u_maga = u_magm/1000,
                 sigra = sigra +128, sigdc = sigdc +128, sigpmra = sigpmra + 128, sigpmdc = sigpmdc + 128,
-                j_m = j_m/1000, h_m = h_m/1000, k_m = k_m/1000, cepra = cepra /100, cepdc = cepdc /100,
-                eapasm_b = eapasm_b/100, eapasm_v = eapasm_v /100, eapasm_g = eapasm_g/100, eapasm_r = eapasm_r/100, eapasm_i = eapasm_i/100)
+                j_m = j_m/1000, h_m = h_m/1000, k_m = k_m/1000, cepra = cepra /100, cepdc = cepdc /100)
+  #eapasm_b = eapasm_b/100, eapasm_v = eapasm_v /100, eapasm_g = eapasm_g/100, eapasm_r = eapasm_r/100, eapasm_i = eapasm_i/100
+  
   res$apasm_b[res$apasm_b!=20000] <- res$apasm_b[res$apasm_b!=20000] / 1000;
   res$apasm_b[res$apasm_b==20000] <- NA;
   res$apasm_v[res$apasm_v!=20000] <- res$apasm_v[res$apasm_v!=20000] / 1000;
@@ -786,6 +787,18 @@ read_ucac4_rec <- function(con, num, id = NULL, index = NULL)
   res$apasm_r[res$apasm_r==20000] <- NA;
   res$apasm_i[res$apasm_i!=20000] <- res$apasm_i[res$apasm_i!=20000] / 1000;
   res$apasm_i[res$apasm_i==20000] <- NA;
+  
+  res$apasm_b[res$eapasm_b!=99] <- res$eapasm_b[res$eapasm_b!=99] / 100;
+  res$apasm_b[res$eapasm_b==99] <- NA;
+  res$apasm_v[res$eapasm_v!=99] <- res$eapasm_v[res$eapasm_v!=99] / 100;
+  res$apasm_v[res$eapasm_v==99] <- NA;
+  res$apasm_g[res$eapasm_g!=99] <- res$eapasm_g[res$eapasm_g!=99] / 100;
+  res$apasm_g[res$eapasm_g==99] <- NA;
+  res$apasm_r[res$eapasm_r!=99] <- res$eapasm_r[res$eapasm_r!=99] / 100;
+  res$apasm_r[res$eapasm_r==99] <- NA;
+  res$apasm_i[res$eapasm_i!=99] <- res$eapasm_i[res$eapasm_i!=99] / 100;
+  res$apasm_i[res$eapasm_i==99] <- NA;
+
   res <- mutate(res, isHIP = substr(as.character(icf), 1, 1))
   })
   cat("filtering time per record:",t2/num,"\n")
@@ -980,9 +993,86 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE, is_hip = TR
   }
 
 
-# ------------------------------------------------------------------------------  
-#
-# ------------------------------------------------------------------------------
+# ===================================================================================================
+#                            URAT1
+#-------------------------------------------------------------------------------------------
+  #   Byte-by-byte Description of output: urat1.sam
+  # -------------------------------------------------------------------------------
+  #   Bytes Format Units   Label    Explanations
+  # -------------------------------------------------------------------------------
+  #   1- 10  A10   ---     URAT1    URAT1 recommended identifier (ZZZ-NNNNNN) (13)
+  # 12- 22  F11.7 deg     RAdeg    Right ascension on ICRS, at "Epoch" (1)
+  # 24- 34  F11.7 deg     DEdeg    Declination on ICRS, at "Epoch" (1)
+  # 36- 38  I3    mas     sigs     Position error per coordinate, from scatter (2)
+  # 40- 42  I3    mas     sigm     Position error per coordinate, from model (2)
+  # 44- 45  I2    ---     Ns       (nst) Total number of sets the star is in (3)
+  # 47- 48  I2    ---     Nu       (nsu) Number of sets used for mean position (3)
+  # 50- 57  F8.3  yr      Epoch    (epoc) Mean URAT observation epoch (1)
+  # 59- 64  F6.3  mag     f.mag    ?(mmag) mean URAT model fit magnitude (4)
+  # 66- 70  F5.3  mag   e_f.mag    ?(sigp) URAT photometry error (5)
+  # 72- 73  I2    ---     Nm       (nsm) Number of sets used
+  # for URAT magnitude (3)
+  # 75  I1    ---     r        (ref) largest reference star flag (6)
+  # 77- 79  I3    ---     Nit      (nit) Total number of images (observations)
+  # 81- 83  I3    ---     Niu      (niu) Number of images used for mean position
+  # 85- 87  I3    ---     Ngt      (ngt) Total number of 1st order
+  # grating observations
+  # 89- 91  I3    ---     Ngu      (ngu) Number of 1st order grating positions
+  # used
+  # 93- 98  F6.1  mas/yr  pmRA     ?(pmr) Proper motion RA*cosDec
+  # (from 2MASS) (7)
+  # 100-105  F6.1  mas/yr  pmDE     ?(pmd) Proper motion in Declination (7)
+  # 106-109  F4.1  mas/yr  e_pm     ?(pme) Proper motion error per coordinate (8)
+  # 112-113  I2    ---     mf2      [1/11] Match flag URAT with 2MASS (9)
+  # 115-116  I2    ---     mfa      [1/11] Match flag URAT with APASS (9)
+  # 118  A1    ---     G        [-] "-" if there is no match with GSC2.4 (14)
+  # --------------------------------------------------------------------------------
+  #   120-129  I10   ---     2Mkey    ?(id2) unique 2MASS star identification number
+  # 131-136  F6.3  mag     Jmag     ?(jmag) 2MASS J-band magnitude
+  # 138-142  F5.3  mag   e_Jmag     ?(ejmag) Error on Jmag
+  # 144-145  A2    ---   q_Jmag     [0,58]? J-band quality-confusion flag (10)
+  # 147-152  F6.3  mag     Hmag     ?(hmag) 2MASS H-band magnitude
+  # 154-158  F5.3  mag   e_Hmag     ?(ehmag) Error on  H-band magnitude (10)
+  # 160-161  A2   ---    q_Hmag     [0,58]? H-band quality-confusion flag (10)
+  # 163-168  F6.3  mag     Kmag     ?(kmag) 2MASS Ks-band magnitude
+  # 170-174  F5.3  mag   e_Kmag     ?(ekmag) Error on Ks-band magnitude (10)
+  # 176-177  A2   ---    q_Kmag     [0,58]? Ks-band quality-confusion flag (10)
+  # --------------------------------------------------------------------------------
+  #   179-181  I3    ---     Nn       (ann) Number of APASS observation nights (12)
+  # 183-185  I3    ---     No       (ano) Number of APASS observations (12)
+  # 187-192  F6.3  mag     Bmag     ?(abm) APASS B-band magnitude (11)
+  # 194-198  F5.3  mag   e_Bmag     ?(ebm) Error on Bmag
+  # 200-205  F6.3  mag     Vmag     ?(avm) APASS V-band magnitude
+  # 207-211  F5.3  mag   e_Vmag     ?(evm) Error on Vmag
+  # 213-218  F6.3  mag     gmag     ?(agm) APASS g-band magnitude
+  # 220-224  F5.3  mag   e_gmag     ?(egm) Error on gmag
+  # 226-231  F6.3  mag     rmag     ?(arm) APASS r-band magnitude
+  # 233-237  F5.3  mag   e_rmag     ?(erm) Error on rmag
+  # 239-244  F6.3  mag     imag     ?(aim) APASS i-band magnitude
+  # 246-250  F5.3  mag   e_imag     ?(eim) Error on imag
+  # --------------------------------------------------------------------------------
+    
+  make_urat1_df <- function(num = 0)
+  {
+    res <-data.frame(
+      # ra = integer(num), spd = integer(num), u_magm = integer(num), u_maga = integer(num), smag = integer(num),
+      #                objt=integer(num), cdf=integer(num), sigra=integer(num), sigdc=integer(num),
+      #                na1=integer(num), nu1=integer(num),cu1=integer(num),
+      #                cepra=integer(num), cepdc=integer(num), pmrac=integer(num), pmdc=integer(num), sigpmra=integer(num), sigpmdc=integer(num),
+      #                pts_key=integer(num), j_m=integer(num), h_m=integer(num), k_m=integer(num),
+      #                icqflag_1=integer(num),icqflag_2=integer(num), icqflag_3=integer(num),
+      #                e2mpho_1=integer(num), e2mpho_2=integer(num),  e2mpho_3=integer(num),
+      #                apasm_b=integer(num), apasm_v=integer(num), apasm_g=integer(num), apasm_r=integer(num), apasm_i=integer(num),
+      #                eapasm_b=integer(num), eapasm_v=integer(num), eapasm_g=integer(num), eapasm_r=integer(num), eapasm_i=integer(num),
+      #                gcflg=integer(num), icf=integer(num), leda=integer(num), x2m=integer(num), uc4_id=integer(num), zn2=integer(num), rn2=integer(num),
+      #                isHIP = character(num)
+      )
+    return(res)
+  }
+    
+  
+# ===================================================================================================
+#        TGAS Alternative distance
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #  Bytes     Format    Units     Label       Explanations
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1087,11 +1177,15 @@ tgas_apply_APASS <- function(tgas_)
   return(tgas_)
 }
 
-tgas_apply_HIP_photometry <- function(tgas_)
+tgas_apply_HIP_photometry <- function(tgas_, reset = TRUE)
 {
-  tgas_$B_V <- NA
-  tgas_$M <- NA
-  tgas_$Mag <- NA
+  
+  if (reset == TRUE)
+  {
+    tgas_$B_V <- NA
+    tgas_$M <- NA
+    tgas_$Mag <- NA
+  }
   # index <-(tgas_$gPx>0)&(!is.na(tgas_$hBV))&(!is.na(tgas_$hMag))
   index <- (!is.na(tgas_$hBV))&(!is.na(tgas_$hMag)&(!is.na(tgas_$e_hBV)))
   index2 <- (tgas_$e_hBV!=0)

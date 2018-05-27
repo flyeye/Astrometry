@@ -7,7 +7,7 @@ filter_tgs_px <- function(tgs,                     #  catalog (data frame)
                           bv_lim = c(-Inf,Inf),    #  limits on B-V
                           Mg = c(-Inf,Inf),        #  limits on absolute magnitude applied to M column in data
                           z_lim = c(0, Inf),       #  limits on distance from galactic equator
-                          r_lim = c(0, Inf),       #  limits on solar distance applied to R column in data
+                          r_lim = c(0, Inf),       #  limits on solar distance applied to R column in data (parsec)
                           g_b = c(-Inf, Inf))      #  limits on galactic lalitude
 {
   #print(bv_lim)
@@ -116,7 +116,12 @@ tgas_calc_LClass <- function(tgas_, dist_ = "TGAS_PX", ph = "APASS")
   } else if (ph == "HIP")
   {
     tgas_ <- tgas_apply_HIP_photometry(tgas_)  
+  } else
+  {
+    tgas_ <- tgas_apply_APASS(tgas_)
+    tgas_ <- tgas_apply_HIP_photometry(tgas_, reset = FALSE)  
   }
+  
   tgas_ <- tgas_calc_distance(tgas_, dist_) 
   tgas_ <- tgas_calc_absolute_mag(tgas_)
   
@@ -127,7 +132,8 @@ tgas_calc_LClass <- function(tgas_, dist_ = "TGAS_PX", ph = "APASS")
   tgas_a$LClass_apass[tgas_a$M<(-2)& (tgas_a$M>(-Inf))] <- 1
   tgas_a$LClass_apass[(tgas_a$M>-1.5)&(tgas_a$M<2.5)&(tgas_a$B_V>0.8)&(tgas_a$B_V<2.5)] <- 3
   
-  tgas_ <- within(tgas_, rm("LClass_apass"))
+  # ctgas_ <- within(tgas_, rm("LClass_apass")) # удаляет строчки в каких то случаях...
+  tgas_$LClass_apass <- NULL
   tgas_ <- tgas_ %>% left_join(tgas_a[ , names(tgas_a) %in% c("source_id", "LClass_apass")], by = "source_id")
   tgas_$LClass_apass[is.na(tgas_$LClass_apass)] <- 0
   
@@ -278,7 +284,7 @@ tgas_calc_OM_seq_2 <- function(tgas_ = tgas, src_ = "TGAS", px_type = "ANGLE", d
         hrd <- HRDiagram(tgas_sample, save = s, photometric = "none")
         
         max_dist <- max(tgas_sample$R/1000) %/% 1 + 1;
-        cat(max_dist)
+        #cat(max_dist)
         cat("draw XY...", "\n")
         DrawGalaxyPlane(tgas_sample, plane = "XY", save = s, dscale = max_dist)
         cat("draw XZ...", "\n")
@@ -313,7 +319,8 @@ tgas_calc_OM_seq_2 <- function(tgas_ = tgas, src_ = "TGAS", px_type = "ANGLE", d
       cat(par[i,], "\n")
       cat(res_tgas$X, "\n")
       cat(res_tgas$s_X, "\n")
-      res_tgas$HR <- hrd;
+      if(!is.null(save))
+        res_tgas$HR <- hrd;
       solution[[i]] <- res_tgas
       par[i, 10] <- res_tgas$s0
     }
@@ -453,7 +460,10 @@ tgas_calc_OM_seq <- function(tgas_ = tgas, src_ = "TGAS", start = 1, step = 0.1,
     cat(par[i,], "\n")
     cat(res_tgas$X, "\n")
     cat(res_tgas$s_X, "\n")
-    res_tgas$HR <- hrd;
+    if(!is.null(save))
+    {
+      res_tgas$HR <- hrd;
+    }
     solution[[i]] <- res_tgas
   }
   colnames(res) <- names(res_tgas$X)
@@ -669,6 +679,7 @@ tgas_write_conditions <- function(conditions)
   cat("Kinematic model = ", conditions$KinModel, "\n", file=con)
   cat("Kinematic model type = ", conditions$KinModelType, "\n", file=con)
   cat("gal B = ", conditions$g_B, "\n", file = con)
+  cat("Photometry = ", conditions$Photometry, "\n", file = con )
   
   close(con)
 }
@@ -1019,6 +1030,8 @@ tgas_draw_kinematic <- function (solution)
 
 ## tgas_draw_all_kinematic_comp(solutions_bv, src = "TGAS", saveto = "solutions/bottlinger_kin_", x_par = 9, x_lim = c(-0.5, 1.2,0.2), x_title = "B-V", is_legend = FALSE, width = 4, height = 4)
 
+## tgas_draw_all_kinematic_comp(solutions, src = "TGAS", saveto = "solutions/om_kin", x_par = 9, x_lim = c(-0.6, 1.5,0.3), x_title = "B-V", is_legend = FALSE, width = 3.7, height = 3.7)
+
 
 tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "", 
                                          x_par = 4, x_lim = c(0, 4, 0.5), x_title = "<r>, kpc",
@@ -1032,7 +1045,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                         x_par = x_par,
                         x_lim = x_lim, 
                         x_title = x_title,
-                        y_lim = c(5, 20, 5),
+                        y_lim = c(0, 25, 2.5),
                         y_title = "Компонент движения Солнца U, км/с",
                         is_legend = is_legend,
                         title = paste("Solar motion U, ", src, " proper motions."))
@@ -1044,7 +1057,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                         x_par = x_par,
                         x_lim = x_lim, 
                         x_title = x_title,
-                        y_lim = c(5, 35, 5),
+                        y_lim = c(0, 25, 2.5),
                         y_title = "Компонент движения Солнца V, км/с",
                         is_legend = is_legend,
                         title = paste("Компонент движения Солнца V, ", src, " proper motions."))
@@ -1056,7 +1069,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                         x_par = x_par,
                         x_lim = x_lim,
                         x_title = x_title,
-                        y_lim = c(5, 20, 2.5),
+                        y_lim = c(0, 25, 2.5),
                         y_title = "Компонент движения Солнца W, км/с",
                         is_legend = is_legend,
                         title = paste("Solar motion W, ", src, " proper motions."))
@@ -1085,7 +1098,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                           #data_x_lim = c(1, 14),
                           is_legend = is_legend,
                           title = paste("Oort`s parameter B, ", src, " proper motions."),
-                          y_lim = c(-20, -8, 2), 
+                          y_lim = c(-18, -8, 2), 
                           y_title = "Параметр Оорта B, км/с/кпк")
   ggsave(paste0(save, "OortB-R", ".png"), plot = g, width = width, height = height)
   #ggsave(paste0(save, "OortB-R", ".eps"), plot = g, width = width, height = height)
@@ -1116,7 +1129,7 @@ tgas_draw_all_kinematic_comp <- function(solutions, src = "TGAS", saveto = "",
                             #data_x_lim = c(3, 13),
                             is_legend = is_legend,
                             title = paste("Oort`s parameter K, ", src, " proper motions."),
-                            y_lim = c(-15, 3, 3), 
+                            y_lim = c(-15, 2, 3), 
                             y_title = "Параметр Оорта K, км/с/кпк")
     ggsave(paste0(save, "OortK-R", ".png"), plot = g, width = width, height = height)
     #ggsave(paste0(save, "OortK-R", ".eps"), plot = g, width = width, height = height)  
@@ -1359,7 +1372,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_par = 9, 
                      x_title = "B-V",
                      x_lim = x_lim,
-                     data_x_lim = c(1, 14),
+                     data_x_lim = c(1, 13),
                      y_lim = c(120, 300, 25),
                      is_legend = is_legend,
                      y_title = "Линейная скорость Солнца V, км/с",
@@ -1386,7 +1399,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      title = paste("Galaxy rotation curve inclination, ", src, " proper motions."),
                      x_par = 9, 
                      x_title = "B-V",
-                     data_x_lim = c(2, 14),
+                     data_x_lim = c(2, 13),
                      x_lim = x_lim,
                      is_legend = is_legend,
                      y_lim = c(-12, 6, 2),
@@ -1444,7 +1457,7 @@ tgas_draw_physics_BV <- function (solution, src = "TGAS", saveto = "", x_lim = c
                      x_title = "B-V",
                      x_lim = x_lim,
                      is_legend = is_legend,
-                     y_lim = c(10, 40, 5),
+                     y_lim = c(-5, 40, 5),
                      y_title = "Широта апекса Солнца B, градусы")
   ggsave(paste0(save, "ApexB-R", ".png"), plot = g, width = width, height = height)
   #ggsave(paste0(save, "ApexB-R", ".eps"), plot = g, width = width, height = height)

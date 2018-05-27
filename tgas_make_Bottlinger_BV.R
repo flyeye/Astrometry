@@ -1,5 +1,5 @@
 
-tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV")
+tgas_make_bottlinger_solutions_bv <- function(data, filter_dist = "TGAS_PX", src = "TGAS", name = "BV", ph = "APASS")
 {
 
   solutions_bv <- list()
@@ -7,7 +7,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   if (!dir.exists("solutions")) 
     dir.create("solutions")
   
-  tgas_ <- tgas_calc_LClass(tgas, dist_ = filter_dist)
+  tgas_ <- tgas_calc_LClass(data, dist_ = filter_dist, ph = ph)
   tgas_ <- tgas_[tgas_$LClass_apass == 5,]
   
   conditions <- list();
@@ -17,17 +17,18 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   conditions$KinModel <- 4
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
-  #conditions$BV <- matrix(0, nrow = 7, ncol = 2)
-  #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
-  #conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+  
+  conditions$BV <- matrix(0, nrow = 7, ncol = 2)
+  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
+  conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
  
   #conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
   #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
   #conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
   
-  conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
-  conditions$BV[,1] <- c(-Inf, seq(-0.3, 1.4, 0.1))
-  conditions$BV[,2] <- c(seq(-0.3, 1.4, 0.1), Inf)
+  # conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
+  # conditions$BV[,1] <- c(-Inf, seq(-0.3, 1.4, 0.1))
+  # conditions$BV[,2] <- c(seq(-0.3, 1.4, 0.1), Inf)
   
   conditions$Z <- c(0, Inf)
   conditions$MG <- c(-Inf, Inf)
@@ -64,7 +65,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   
   solution_bv <- tgas_process_solution(solution_bv)
   solutions_bv$MS_ALL_Rpi <- solution_bv
-  solutions_bv$MS_ALL_Rpi$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  solutions_bv$MS_ALL_Rpi$Name <- paste("1. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
   gc()
   
@@ -93,7 +94,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   
   solution_bv <- tgas_process_solution(solution_bv)
   solutions_bv$MS_ALL_rMoMW <- solution_bv
-  solutions_bv$MS_ALL_rMoMW$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  solutions_bv$MS_ALL_rMoMW$Name <- paste("2. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   #solutions_bv$MS_ALL_rMoMW$Name <- "Main sequence Rpi-rMoMW"
 
   gc()
@@ -124,7 +125,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   solution_bv <- tgas_process_solution(solution_bv)
   solutions_bv$MS_ALL_rMoExp1 <- solution_bv
   #solutions_bv$MS_ALL_rMoExp1$Name <- "Main sequence Rpi-rMoExp1"
-  solutions_bv$MS_ALL_rMoExp1$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  solutions_bv$MS_ALL_rMoExp1$Name <- paste("3. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
   gc()
   # ----------------------------------------------------------    
@@ -154,7 +155,7 @@ tgas_make_bottlinger_solutions_bv <- function(filter_dist = "TGAS_PX", src = "TG
   solution_bv <- tgas_process_solution(solution_bv)
   solutions_bv$MS_ALL_rMoExp2 <- solution_bv
   #solutions_bv$MS_ALL_rMoExp2$Name <- "Main sequence Rpi-rMoExp2"
-  solutions_bv$MS_ALL_rMoExp2$Name <- paste("Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  solutions_bv$MS_ALL_rMoExp2$Name <- paste("4. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
   gc()
   # ----------------------------------------------------------      

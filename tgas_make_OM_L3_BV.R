@@ -1,5 +1,5 @@
 
-tgas_make_OM_solutions_bv_l3 <- function(filter_dist = "TGAS_PX", src = "TGAS", name = "BV")
+tgas_make_OM_solutions_bv_l3 <- function(data, filter_dist = "TGAS_PX", src = "TGAS", name = "BV", ph = "APASS")
 {
 
   solutions_bv <- list()
@@ -7,7 +7,7 @@ tgas_make_OM_solutions_bv_l3 <- function(filter_dist = "TGAS_PX", src = "TGAS", 
   if (!dir.exists("solutions")) 
     dir.create("solutions")
   
-  tgas_ <- tgas_calc_LClass(tgas, dist_ = filter_dist)
+  tgas_ <- tgas_calc_LClass(data, dist_ = filter_dist, ph = ph)
   tgas_ <- tgas_[tgas_$LClass_apass == 3,]
   
   conditions <- list();
@@ -17,10 +17,16 @@ tgas_make_OM_solutions_bv_l3 <- function(filter_dist = "TGAS_PX", src = "TGAS", 
   conditions$KinModel <- 1
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
-  conditions$BV <- matrix(0, nrow = 3, ncol = 2)
-  conditions$BV[,1] <- c(0.65, 1.03, 1.57)
-  conditions$BV[,2] <- c(1.03, 1.57, Inf)
-  conditions$Z <- c(0, Inf)
+  
+  # conditions$BV <- matrix(0, nrow = 3, ncol = 2)
+  # conditions$BV[,1] <- c(0.65, 1.03, 1.57)
+  # conditions$BV[,2] <- c(1.03, 1.57, Inf)
+   
+  conditions$BV <- matrix(0, nrow = 10, ncol = 2)
+  conditions$BV[,1] <- c(-Inf, seq(0.8, 2.5, 0.2))
+  conditions$BV[,2] <- c(seq(0.8, 2.5, 0.2), Inf)
+  
+  conditions$Z <- c(0.25, Inf)
   conditions$MG <- c(-Inf, Inf)
   conditions$e_Px <- Inf
   conditions$distance_ <- c(0, Inf)
@@ -146,32 +152,32 @@ tgas_make_OM_solutions_bv_l3 <- function(filter_dist = "TGAS_PX", src = "TGAS", 
   
   gc()
   # ----------------------------------------------------------      
-  g <- draw_OortParameter(solutions_bv, parameter = 1,
-                     title = "Oort`s parameter A, Red Giants", 
-                     x_lim = c(0.5, 2, 0.1), y_lim = c(8, 18, 1), 
-                     clr = c("blue", "green4", "brown", "black", "red", "orange"),
-                     x_par = 9, 
-                     x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_RG_OL_A.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_RG_OL_A.eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OortParameter(solutions_bv, parameter = 2,
-                          title = "Oort`s parameter B, Red Giants", 
-                          x_lim = c(0.5, 2, 0.1), y_lim = c(-18, -8, 1), 
-                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
-                          x_par = 9, 
-                          x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_RG_OL_B.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_RG_OL_B.eps"), plot = g, width = 10, height = 5)
-  
-  g <- draw_OortParameter(solutions_bv, parameter = 3,
-                          title = "Oort`s parameter C, Red Giants", 
-                          x_lim = c(0.5, 2, 0.1), y_lim = c(-6, 2, 1), 
-                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
-                          x_par = 9, 
-                          x_title = "B-V")
-  ggsave(paste0("solutions/",filter_dist,"_RG_OL_C.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0("solutions/",filter_dist,"_RG_OL_C.eps"), plot = g, width = 10, height = 5)
+  # g <- draw_OortParameter(solutions_bv, parameter = 1,
+  #                    title = "Oort`s parameter A, Red Giants", 
+  #                    x_lim = c(0.5, 2, 0.1), y_lim = c(8, 18, 1), 
+  #                    clr = c("blue", "green4", "brown", "black", "red", "orange"),
+  #                    x_par = 9, 
+  #                    x_title = "B-V")
+  # ggsave(paste0("solutions/",filter_dist,"_RG_OL_A.png"), plot = g, width = 10, height = 5)
+  # ggsave(paste0("solutions/",filter_dist,"_RG_OL_A.eps"), plot = g, width = 10, height = 5)
+  # 
+  # g <- draw_OortParameter(solutions_bv, parameter = 2,
+  #                         title = "Oort`s parameter B, Red Giants", 
+  #                         x_lim = c(0.5, 2, 0.1), y_lim = c(-18, -8, 1), 
+  #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
+  #                         x_par = 9, 
+  #                         x_title = "B-V")
+  # ggsave(paste0("solutions/",filter_dist,"_RG_OL_B.png"), plot = g, width = 10, height = 5)
+  # ggsave(paste0("solutions/",filter_dist,"_RG_OL_B.eps"), plot = g, width = 10, height = 5)
+  # 
+  # g <- draw_OortParameter(solutions_bv, parameter = 3,
+  #                         title = "Oort`s parameter C, Red Giants", 
+  #                         x_lim = c(0.5, 2, 0.1), y_lim = c(-6, 2, 1), 
+  #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
+  #                         x_par = 9, 
+  #                         x_title = "B-V")
+  # ggsave(paste0("solutions/",filter_dist,"_RG_OL_C.png"), plot = g, width = 10, height = 5)
+  # ggsave(paste0("solutions/",filter_dist,"_RG_OL_C.eps"), plot = g, width = 10, height = 5)
   
   g <- draw_OortParameter(solutions_bv, parameter = 4,
                           title = "Oort`s parameter K, Red Giants", 
