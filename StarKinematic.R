@@ -549,6 +549,7 @@ Bottlinger_K_B <- function( l, b, r, R0, R)
 #   2 - Оорта-Линдблада, 
 #          0 - классический вариант с A и B
 #          1 - расширенный вариант с С и К
+#          2 - расширенный вариант с С, К, |Gx| и |Gy}
 #          2 - расширенный вариант с С, К, Gx и  Gy
 #   3 - Эри-Ковальского, 
 #   4 - Модель Боттлингера с W(W0), W'(W1), W" (W2) и K. 
@@ -913,6 +914,7 @@ GetOM_B_SphK <- function(sphK, ver)
   return(0);
 }
 
+
 GetOM_A_SphK <- function(sphK, ver)
 {
   if (ver == 1)
@@ -949,41 +951,69 @@ GetOM_C_SphK <- function(sphK, ver)
   return(0);
 }
 
+GetOM_K_SphK <- function(sphK, ver)
+{
+  return(0)
+}
+  
+
+#     V_110     V_310
+# U/R 0.5530657 -0.5912082
+# Gx  0.3259447 -1.3933557
+
+#    V_510     V_710
+# U/R 7.326007 -5.999747
+# Gx  5.494505 -8.810155
+
 GetOM_UR_SphK <- function(sphK, ver)
 {
   if (ver == 1)
   {
-    return( 0.5531*sphK[GetJbyNKP(1, 1, 0)+1] - 0.5912*sphK[GetJbyNKP(3, 1, 0)+1])
+    return( 0.5530657*sphK[GetJbyNKP(1, 1, 0)+1] - 0.5912082*sphK[GetJbyNKP(3, 1, 0)+1])
   } else if (ver == 2)
   {
-    return( 7.3249*sphK[GetJbyNKP(5, 1, 0)+1] - 5.9988*sphK[GetJbyNKP(7, 1, 0)+1])
+    return( 7.326007*sphK[GetJbyNKP(5, 1, 0)+1] - 5.999747*sphK[GetJbyNKP(7, 1, 0)+1])
+    #return( -15.749*sphK[GetJbyNKP(5, 1, 0)+1] + 19.194*sphK[GetJbyNKP(7, 1, 0)+1])
   } 
   
   return(0);
 }
+
+#       V_111      V_311
+#V/R -0.5530657  0.5912082
+#Gy   0.3259447 -1.3933557
+
+#      V_511       V_711
+#V/R -7.326007  5.999747
+#Gy  5.494505 -8.810155
 
 GetOM_VR_SphK <- function(sphK, ver)
 {
   if (ver == 1)
   {
-    return( -0.5531*sphK[GetJbyNKP(1, 1, 1)+1] + 0.5912*sphK[GetJbyNKP(3, 1, 1)+1])
+    return( -0.5530657*sphK[GetJbyNKP(1, 1, 1)+1] + 0.5912082*sphK[GetJbyNKP(3, 1, 1)+1])
   } else if (ver == 2)
   {
-    return( -7.3249*sphK[GetJbyNKP(5, 1, 1)+1] + 5.9988*sphK[GetJbyNKP(7, 1, 1)+1])
+    return( -7.326007*sphK[GetJbyNKP(5, 1, 1)+1] + 5.999747*sphK[GetJbyNKP(7, 1, 1)+1])
   } 
   
   return(0);
 }
 
+GetOM_WR_SphK <- function(sphK, ver)
+{
+  return(0)
+}
 
 GetOM_Gx_SphK <- function(sphK, ver)
 {
   if (ver == 1)
   {
-    return( 0.3261*sphK[GetJbyNKP(1, 1, 0)+1] - 1.3933*sphK[GetJbyNKP(3, 1, 0)+1])
+    return( 0.3259447*sphK[GetJbyNKP(1, 1, 0)+1] - 1.3933557*sphK[GetJbyNKP(3, 1, 0)+1])
   } else if (ver == 2)
   {
-    return( 5.4927*sphK[GetJbyNKP(5, 1, 0)+1] - 8.8086*sphK[GetJbyNKP(7, 1, 0)+1])
+    return( 5.494505*sphK[GetJbyNKP(5, 1, 0)+1] - 8.810155*sphK[GetJbyNKP(7, 1, 0)+1])
+    #return( -28.389*sphK[GetJbyNKP(5, 1, 0)+1] + 28.1845*sphK[GetJbyNKP(7, 1, 0)+1])
   } 
   
   return(0);
@@ -993,14 +1023,21 @@ GetOM_Gy_SphK <- function(sphK, ver)
 {
   if (ver == 1)
   {
-    return( 0.3261*sphK[GetJbyNKP(1, 1, 1)+1] - 1.3933*sphK[GetJbyNKP(3, 1, 1)]+1)
+    return( 0.3259447*sphK[GetJbyNKP(1, 1, 1)+1] - 1.3933557*sphK[GetJbyNKP(3, 1, 1)+1])
   } else if (ver == 2)
   {
-    return( 5.4927*sphK[GetJbyNKP(5, 1, 1)+1] - 8.8086*sphK[GetJbyNKP(7, 1, 1)]+1)
+    return( 5.494505*sphK[GetJbyNKP(5, 1, 1)+1] - 8.810155*sphK[GetJbyNKP(7, 1, 1)+1])
   } 
   
   return(0);
 }
+
+GetOm_VSF <- function(sphK, ver)
+{
+  
+}
+
+
 #-----------------------------------------------------------------
 # stars - matrix(n,3), where 
 # stars[,1] - l in degrees, [,2] - b in degrees, [,3] px - kPc
@@ -1129,8 +1166,8 @@ Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 
       res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], NA, NA, NA, NA)  
     } else if (type == 1)
     {
-      res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"])
-      res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"])
+      res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"], NA, NA)
+      res$s_Oort <- c(res$s_X["eA"], res$s_X["eB"], res$s_X["eC"], res$s_X["eK"], NA, NA)
     } else if ((type == 2)|(type == 3))
     {
       res$Oort <- c(res$X["A"], res$X["B"], res$X["C"], res$X["K"], res$X["Gx"], res$X["Gy"])
@@ -1174,22 +1211,23 @@ Calc_OM_Model <- function(stars, use = c(TRUE, TRUE, TRUE), mode = 1, scaling = 
 
 GetOM_Default <- function ()
 {
-  result <- c(10.3, 15.2, 8.0, -2,  1, -15,  -1, 15, 0.5, -0.5, 0.5,-0.5);
+  result <- c(10.3, 15.2, 8.0, -2,  1, -15,  -1, 15, 0.5, -0.5, 0.5, -0.5);
   return(result)
 }
 
-GetSphCoefDefault <- function(U = 10.3, V = 15.2, W = 8.0, A = 15.0, B = -15.0, C = -4.0, Gx = -3.0, Gy = 3.0, r = 8.0)
+GetSphCoefDefault <- function(n = 81, U = 10.3, V = 15.2, W = 8.0, A = 15.0, B = -15.0, C = -5.0, Gx = -10.0, Gy = 30.0, r = 1.0)
 {
- result <- c( 
+  result <- c(rep(0, max(81,n)))
+  result[1:81] <- c( 
    2.784*B,  # 001
    0,        # 101
    2.411*U/r - 1.023*Gx, # 110
-   -2.411*U/r - 1.023*Gx, # 111
+   -2.411*V/r - 1.023*Gy, # 111
    -0.778*B, #201
    0,          # 210
    0,          # 211
    -2.022*C,   #220
-   -2.022*A,   #221
+   2.022*A,   #221
    0,          # 301
    0.564*U/r - 0.957*Gx,    # 310
    -0.564*V/r - 0.957*Gy,   # 311
@@ -1201,11 +1239,67 @@ GetSphCoefDefault <- function(U = 10.3, V = 15.2, W = 8.0, A = 15.0, B = -15.0, 
    0,  # 410
    0,  # 411
    -0.292*C, # 420
-   -0.292*A, # 421
+   0.292*A, # 421
    0,    # 430
    0,    # 431
    0,    # 440
-   0    # 441
+   0,    # 441
+   0,    # 501
+   0.279*U/r - 0.190*Gx,    # 510
+   -0.279*V/r - 0.190*Gy,    # 511
+   0,    # 520 
+   0,    # 521 
+   0,    # 530    
+   0,    # 531 
+   0,    # 540 
+   0,    # 541
+   0,    # 550
+   0,    # 551
+   -0.049*B,    # 601
+   0,    # 610 
+   0,    # 611
+   0.106*C,    # 620 
+   -0.106*A,    # 621
+   0,    # 630 
+   0,    # 631
+   0,    # 640
+   0,    # 641
+   0,    # 650
+   0,    # 651
+   0,    # 660
+   0,    # 661
+   0,    # 701
+   0.174*U/r - 0.232*Gx,    # 710
+   -0.174*V/r - 0.232*Gy,    # 711
+   0,    # 720
+   0,    # 721
+   0,    # 730
+   0,    # 731
+   0,    # 740
+   0,    # 741
+   0,    # 750
+   0,    # 751
+   0,    # 760
+   0,    # 761
+   0,    # 770
+   0,    # 771
+   -0.024*B,    # 801
+   0,    # 810 
+   0,    # 811
+   0.053*C,    # 820 
+   -0.053*A,    # 821
+   0,    # 830 
+   0,    # 831
+   0,    # 840
+   0,    # 841
+   0,    # 850
+   0,    # 851
+   0,    # 860
+   0,    # 861
+   0,    # 870
+   0,    # 871
+   0,    # 880
+   0    # 881
    ) 
  return(result)
 }
