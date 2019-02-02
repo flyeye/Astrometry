@@ -27,6 +27,24 @@ stargazer(res_tgas$X, type = "text")
 
 # -----------------------
 
+B <- 144;   dB <- pi/B;
+L <- 192;   dL <- 2*pi/L;
+
+
+stars <- matrix(0, ncol = 6, nrow = B*L)
+for (q1 in 0:(L-1))
+{
+  lq <- dL*(q1+0.5);
+  for (q2 in 0:(B-1))
+  {
+    bq <- (pi/2) - dB*(q2+0.5);
+    stars[(q1+1) + q2*L,1] <- lq
+    stars[(q1+1) + q2*L,2] <- bq
+  }
+}
+stars[,3] <- 1
+
+
 stars <- matrix(0, ncol = 6, nrow = 100000)
 stars[,1] <- runif(100000, 0, 2*pi)
 stars[,2] <- runif(100000, -pi/2, pi/2)
@@ -36,23 +54,24 @@ stars[,5] <- 0
 stars[,6] <- 0
 
 a0 <- GetSphFuncK_matrix(80, stars[,1], stars[,2])
-Sph_0 <- GetSphCoefDefault(81, r = 1)
-b0 <- rowSums(t(t(a0)*Sph_0))
-# b0 <- a0 %*% matrix(Sph_0, ncol = 1)
+Sph_0 <- GetSphCoefDefault(81, U = 0, V = 0, W = 0, B = -15, A = 0, C = 0, Gx = 0, Gy = 0, r = 1)
+#b0 <- rowSums(t(t(a0)*Sph_0))
+b0 <- a0 %*% matrix(Sph_0, ncol = 1)
 stars[,4] <- b0 / 4.74064
 res <- TLS_Gen(a0, b0, mode = 2, ef = ncol(a0))
 Sph_0 - res$X
 
-a0 <- MakeOMCoef(stars, use = c(TRUE, FALSE, FALSE), model = 2, type = 1)
+a0 <- MakeOMCoef(stars, use = c(TRUE, FALSE, FALSE), model = 2, type = 2)
 #  calculate B0
 #OM_0 <- c(10.3, 15.2, -15,  15, -5, -10, 30) # type = 3, mu_l
+OM_0 <- c(0, 0, -15,  0, 0, 0, 0) # type = 3, mu_l
 #OM_0 <- c(10.3, 15.2, 10, -15,  15, -5, -3) # type = 1, mu_l + mu_b
-OM_0 <- c(10.3, 15.2, -15,  15, -5) # type = 1, mu_l
+#OM_0 <- c(10.3, 15.2, -15,  15, -5) # type = 1, mu_l
 b0 <- rowSums(t(t(a0)*OM_0)) 
 stars[,4] <- b0[1:nrow(stars)] / 4.74064
 #stars[,5] <- b0[(nrow(stars)+1):length(b0)]
-res_tgas <- Calc_OM_Model(stars, use = c(TRUE, FALSE, FALSE), mode = 2, model = 2, type = 1)
+res_tgas <- Calc_OM_Model(stars, use = c(TRUE, FALSE, FALSE), mode = 2, model = 2, type = 2)
 
 
-res_tgas <- Calc_OM_Model(stars, use = c(TRUE, FALSE, FALSE), mode = 2, model = 2, type = 3)
+res_tgas <- Calc_OM_Model(stars, use = c(TRUE, FALSE, FALSE), mode = 2, model = 2, type = 2)
 

@@ -925,10 +925,10 @@ GetOM_A_SphK <- function(sphK, ver)
     return (sphK[GetJbyNKP(4, 2, 1)+1]/0.292)
   } else if (ver == 3)
   {
-    return (sphK[GetJbyNKP(6, 2, 1)+1]/0.106)
+    return (sphK[GetJbyNKP(6, 2, 1)+1]/0.1065461)
   } else if (ver == 4)
   {
-    return (sphK[GetJbyNKP(8, 2, 1)+1]/0.053)
+    return (sphK[GetJbyNKP(8, 2, 1)+1]/0.05275831)
   } 
   return(0);
 }
@@ -943,10 +943,10 @@ GetOM_C_SphK <- function(sphK, ver)
     return (sphK[GetJbyNKP(4, 2, 0)+1]/-0.292)
   } else if (ver == 3)
   {
-    return (sphK[GetJbyNKP(6, 2, 0)+1]/-0.106)
+    return (sphK[GetJbyNKP(6, 2, 0)+1]/-0.1065461)
   } else if (ver == 4)
   {
-    return (sphK[GetJbyNKP(8, 2, 0)+1]/-0.053)
+    return (sphK[GetJbyNKP(8, 2, 0)+1]/-0.05275831)
   } 
   return(0);
 }
@@ -1258,8 +1258,8 @@ GetSphCoefDefault <- function(n = 81, U = 10.3, V = 15.2, W = 8.0, A = 15.0, B =
    -0.049*B,    # 601
    0,    # 610 
    0,    # 611
-   0.106*C,    # 620 
-   -0.106*A,    # 621
+   0.1065461*C,    # 620 
+   -0.1065461*A,    # 621
    0,    # 630 
    0,    # 631
    0,    # 640
@@ -1286,8 +1286,8 @@ GetSphCoefDefault <- function(n = 81, U = 10.3, V = 15.2, W = 8.0, A = 15.0, B =
    -0.024*B,    # 801
    0,    # 810 
    0,    # 811
-   0.053*C,    # 820 
-   -0.053*A,    # 821
+   0.05275831*C,    # 820 
+   -0.05275831*A,    # 821
    0,    # 830 
    0,    # 831
    0,    # 840
