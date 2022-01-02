@@ -30,17 +30,17 @@ draw_OMParComp <- function(parameter, sol1, sol2, title = "", xat = "", yat = ""
 
 
 
-draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
+draw_OM <- function(res, title = "Ogorodnikov-Miln Model", xpar = 4, xtitle = "<r>, kpc")
 {
-  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
-  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+  min_x <- (min(res$Parameters[,xpar])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,xpar])%/%0.2)*0.2 + 0.2
   stepx <- 0.2
   #stepx <- 10
   
   #min_y <- (min(res$X[,4:11])%/%1) - 1
   #max_y <- (max(res$X[,4:11])%/%1) + 1
-  min_y <- -17
-  max_y <- 18
+  min_y <- -20
+  max_y <- 20
   
   
   g <- ggplot()
@@ -57,23 +57,23 @@ draw_OM <- function(res, title = "Ogorodnikov-Miln Model")
     #geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
     #geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) +
     #geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,4] - res$S_X[,4], ymax = res$X[,4] + res$S_X[,4], colour = colnames(res$X)[4])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,5] - res$S_X[,5], ymax = res$X[,5] + res$S_X[,5], colour = colnames(res$X)[5])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,6] - res$S_X[,6], ymax = res$X[,6] + res$S_X[,6], colour = colnames(res$X)[6])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,7] - res$S_X[,7], ymax = res$X[,7] + res$S_X[,7], colour = colnames(res$X)[7])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,8] - res$S_X[,8], ymax = res$X[,8] + res$S_X[,8], colour = colnames(res$X)[8])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,9] - res$S_X[,9], ymax = res$X[,9] + res$S_X[,9], colour = colnames(res$X)[9])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters)))) #+  
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,4], colour = colnames(res$X)[4]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,4] - res$S_X[,4], ymax = res$X[,4] + res$S_X[,4], colour = colnames(res$X)[4])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,5], colour = colnames(res$X)[5]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,5] - res$S_X[,5], ymax = res$X[,5] + res$S_X[,5], colour = colnames(res$X)[5])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,6], colour = colnames(res$X)[6]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,6] - res$S_X[,6], ymax = res$X[,6] + res$S_X[,6], colour = colnames(res$X)[6])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,7], colour = colnames(res$X)[7]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,7] - res$S_X[,7], ymax = res$X[,7] + res$S_X[,7], colour = colnames(res$X)[7])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,8], colour = colnames(res$X)[8]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,8] - res$S_X[,8], ymax = res$X[,8] + res$S_X[,8], colour = colnames(res$X)[8])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,9], colour = colnames(res$X)[9]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,9] - res$S_X[,9], ymax = res$X[,9] + res$S_X[,9], colour = colnames(res$X)[9])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,10], colour = colnames(res$X)[10]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,10] - res$S_X[,10], ymax = res$X[,10] + res$S_X[,10], colour = colnames(res$X)[10])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,11], colour = colnames(res$X)[11]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,11] - res$S_X[,11], ymax = res$X[,11] + res$S_X[,11], colour = colnames(res$X)[11])) +
+    geom_point(aes(x = res$Parameters[,xpar], y = rep(0,nrow(res$Parameters)))) #+  
   #geom_smooth(aes(x = res$Parameters[,4], y = res$X[,6], colour = colnames(res$X)[6])) +
   #geom_smooth(aes(x = res$Parameters[,4], y = res$X[,9], colour = colnames(res$X)[9])) +
   #geom_smooth(aes(x = res$Parameters[,4], y = res$X[,10], colour = colnames(res$X)[10])) 
@@ -114,10 +114,10 @@ draw_OM_diff <- function(res, title = "Ogorodnikov-Miln Model")
   return(g)
 }
 
-draw_OM_Solar <- function(res, title = "Solar motion")
+draw_OM_Solar <- function(res, title = "Solar motion", xpar = 4, xtitle = "<px>, kpc")
 {
-  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
-  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+  min_x <- (min(res$Parameters[,xpar])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,xpar])%/%0.2)*0.2 + 0.2
   
   min_y <- (min(res$X[,1:3])%/%1) - 1
   max_y <- (max(res$X[,1:3])%/%1) + 1
@@ -128,16 +128,16 @@ draw_OM_Solar <- function(res, title = "Solar motion")
     #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
     #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
     scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
-    xlab("<px>, kpc") + ylab("km/s") +ggtitle(title) +
+    xlab(xtitle) + ylab("km/s") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$X)[1:3],
                         values = c("green", "blue", "brown")) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,1] - res$S_X[,1], ymax = res$X[,1] + res$S_X[,1], colour = colnames(res$X)[1])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,2] - res$S_X[,2], ymax = res$X[,2] + res$S_X[,2], colour = colnames(res$X)[2])) +
-    geom_line(aes(x = res$Parameters[,4], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) +
-    geom_errorbar(aes(x = res$Parameters[,4], ymin = res$X[,3] - res$S_X[,3], ymax = res$X[,3] + res$S_X[,3], colour = colnames(res$X)[3])) +
-    geom_point(aes(x = res$Parameters[,4], y = rep(0,nrow(res$Parameters))))
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,1], colour = colnames(res$X)[1]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,1] - res$S_X[,1], ymax = res$X[,1] + res$S_X[,1], colour = colnames(res$X)[1])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,2], colour = colnames(res$X)[2]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,2] - res$S_X[,2], ymax = res$X[,2] + res$S_X[,2], colour = colnames(res$X)[2])) +
+    geom_line(aes(x = res$Parameters[,xpar], y = res$X[,3], colour = colnames(res$X)[3]), size = 1) +
+    geom_errorbar(aes(x = res$Parameters[,xpar], ymin = res$X[,3] - res$S_X[,3], ymax = res$X[,3] + res$S_X[,3], colour = colnames(res$X)[3])) +
+    geom_point(aes(x = res$Parameters[,xpar], y = rep(0,nrow(res$Parameters))))
   return(g)
 }
 
@@ -165,15 +165,15 @@ draw_OM_Solar_diff <- function(res, title = "Solar motion")
 }
 
 
-draw_Oort <- function(res, title = "Oort`s parameters")
+draw_Oort <- function(res, title = "Oort`s parameters", xpar = 4, xtitle = "<r>, kpc")
 {
-  min_x <- (min(res$Parameters[,4])%/%0.2)*0.2
-  max_x <- (max(res$Parameters[,4])%/%0.2)*0.2 + 0.2
+  min_x <- (min(res$Parameters[,xpar])%/%0.2)*0.2
+  max_x <- (max(res$Parameters[,xpar])%/%0.2)*0.2 + 0.2
   
   #min_y <- (min(res$Oort)%/%1) - 1
   #max_y <- (max(res$Oort)%/%1) + 1
-  min_y <- -30
-  max_y <- 30
+  min_y <- -20
+  max_y <- 20
   
   
   g <- ggplot() +
@@ -182,14 +182,14 @@ draw_Oort <- function(res, title = "Oort`s parameters")
     #scale_x_continuous(breaks=seq(0,4,by=0.25), minor_breaks=seq(0,4,by=0.125), limits = c(0.25,4)) +
     #scale_x_continuous(breaks=seq(0,2.5,by=0.25), minor_breaks=seq(0,2.5,by=0.125), limits = c(0.25,2.5)) +
     scale_x_continuous(breaks=seq(min_x,max_x,by=0.2), minor_breaks=seq(min_x,max_x,by=0.1), limits = c(min_x,max_x))+
-    xlab("<r>, kpc") + ylab("km/s/kpc") +ggtitle(title) +
+    xlab(xtitle) + ylab("km/s/kpc") +ggtitle(title) +
     scale_colour_manual("Parameters",  breaks = colnames(res$Oort)[1:6],
                         values = c("green", "blue", "brown", "black", "gray", "orange"))
   
   for (i in 1:ncol(res$Oort))
   {
-    g <- g + geom_line(aes_string(x = res$Parameters[,4], y = res$Oort[,i], colour = shQuote(colnames(res$Oort)[i])), size = 1) +
-      geom_errorbar(aes_string(x = res$Parameters[,4], ymin = res$Oort[,i] - res$s_Oort[,i], ymax = res$Oort[,i] + res$s_Oort[,i], colour = shQuote(colnames(res$Oort)[i])))
+    g <- g + geom_line(aes_string(x = res$Parameters[,xpar], y = res$Oort[,i], colour = shQuote(colnames(res$Oort)[i])), size = 1) +
+      geom_errorbar(aes_string(x = res$Parameters[,xpar], ymin = res$Oort[,i] - res$s_Oort[,i], ymax = res$Oort[,i] + res$s_Oort[,i], colour = shQuote(colnames(res$Oort)[i])))
   }
   # geom_line(aes(x = res$Parameters[,4], y = res$Oort[,1], colour = colnames(res$Oort)[1]), size = 1) +
   # geom_errorbar(aes(x = res$Parameters[,4], ymin = res$Oort[,1] - res$s_Oort[,1], ymax = res$Oort[,1] + res$s_Oort[,1], colour = colnames(res$Oort)[1])) +
@@ -211,8 +211,8 @@ draw_solution_Oort <- function(solution, title = "Oort`s parameters")
   
   #min_y <- (min(res$Oort)%/%1) - 1
   #max_y <- (max(res$Oort)%/%1) + 1
-  min_y <- -17
-  max_y <- 18
+  min_y <- -20
+  max_y <- 20
   
   g <- ggplot() +
     #scale_y_continuous(breaks=seq(0,20,by=1), minor_breaks=seq(0,20,by=0.5), limits = c(-0.5,20)) +
@@ -376,21 +376,23 @@ draw_OMParameter <- function(solution,
   
   for (i in 1:length(solution))
   {
-    
-    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par], y = solution[[i]]$X[data_x_lim[1]:data_x_lim[2],parameter], 
+    #cat(i)
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par], 
+                                   y = solution[[i]]$X[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter], 
                                    colour = shQuote(solution[[i]]$Name), 
                                    linetype = shQuote(solution[[i]]$Name)
     ), 
     size = 1)
     
-    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par], y = solution[[i]]$X[data_x_lim[1]:data_x_lim[2],parameter],
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par], 
+                                   y = solution[[i]]$X[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
                                    fill = shQuote(solution[[i]]$Name),
                                    shape = shQuote(solution[[i]]$Name)
     ))
     
-    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par],
-                                      ymin = solution[[i]]$X[data_x_lim[1]:data_x_lim[2],parameter] - solution[[i]]$S_X[data_x_lim[1]:data_x_lim[2],parameter],
-                                      ymax = solution[[i]]$X[data_x_lim[1]:data_x_lim[2],parameter] + solution[[i]]$S_X[data_x_lim[1]:data_x_lim[2],parameter],
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par],
+                                      ymin = solution[[i]]$X[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter] - solution[[i]]$S_X[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
+                                      ymax = solution[[i]]$X[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter] + solution[[i]]$S_X[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
                                       colour = shQuote(solution[[i]]$Name)),
                            width = 0.05)
   }
@@ -401,10 +403,8 @@ draw_OMParameter <- function(solution,
   {
     g <- g + guides(colour = "none", shape = "none", fill = "none", linetype = "none")
     ## theme(axis.text=element_text(size=18,face="bold"))      
-  }
-  else {
+  } else {
     g <- g + ggtitle(title)
-    
   }
   
   return(g)
@@ -452,20 +452,20 @@ draw_OortParameter <- function(solution,
   for (i in 1:length(solution))
   {
     
-    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par], y = solution[[i]]$Oort[data_x_lim[1]:data_x_lim[2],parameter], 
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par], y = solution[[i]]$Oort[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter], 
                                    colour = shQuote(solution[[i]]$Name), 
                                    linetype = shQuote(solution[[i]]$Name)
     ), 
     size = 1)
     
-    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par], y = solution[[i]]$Oort[data_x_lim[1]:data_x_lim[2],parameter],
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par], y = solution[[i]]$Oort[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
                                    fill = shQuote(solution[[i]]$Name),
                                    shape = shQuote(solution[[i]]$Name)
     ))
     
-    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par],
-                                      ymin = solution[[i]]$Oort[data_x_lim[1]:data_x_lim[2],parameter] - solution[[i]]$s_Oort[data_x_lim[1]:data_x_lim[2],parameter],
-                                      ymax = solution[[i]]$Oort[data_x_lim[1]:data_x_lim[2],parameter] + solution[[i]]$s_Oort[data_x_lim[1]:data_x_lim[2],parameter],
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par],
+                                      ymin = solution[[i]]$Oort[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter] - solution[[i]]$s_Oort[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
+                                      ymax = solution[[i]]$Oort[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter] + solution[[i]]$s_Oort[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
                                       colour = shQuote(solution[[i]]$Name)), 
                             width = 0.05)
   }
@@ -524,18 +524,18 @@ draw_Physical <- function(solution,
   
   for (i in 1:length(solution))
   {
-    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par], y = solution[[i]]$Physical[data_x_lim[1]:data_x_lim[2],parameter], 
+    g <- g + geom_line( aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par], y = solution[[i]]$Physical[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter], 
                                    colour = shQuote(solution[[i]]$Name), 
                                    linetype = shQuote(solution[[i]]$Name)), 
                         size = 1)
     
-    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par], y = solution[[i]]$Physical[data_x_lim[1]:data_x_lim[2],parameter],
+    g <- g + geom_point(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par], y = solution[[i]]$Physical[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
                                    fill = shQuote(solution[[i]]$Name),
-                                   shape = shQuote(solution[[i]]$Name)))
+                                   shape = shQuote(solution[[i]]$Name))) 
     
-    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:data_x_lim[2],x_par],
-                                      ymin = solution[[i]]$Physical[data_x_lim[1]:data_x_lim[2],parameter] - solution[[i]]$s_Physical[data_x_lim[1]:data_x_lim[2],parameter],
-                                      ymax = solution[[i]]$Physical[data_x_lim[1]:data_x_lim[2],parameter] + solution[[i]]$s_Physical[data_x_lim[1]:data_x_lim[2],parameter],
+    g <- g + geom_errorbar(aes_string(x = solution[[i]]$Parameters[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),x_par],
+                                      ymin = solution[[i]]$Physical[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter] - solution[[i]]$s_Physical[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
+                                      ymax = solution[[i]]$Physical[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter] + solution[[i]]$s_Physical[data_x_lim[1]:min(data_x_lim[2], nrow(solution[[i]]$Parameters)),parameter],
                                       colour = shQuote(solution[[i]]$Name)), 
                            width = 0.05)
     

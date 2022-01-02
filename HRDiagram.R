@@ -1,5 +1,74 @@
 
 
+# ga$Vmag <- ga$gMag
+# ga$BV<- ga$bMag - ga$gMag
+# ga$M[index] <-ga$Vmag[index] + 5 + 5*log10(ga$gPx[index]/1000)
+
+HRDiagramGDR3 <- function(data, L5lim = TRUE, L3lim = TRUE, BV_lim = c(-2, 4), M_lim = c(15, -5), save = NULL)
+{
+  #data <- data %>% mutate(M = NA)
+  data[, M := NA]
+  index <-(data$gPx>0)&(!is.na(data$Mag))&(!is.na(data$B_V))
+  #data$M[index] <- data$Mag[index] + 5 + 5*log10(data$gPx[index]/1000)
+  #data[, M := Mag + 5 + 5*log10(gPx/1000)]
+  data[, M := Mag + 5 - 5*log10(R)]
+  
+  alpha_ <- 0.05
+  size_ <- 0.01
+  
+  g <- ggplot() + 
+    stat_bin2d(data = data, binwidth = 0.01, aes(x = B_V, y = M, fill = ..count..), alpha = 0.9) + 
+    theme_bw() + 
+    scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) +
+    scale_y_reverse(breaks=seq(M_lim[1],M_lim[2],by=-1), minor_breaks=seq(M_lim[1],M_lim[2],by=-0.5), limits = M_lim) +
+    scale_fill_gradient(low = "white", high = "black", tran = "log")
+  
+  # g <- ggplot() + 
+  #   geom_point(data = ga, aes(x = BV, y = M), alpha = 0.01, size = 0.01) + 
+  #   theme_bw() + 
+  #   scale_x_continuous(breaks=seq(-1,3,by=0.25), minor_breaks=seq(-1,3,by=0.125), limits = c(-1,3)) +
+  #   scale_y_reverse(breaks=seq(M_lim[1],M_lim[2],by=-1), minor_breaks=seq(M_lim[1],M_lim[2],by=-0.5), limits = M_lim) +
+  #   scale_fill_gradient(low = "white", high = "black", tran = "log")
+  
+  if (L5lim)
+  {
+    #ms_top_limit <- matrix(0, nrow = 5, ncol = 2)
+    #ms_top_limit[,1] <- c(-0.1, 0.8, 1.0, 1.5, 1.7)
+    #ms_top_limit[,2] <- c(-1.8, 3.4, 6.0, 8.0, 10.0 )
+    #ms_bottom_limit <- matrix(0, nrow = 4, ncol = 2)
+    #ms_bottom_limit[,1] <- c(-0.1, 0.5, 1.3, 1.35)
+    #ms_bottom_limit[,2] <- c(1.8, 5.6, 9.0, 10.0)
+    
+    #g <- g + geom_line(aes(x = ms_top_limit[,1], y = ms_top_limit[,2])) +
+    #        geom_line(aes(x = ms_bottom_limit[,1], y = ms_bottom_limit[,2]));
+    
+    a <- seq(from = -1, to = 2.0, by = 0.01)
+    g <- g + geom_line(aes(x = a, y = max_M(a))) +
+      geom_line(aes(x = a, y = min_M(a)));
+  }
+  
+  if (L3lim)
+  {
+    rg_top_limit <- matrix(0, nrow = 4, ncol = 2)
+    rg_top_limit[,1] <- c(0.8, 0.8, 2.5, 2.5)
+    rg_top_limit[,2] <- c(2.5, -1.5, -1.5, 2.5)
+    rg_bottom_limit <- matrix(0, nrow = 2, ncol = 2)
+    rg_bottom_limit[,1] <- c(0.8, 2.5)
+    rg_bottom_limit[,2] <- c(2.5, 2.5)
+    
+    g <- g + geom_line(aes(x = rg_top_limit[,1], y = rg_top_limit[,2])) +
+      geom_line(aes(x = rg_bottom_limit[,1], y = rg_bottom_limit[,2]))
+  }
+    
+  if(!is.null(save))
+  {
+    ggsave(paste0(save, "-HR.jpg"), width = 10, height = 10)
+    #ggsave(paste0(save, "-HR.eps"), width = 10, height = 10)
+  }
+  
+  return(g)
+}
+
 
 HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell", save = NULL, 
                       L5lim = TRUE, L3lim = TRUE, BV_lim = c(-1, 3), M_lim = c(10, -10))
@@ -46,7 +115,7 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
   } else
   {
     alpha_ <- 0.05
-    size_ <- 0.1
+    size_ <- 0.01
   }
   
   #g <- ggplot() + geom_point(data=hrdata, aes(x = hrdata$B_V, y = hrdata$M), alpha_ = 0.05, na.rm = TRUE, size_ = 0.1) + scale_y_reverse()
@@ -98,4 +167,21 @@ HRDiagram <- function(data, photometric = "APASS", title = "Hertzsprung-Russell"
   }
   
   return(g)
+}
+
+
+draw_HR_Sp <- function()
+{
+  HRDiagram(tgas, title = "Hertzsprung-Russell")
+  ggsave("HR.png", width = 10, height = 10)
+  HRDiagram(filter(tgas, LClass == 1), title = "Hertzsprung-Russell L1 class")
+  ggsave("HR-L1.png", width = 10, height = 10)
+  HRDiagram(filter(tgas, LClass == 2), title = "Hertzsprung-Russell L2 class")
+  ggsave("HR-L2.png", width = 10, height = 10)
+  HRDiagram(filter(tgas, LClass == 3), title = "Hertzsprung-Russell L3 class")
+  ggsave("HR-L3.png", width = 10, height = 10)
+  HRDiagram(filter(tgas, LClass == 4), title = "Hertzsprung-Russell L4 class")
+  ggsave("HR-L4.png", width = 10, height = 10)
+  HRDiagram(filter(tgas, LClass == 5), title = "Hertzsprung-Russell L5 class")
+  ggsave("HR-L5.png", width = 10, height = 10)
 }

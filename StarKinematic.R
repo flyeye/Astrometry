@@ -55,6 +55,26 @@ get_galaxy_mu <- function(pm, gal, dec)
   return(GalPm)
 }
 
+calc_galaxy_mu_DT <- function(data)
+{
+  
+  L0  <- 0.57477039907; # 32.931918056?
+  si  <- 0.88998807641; # sin 62.871748611?
+  ci  <- 0.45598379779; # cos 62.871748611?
+  
+  data[, cs := cos(DE)]
+  data[, sfi := si*cos(gl-L0)/cs]
+  data[,  cfi := (cos(gb)*ci - (sin(gb)*si)*sin(gl - L0) )/cs]
+  data[, pm_l := cfi*gpmRA+sfi*gpmDE]
+  data[, pm_b := -sfi*gpmRA+cfi*gpmDE]
+  data[, cs := NULL]
+  data[, sfi := NULL]
+  data[, cfi := NULL]
+  gc()
+  
+  return(data)
+}
+
 get_galaxy_mu2 <- function(pm, gal, ecv)
 {
 
@@ -549,8 +569,8 @@ Bottlinger_K_B <- function( l, b, r, R0, R)
 #   2 - Оорта-Линдблада, 
 #          0 - классический вариант с A и B
 #          1 - расширенный вариант с С и К
-#          2 - расширенный вариант с С, К, |Gx| и |Gy}
-#          2 - расширенный вариант с С, К, Gx и  Gy
+#          2 - расширенный вариант с С, К, |Gx| и |Gy|}
+#          3 - расширенный вариант с С, К, Gx и  Gy
 #   3 - Эри-Ковальского, 
 #   4 - Модель Боттлингера с W(W0), W'(W1), W" (W2) и K. 
 # use - массив флагов используемых скоростей

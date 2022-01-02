@@ -1,6 +1,6 @@
 # ===============================================================================
 # ---------------------------------  libraries ----------------------------------
-tgas_libs_required <- function()
+cr_libs_required <- function()
 {
   #library("tidyverse", lib.loc="~/R/win-library/3.4")
   #library("readxl", lib.loc="~/R/win-library/3.4")
@@ -21,6 +21,15 @@ tgas_libs_required <- function()
   require(gdata)
   require(xtable)
   require(gridExtra)
+  require(fst)
+  require(data.table)
+  require(bit64)
+  require(R.utils)
+}
+
+lib_install <- function()
+{
+  install.packages("bit64", "data.table", "fst", "gdata", "ggplot2", "gridExtra", "R.utils", "readr", "readxl", "scales", "stargazer", "tidyverse", "xlsx", "xtable")
 }
 
 
@@ -457,7 +466,6 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # ===============================================================================
 # --------------------------------   GAIA DR3 Routings  -----------------------------
 # field description: https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html
-# solution_id,designation,source_id,random_index,ref_epoch,ra,ra_error,dec,dec_error,parallax,parallax_error
 #
 # solution_id : Solution Identifier (long)
 # designation : Unique source designation (unique across all Data Releases) (string)
@@ -470,8 +478,6 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # dec_error : Standard error of declination (float, Angle[mas])
 # parallax : Parallax (double, Angle[mas] )
 # parallax_error : Standard error of parallax (float, Angle[mas] )
-
-# ___parallax_over_error,pm,pmra,pmra_error,pmdec,pmdec_error,ra_dec_corr,ra_parallax_corr,ra_pmra_corr,ra_pmdec_corr,
 # parallax_over_error : Parallax divided by its standard error (float)
 # pm : Total proper motion (float, Angular Velocity[mas/year])
 # pmra : Proper motion in right ascension direction (double, Angular Velocity[mas/year])
@@ -482,24 +488,18 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # ra_parallax_corr : Correlation between right ascension and parallax (float, Dimensionless[see description])
 # ra_pmra_corr : Correlation between right ascension and proper motion in right ascension (float, Dimensionless[see description])
 # ra_pmdec_corr : Correlation between right ascension and proper motion in declination (float, Dimensionless[see description])
-
-# ___dec_parallax_corr,dec_pmra_corr,dec_pmdec_corr,parallax_pmra_corr,parallax_pmdec_corr,pmra_pmdec_corr,
 # dec_parallax_corr : Correlation between declination and parallax (float, Dimensionless[see description])
 # dec_pmra_corr : Correlation between declination and proper motion in right ascension (float, Dimensionless[see description])
 # dec_pmdec_corr : Correlation between declination and proper motion in declination (float, Dimensionless[see description])
 # parallax_pmra_corr : Correlation between parallax and proper motion in right ascension (float, Dimensionless[see description])
 # parallax_pmdec_corr : Correlation between parallax and proper motion in declination (float, Dimensionless[see description])
 # pmra_pmdec_corr : Correlation between proper motion in right ascension and proper motion in declination (float, Dimensionless[see description])
-
-# ___astrometric_n_obs_al,astrometric_n_obs_ac,astrometric_n_good_obs_al,astrometric_n_bad_obs_al,astrometric_gof_al,astrometric_chi2_al,
 # astrometric_n_obs_al : Total number of observations AL (short)
 # astrometric_n_obs_ac : Total number of observations AC (short)
 # astrometric_n_good_obs_al : Number of good observations AL (short)
 # astrometric_n_bad_obs_al : Number of bad observations AL (short)
 # astrometric_gof_al : Goodness of fit statistic of model wrt along-scan observations (float)
 # astrometric_chi2_al : AL chi-square value (float)
-
-# ____astrometric_excess_noise,astrometric_excess_noise_sig,astrometric_params_solved,astrometric_primary_flag,nu_eff_used_in_astrometry,
 # astrometric_excess_noise : Excess noise of the source (float, Angle[mas])
 # astrometric_excess_noise_sig : Significance of excess noise (float)
 # astrometric_params_solved : Which parameters have been solved for? (byte)
@@ -511,8 +511,6 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 #   10111112=95	- pos + px + pm + C
 # astrometric_primary_flag : Primary or seconday (boolean)
 # nu_eff_used_in_astrometry : Effective wavenumber of the source used in the astrometric solution
-
-# __pseudocolour,pseudocolour_error,ra_pseudocolour_corr,dec_pseudocolour_corr,parallax_pseudocolour_corr,pmra_pseudocolour_corr,pmdec_pseudocolour_corr,
 # pseudocolour : Astrometrically estimated pseudocolour of the source (float, Misc[??m???1])
 # pseudocolour_error : Standard error of the pseudocolour of the source (float, Misc[??m???1])
 # ra_pseudocolour_corr : Correlation between right ascension and pseudocolour (float, Dimensionless[see description])
@@ -520,23 +518,17 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # parallax_pseudocolour_corr : Correlation between parallax and pseudocolour (float, Dimensionless[see description])
 # pmra_pseudocolour_corr : Correlation between proper motion in right asension and pseudocolour (float, Dimensionless[see description])
 # pmdec_pseudocolour_corr : Correlation between proper motion in declination and pseudocolour (float, Dimensionless[see description])
-
-# ___astrometric_matched_transits,visibility_periods_used,astrometric_sigma5d_max,matched_transits,new_matched_transits,matched_transits_removed,
 # astrometric_matched_transits : Matched FOV transits used in the AGIS solution (short)
 # visibility_periods_used : Number of visibility periods used in Astrometric solution (short)
 # astrometric_sigma5d_max : The longest semi-major axis of the 5-d error ellipsoid (float, Angle[mas])
 # matched_transits : The number of transits matched to this source (short)
 # new_matched_transits : The number of transits newly incorporated into an existing source in the current cycle (short)
 # matched_transits_removed : The number of transits removed from an existing source in the current cycle (short)
-
-# ___ipd_gof_harmonic_amplitude,ipd_gof_harmonic_phase,ipd_frac_multi_peak,ipd_frac_odd_win,ruwe,
 # ipd_gof_harmonic_amplitude : Amplitude of the IPD GoF versus position angle of scan (float, Dimensionless[see description])
 # ipd_gof_harmonic_phase : Phase of the IPD GoF versus position angle of scan (float, Angle[deg])
 # ipd_frac_multi_peak : Percent of successful-IPD windows with more than one peak (byte)
 # ipd_frac_odd_win : Percent of transits with truncated windows or multiple gate (byte)
 # ruwe : Renormalised unit weight error (float)
-
-# ___scan_direction_strength_k1,scan_direction_strength_k2,scan_direction_strength_k3,scan_direction_strength_k4,scan_direction_mean_k1,scan_direction_mean_k2,scan_direction_mean_k3,scan_direction_mean_k4,
 # scan_direction_strength_k1 : Degree of concentration of scan directions across the source (float)
 # scan_direction_strength_k2 : Degree of concentration of scan directions across the source (float)
 # scan_direction_strength_k3 : Degree of concentration of scan directions across the source (float)
@@ -545,16 +537,12 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # scan_direction_mean_k2 : Mean position angle of scan directions across the source (float, Angle[deg])
 # scan_direction_mean_k3 : Mean position angle of scan directions across the source (float, Angle[deg])
 # scan_direction_mean_k4 : Mean position angle of scan directions across the source (float, Angle[deg])
-
-# __duplicated_source,phot_g_n_obs,phot_g_mean_flux,phot_g_mean_flux_error,phot_g_mean_flux_over_error,phot_g_mean_mag,
 # duplicated_source : Source with multiple source identifiers (boolean)
 # phot_g_n_obs : Number of observations contributing to G photometry (short)
 # phot_g_mean_flux : G-band mean flux (double, Flux[e-/s])
 # phot_g_mean_flux_error : Error on G-band mean flux (float, Flux[e-/s])
 # phot_g_mean_flux_over_error : G-band mean flux divided by its error (float)
 # phot_g_mean_mag : G-band mean magnitude (float, Magnitude[mag])
-
-# __phot_bp_n_obs,phot_bp_mean_flux,phot_bp_mean_flux_error,phot_bp_mean_flux_over_error,phot_bp_mean_mag,phot_rp_n_obs,phot_rp_mean_flux,phot_rp_mean_flux_error,phot_rp_mean_flux_over_error,phot_rp_mean_mag,
 # phot_bp_n_obs : Number of observations contributing to BP photometry (short)
 # phot_bp_mean_flux : Integrated BP mean flux (double, Flux[e-/s])
 # phot_bp_mean_flux_error : Error on the integrated BP mean flux (float, Flux[e-/s])
@@ -565,15 +553,11 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # phot_rp_mean_flux_error : Error on the integrated RP mean flux (float, Flux[e-/s])
 # phot_rp_mean_flux_over_error : Integrated RP mean flux divided by its error (float)
 # phot_rp_mean_mag : Integrated RP mean magnitude (float, Magnitude[mag])
-
-# __phot_bp_n_contaminated_transits,phot_bp_n_blended_transits,phot_rp_n_contaminated_transits,phot_rp_n_blended_transits,phot_proc_mode,
 # phot_bp_n_contaminated_transits : Number of BP contaminated transits (short)
 # phot_bp_n_blended_transits : Number of BP blended transits (short)
 # phot_rp_n_contaminated_transits : Number of RP contaminated transits (short)
 # phot_rp_n_blended_transits : Number of RP blended transits (short)
 # phot_proc_mode : Photometry processing mode (byte)
-
-# __phot_bp_rp_excess_factor,bp_rp,bp_g,g_rp,dr2_radial_velocity,dr2_radial_velocity_error,dr2_rv_nb_transits,dr2_rv_template_teff,dr2_rv_template_logg,dr2_rv_template_fe_h,
 # phot_bp_rp_excess_factor : BP/RP excess factor (float)
 # bp_rp : BP - RP colour (float, Magnitude[mag])
 # bp_g : BP - G colour (float, Magnitude[mag])
@@ -584,20 +568,38 @@ get_tyc2sp_OB <- function(tyc2sp_data)
 # dr2_rv_template_teff : Teff of the template used to compute radial velocity in Gaia DR2 (float,Temperature[K])
 # dr2_rv_template_logg : logg of the template used to compute radial velocity in Gaia DR2 (float, GravitySurface[log cgs])
 # dr2_rv_template_fe_h : Fe/H of the template used to compute radial velocity in Gaia DR2 (float, Abundances[dex])
-
-# __l,b,ecl_lon,ecl_lat
 # l : Galactic longitude (double, Angle[deg])
 # b : Galactic latitude (double, Angle[deg])
 # ecl_lon : Ecliptic longitude (double, Angle[deg])
 # ecl_lat : Ecliptic latitude (double, Angle[deg])
 
+
+GDR3_distance_prepare <- function(path = "/Catalogues/Gaia/", filename ="dedr3dis.gz")
+{
+  var_types <- "c__d__d__i";
+  var_names <- c("source_id", "Rg","Rph", "flags")
+  
+  for (i in 1:15)  
+  {
+    data.table(fread("/media/flyeye/T7/Gaia Distance/dedr3dis.csv", select = c(1, 4, 7, 10), colClasses = c("integer64", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric","numeric", "numeric", "integer"), header =TRUE, skip = 0, nrows = 100000000)) 
+  }
+  
+}
+
+
+
+
+var_names <- c("source_id","ref_epoch","RA","ra_error","DE","dec_error","gPx","parallax_error","parallax_over_error",
+               "gpmRA","pmra_error","gpmDE","pmdec_error","n_good_obs","params","duplicated", "gMag", "bMag", "rMag",
+               "Vr", "Vr_error","Teff","FeH","l","b")
+
 Gaia_DR3_prepare <- function(path = "D:/Gaia/")
 {
 
-var_types <- "__cidddddddd_dddd____________i_____i____________________________l____d____d____d_________dd_d_ddd__";
+var_types <- "__c_dddddddd_dddd____________i_____i____________________________l____d____d____d_________dd_d_ddd__";
           
 
-var_names <- c("source_id","random_index","ref_epoch","RA","ra_error","DE","dec_error","gPx","parallax_error","parallax_over_error",
+var_names <- c("source_id","ref_epoch","RA","ra_error","DE","dec_error","gPx","parallax_error","parallax_over_error",
                "gpmRA","pmra_error","gpmDE","pmdec_error","n_good_obs","params","duplicated", "gMag", "bMag", "rMag",
                "Vr", "Vr_error","Teff","FeH","l","b")
 
@@ -628,35 +630,383 @@ var_names <- c("source_id","random_index","ref_epoch","RA","ra_error","DE","dec_
 
   readed_all <- 0;
   filtred_all <-0;
+  written_all <- 0;
+  vol_count <- 0;
   
-  gdr3_data <- data.frame()
+  gdr3_data <- data.table()
 
+  t0 <- Sys.time();
+  
   for (i in 1:nrow(gaia_list))
   {
+    t1 = Sys.time();
     gc()
     filename <- paste0(path, gaia_list$filename[i])
     cat("step:", i, "file:", filename, "\n")
-    data <- read_csv(filename, col_names = var_names, col_types = var_types, skip = 1)
+    data <- data.table(read_csv(filename, col_names = var_names, col_types = var_types, skip = 1))
     readed <- nrow(data)
     cat("readed: ", readed, "\n")
     readed_all <- readed_all + readed
     cat("Total read:", readed_all, "\n")
-    data2 <- data %>% filter(duplicated==FALSE) %>% filter((params==31) || (params==63) || (params==95)) %>% filter(parallax_over_error>0) %>% filter(parallax_over_error > 5) %>% filter(gPx>0.2)  
-    filtred <- nrow(data2)
+    data <- data %>% filter(duplicated==FALSE) %>% filter((params==31) || (params==63) || (params==95)) %>% filter(parallax_over_error>0) %>% filter(parallax_over_error > 2) %>% filter(gPx>0.1)  
+    filtred <- nrow(data)
     cat("filtred:", filtred, "\n")
     filtred_all <- filtred_all +filtred
     cat("Total filtred:", filtred_all, "\n")
     if (filtred>0)
     {
-      data2 <- data2 %>% mutate(RA = RA*pi/180, DE = DE*pi/180)
-      saveRDS(data2, file = paste0(path, tools::file_path_sans_ext(tools::file_path_sans_ext(gaia_list$filename[i])), ".rds"))
+      data <- data %>% mutate(RA = RA*pi/180, DE = DE*pi/180)
+      data <- data %>% mutate(l = l*pi/180, b = b*pi/180)
+      data$source_id <- as.integer64(data$source_id)
+      #saveRDS(data2, file = paste0(path, tools::file_path_sans_ext(tools::file_path_sans_ext(gaia_list$filename[i])), ".rds"))
       #write_csv(x = data2, path = paste0(path, "gaia_dr3_good.csv"), append = TRUE, col_names = FALSE)
+      gdr3_data <- rbind(gdr3_data, data)
+      cat("Catalogue size (Gb):", object.size(gdr3_data)/1000000000, "\n")
     }
     
-    #gdr3_data <- rbind(gdr3_data, data2)
+    if (object.size(gdr3_data)>10000000000)
+    {
+      vol_count <- vol_count+1
+      filename <- paste0(path, "GaiaSource_vol", as.character(vol_count),".fst")
+      cat("Writing volume ", vol_count, " to ", filename,"\n")
+      # saveRDS(gdr3_data, file = filename);
+      write.fst(x = gdr3_data, filename, 75)
+      written_all <- written_all + nrow(gdr3_data)
+      gdr3_data <- data.table();
+    }
+    
+    t2 = Sys.time();
+    cat("---------------",i/nrow(gaia_list),",",(Sys.time()-t0),"-----------------\n")
+    cat(t2-t1, "\n\n")
   }
   
+  if (nrow(gdr3_data)>0)
+  {
+    vol_count <- vol_count+1
+    filename <- paste0(path, "GaiaSource_vol", as.character(vol_count),".fst")
+    cat("Writing volume ", vol_count, " to ", filename,"\n")
+    # saveRDS(gdr3_data, file = filename);
+    write.fst(x = gdr3_data, filename, 75)
+    gdr3_data <- data.table();
+  }
+  
+  cat("Read total:", readed_all, "\n")
+  cat("Write total:", written_all, "\n")
+  
 }
+
+# складывает маленькие тома в большие, пока не нужна
+GDR3_list_vol <- function(path = "/VMstorage/Gaia/", list_name = "gaia_vol_fst.list")
+{
+  gaia_list <- read_csv(paste0(path, list_name), col_names = c("filename"), col_types = "c", skip = 0)
+  
+  gdr3_data <- data.table()
+  rdata <- data.table()
+  
+  readed_all <- 0;
+  filtred_all <-0;
+  written_all <- 0;
+  
+  vol_count <- 0;
+  
+  t0 <- Sys.time();
+  
+  for (i in 1:nrow(gaia_list))
+    {
+        t1 = Sys.time();
+        gc()
+        filename <- paste0(path, gaia_list$filename[i])
+        cat("step:", i, "file:", filename, "\n")
+        
+        data <- data.table(readRDS(file = filename))
+        
+        readed <- nrow(data)
+        cat("readed: ", readed, "\n")
+        
+        readed_all <- readed_all + readed
+        cat("Total read:", readed_all, "\n")
+        
+        gdr3_data <- rbind(gdr3_data, data)
+        cat("Catalogue size (Gb):", object.size(gdr3_data)/1000000000, "\n")
+
+        if (object.size(gdr3_data)>10000000000)
+        {
+          vol_count <- vol_count+1
+          filename <- paste0(path, "GaiaSource_vol", as.character(vol_count),".fst")
+          cat("Writing volume ", vol_count, " to ", filename,"\n")
+          # saveRDS(gdr3_data, file = filename);
+          write.fst(x = gdr3_data, filename, 75)
+          written_all <- written_all + nrow(gdr3_data)
+          gdr3_data <- data.table();
+        }
+
+        # #rdata0 <- data.frame(cbind(data$RA, data$DE, data$gPx, data$parallax_error, data$parallax_over_error, data$l, data$b, data$random_index))
+        # #rdata <- rbind(rdata, rdata0)
+        # #cat("Sample size (Gb):", object.size(rdata)/1000000000, "\n")
+      
+        t2 = Sys.time();
+        cat("---------------",i/nrow(gaia_list),",",(Sys.time()-t0),"-----------------\n")
+        cat(t2-t1, "\n\n")
+        
+  }
+  
+  if (nrow(gdr3_data)>0)
+  {
+    vol_count <- vol_count+1
+    filename <- paste0(path, "GaiaSource_vol", as.character(vol_count),".fst")
+    cat("Writing volume ", vol_count, " to ", filename,"\n")
+    # saveRDS(gdr3_data, file = filename);
+    write.fst(x = gdr3_data, filename, 75)
+    gdr3_data <- data.table();
+  }
+  
+  cat("Read total:", readed_all, "\n")
+  cat("Write total:", written_all, "\n")
+  
+  return(0)
+}
+
+# перечитывает каталог в больших томах и отбирает нужные столбцы
+GDR3_list_FST <- function(path = "/Catalogues/Gaia/", list_name = "gaia_vol_fst.list")
+{
+  gaia_list <- read_csv(paste0(path, list_name), col_names = c("filename"), col_types = "c", skip = 0)
+  
+  rdata <- data.table(source_id=integer64(), RA=numeric(), DE=numeric(), gPx=numeric(), parallax_error=numeric(), parallax_over_error=numeric(), 
+                      gpmRA=numeric(), pmra_error=numeric(), gpmDE=numeric(), pmdec_error=numeric(), Vr=numeric(), Vr_error=numeric(),
+                      Teff=numeric(), FeH=numeric(), 
+                      gl=numeric(), gb=numeric(), 
+                      gMag=numeric(), bMag=numeric())
+  
+  readed_all <- 0;
+  filtred_all <-0;
+  written_all <- 0;
+  
+  vol_count <- 0;
+  
+  t0 <- Sys.time();
+  
+  for (i in 1:nrow(gaia_list))
+  {
+    t1 = Sys.time();
+    gc()
+    filename <- paste0(path, gaia_list$filename[i])
+    cat("step:", i, "file:", filename, "\n")
+    
+    data <- data.table(read.fst(filename))
+    colnames(data)[colnames(data) == 'l'] <- "gl"
+    colnames(data)[colnames(data) == 'b'] <- "gb"
+    
+    readed <- nrow(data)
+    cat("readed: ", readed, "\n")
+    
+    readed_all <- readed_all + readed
+    cat("Total read:", readed_all, "\n")
+    t2 = Sys.time();
+    cat(t2-t1, "\n\n")
+    #gdr3_data <- rbind(gdr3_data, data)
+    #cat("Catalogue size (Gb):", object.size(gdr3_data)/1000000000, "\n")
+    
+    #rdata0 <- data.table(cbind(data$source_id,  data$RA, data$DE, data$gPx, data$parallax_error, data$parallax_over_error, data$l, data$b, data$gMag, data$bMag))
+    #cat("Columns selected...")
+    #colnames(rdata0) <- c("source_id", "RA", "DE", "gPx", "parallax_error", "parallax_over_error", "gl", "gb", "gMag", "bMag")
+    #rdata0 <- rdata0 %>% mutate(gl = gl*pi/180, gb = gb*pi/180)
+    #rdata <- rbind(rdata, rdata0)
+    data$source_id <- as.integer64(data$source_id)
+    rdata <- rbind(rdata, data[,.(source_id, RA, DE, gPx, parallax_error, parallax_over_error, gpmRA, pmra_error, gpmDE, pmdec_error, Vr, Vr_error, Teff, FeH, gl, gb, gMag, bMag)])    
+    rm(data)
+    cat("New data binded..")
+    cat("Sample size (Gb):", object.size(rdata)/1000000000, "\n")
+    
+    t3 = Sys.time();
+    cat(t3-t2, "\n\n")
+    cat("---------------",i/nrow(gaia_list),"  ", (Sys.time()-t0),"-----------------\n")
+    #print("Total time:",(Sys.time()-t0))
+    cat(t3-t1, "\n\n")
+    #print(t2-t1, "\n\n")
+    
+  }
+
+   
+  cat("Read total:", readed_all, "\n")
+  cat("Write total:", written_all, "\n")
+  
+  return(rdata)
+}
+
+
+gaia_diag <- function(data)
+{
+  ggplot(data, aes(x = gMag)) + stat_bin(binwidth = 0.02) + theme_bw() +  scale_x_continuous(breaks = c(1:25))
+  ggplot(data, aes(x = bv)) + stat_bin(binwidth = 0.02) + theme_bw() + scale_x_continuous(breaks = seq(-1, 3, 0.25), limits = c(-2, 4))
+  
+  ggplot(gaia[sample(.N, 1000000),], aes(x = x, y = y)) + 
+    stat_bin2d(binwidth = 0.01, aes(fill = ..count..)) + 
+    theme_bw() + 
+    scale_x_continuous(breaks = seq(-5, 5, 1), limits = c(-5, 5)) + 
+    scale_y_continuous(breaks = seq(-5, 5, 1), limits = c(-5, 5)) + 
+    scale_fill_gradient(low = "white", high = "black")
+  
+  ggplot(gaia[sample(.N, 1000000),]) + 
+    stat_density_2d(binwidth = 0.01, geom = "raster", aes(x = x, y = y, fill = after_stat(density)), contour = FALSE, alpha = 0.8) + 
+    theme_bw() + 
+    scale_x_continuous(breaks = seq(-5, 5, 1), limits = c(-6, 6)) + 
+    scale_y_continuous(breaks = seq(-5, 5, 1), limits = c(-6, 6)) + 
+    scale_fill_gradient(low = "white", high = "black", trans = "log")
+  
+}
+
+
+# ==============================================================================
+# --------------------------------- APASS9 -------------------------------------
+# 
+# Byte-by-byte Description of file: apass9.sam
+# --------------------------------------------------------------------------------
+#   Bytes Format Units     Label   Explanations
+# --------------------------------------------------------------------------------
+# recno, I, 
+#  1- 10  F10.6 deg       RAdeg   Right ascension in decimal degrees (J2000)
+# 12- 21  F10.6 deg       DEdeg   Declination in decimal degrees (J2000)
+# 23- 27  F5.3  arcsec  e_RAdeg   [0/2.4] RA uncertainty
+# 29- 33  F5.3  arcsec  e_DEdeg   [0/2.4] DEC uncertainty
+# 35- 44  I10   ---       Field   [20110001/9999988888] Field name
+# 46- 48  I3    ---       nobs    [2/387] Number of observed nights
+# 50- 53  I4    ---       mobs    [2/3476] Number of images for this field, usually nobs*5
+# 55- 60  F6.3  mag       B-V     [-7.5/13]? B-V color index
+# 62- 67  F6.3  mag     e_B-V     [0/10.1]? B-V uncertainty
+# 69- 74  F6.3  mag       Vmag    [5.5/27.4]? Johnson V-band magnitude
+# 76- 81  F6.3  mag     e_Vmag    [0/7]? Vmag uncertainty
+# 83      I1    ---   u_e_Vmag    [0/1]? Uncertainty flag on e_Vmag (1)
+# 85- 90  F6.3  mag       Bmag    [5.4/27.3]? Johnson B-band magnitude
+# 92- 97  F6.3  mag     e_Bmag    [0/10]? Bmag uncertainty
+# 99      I1    ---   u_e_Bmag    [0/1]? Uncertainty flag on e_Bmag (1)
+# 101-106  F6.3  mag       g'mag   [5.9/24.2]? g'-band AB magnitude, Sloan filter
+# 108-113  F6.3  mag     e_g'mag   [0/9.7]? g'mag uncertainty
+# 115      I1    ---   u_e_g'mag   [0/1]? Uncertainty flag on e_g'mag (1)
+# 117-122  F6.3  mag       r'mag   [5.1/23.9]? r'-band AB magnitude, Sloan filter
+# 124-129  F6.3  mag     e_r'mag   [0/6.5]? r'mag uncertainty
+# 131      I1    ---   u_e_r'mag   [0/1]? Uncertainty flag on e_r'mag (1)
+# 133-138  F6.3  mag       i'mag   [4.2/29.1]? i'-band AB magnitude, Sloan filter
+# 140-145  F6.3  mag     e_i'mag   [0/9.6]? i'mag uncertainty
+# 147      I1    ---   u_e_i'mag   [0/1]? Uncertainty flag on e_i'mag (1)
+# --------------------------------------------------------------------------------
+#   Note (1): Uncertainty flag as follows:
+#   0 = Standard deviation of N observations
+# 1 = Poissonian error (unique observation)
+# --------------------------------------------------------------------------------
+
+APASS9_prepare <- function(path = "/VMstorage/APASS9/")
+{
+  
+  var_types <- "iddddiiiddddlddlddlddlddl";
+  var_names <- c("recno", "RA", "DE", "RA_err", "DE_err", "Field", "nobs", "mobs", "BV", "e_BV", "Vmag", "eVmag", "uVmag", "Bmag", "eBmag", "uBmag","Gmag", "eGmag", "uGmag", "Rmag", "eRmag", "uRmag", "Imag", "eImag", "uImag")
+  
+  readed_all <- 0;
+  filtred_all <-0;
+  written_all <- 0;
+  
+  apass9_data <- data.table()
+  
+  t0 <- Sys.time();
+  
+  filename <- paste0(path, "apass9.csv.gz")
+  cat("file:", filename, "\n")
+  apass9_data <- data.table(read_csv(filename, col_names = var_names, col_types = var_types, skip = 1))
+  readed_all <- nrow(apass9_data)
+  cat("readed: ", readed_all, "\n")
+  
+  apass9_data <- apass9_data %>% filter(!is.na(apass$BV))
+  
+  filtred_all <- nrow(apass9_data)
+  cat("Filtred:", filtred_all, "\n")
+  if (filtred_all>0)
+  {
+    apass9_data <- apass9_data %>% mutate(RA = RA*pi/180, DE = DE*pi/180)
+    
+    #saveRDS(data2, file = paste0(path, tools::file_path_sans_ext(tools::file_path_sans_ext(gaia_list$filename[i])), ".rds"))
+    #write_csv(x = data2, path = paste0(path, "gaia_dr3_good.csv"), append = TRUE, col_names = FALSE)
+    cat("Catalogue size (Gb):", object.size(apass9_data)/1000000000, "\n")
+    filename <- paste0(filename, ".fst")
+    cat("Writing APASS9 to ", filename,"\n")
+    write.fst(x = apass9_data, filename, 75)
+    written_all <- nrow(apass9_data)
+  }
+  
+  cat("---------------",(Sys.time()-t0),"-----------------\n")
+  
+  return(apass9_data)
+}
+
+# write.fst(apass, "/VMstorage/APASS9/apass9_good.csv.gz.fst", 75)
+# apass <- read.fst("/VMstorage/APASS9/apass9_good.csv.gz.fst")
+
+# ===============================================================================
+# --------------------------------   EGDR3 vs APASS9 ----------------------------
+
+APASS9_GAIA_cross_match_prepare <- function(path = "/VMstorage/Gaia/")
+{
+  
+  var_types <- "ciidiii";
+  var_names <- c("source_id", "clean_apass9_oid", "recno", "ang_dist", "nn", "nm", "xm_flag")
+  
+  cm_list <- read_csv(paste0(path, "apassbestneighbour.list"), col_names = c("filename"), col_types = "c", skip = 0)
+  
+  readed_all <- 0;
+  filtred_all <-0;
+  written_all <- 0;
+  vol_count <- 0;
+  
+  
+  cm_data <- data.table()
+  
+  t0 <- Sys.time();
+  
+  for (i in 1:nrow(cm_list))
+  {
+    t1 = Sys.time();
+    gc()
+    filename <- paste0(path, cm_list$filename[i])
+    cat("step:", i, "file:", filename, "\n")
+    data <- data.table(read_csv(filename, col_names = var_names, col_types = var_types, skip = 1))
+    readed <- nrow(data)
+    cat("readed: ", readed, "\n")
+    readed_all <- readed_all + readed
+    cat("Total read:", readed_all, "\n")
+    data <- data %>% filter(nm==0) %>% filter(nn==1)
+    filtred <- nrow(data)
+    cat("filtred:", filtred, "\n")
+    filtred_all <- filtred_all +filtred
+    cat("Total filtred:", filtred_all, "\n")
+    if (filtred>0)
+    {
+      cm_data <- rbind(cm_data, data)
+      cat("Catalogue size (Gb):", object.size(cm_data)/1000000000, "\n")
+    }
+    
+    t2 = Sys.time();
+    cat("---------------",i/nrow(cm_list),",",(Sys.time()-t0),"-----------------\n")
+    cat(t2-t1, "\n\n")
+  }
+  
+  if (nrow(cm_data)>0)
+  {
+    filename <- paste0(path, "APASSBestNeibour.fst")
+    cat("Writing to ", filename,"\n")
+    write.fst(x = cm_data, filename, 75)
+  }
+  
+  cat("Read total:", readed_all, "\n")
+  cat("Write total:", written_all, "\n")
+  
+  return(cm_data)
+}
+
+
+merge_gaia_apass <- function()
+{
+  data <- cross_match %>% left_join(gaia[,.(RA, DE, gPx, parallax_error, gl, gb, gMag, bMag, x, y, z) ], by = "source_id")
+}
+
+# write.fst(cross_match, paste0(path, "APASSBestNeibour.fst"))
 
 # ===============================================================================
 # --------------------------------   TGAS Routings  -----------------------------
@@ -1215,24 +1565,20 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE, is_hip = TR
   # 50- 57  F8.3  yr      Epoch    (epoc) Mean URAT observation epoch (1)
   # 59- 64  F6.3  mag     f.mag    ?(mmag) mean URAT model fit magnitude (4)
   # 66- 70  F5.3  mag   e_f.mag    ?(sigp) URAT photometry error (5)
-  # 72- 73  I2    ---     Nm       (nsm) Number of sets used
-  # for URAT magnitude (3)
+  # 72- 73  I2    ---     Nm       (nsm) Number of sets used for URAT magnitude (3)
   # 75  I1    ---     r        (ref) largest reference star flag (6)
   # 77- 79  I3    ---     Nit      (nit) Total number of images (observations)
   # 81- 83  I3    ---     Niu      (niu) Number of images used for mean position
-  # 85- 87  I3    ---     Ngt      (ngt) Total number of 1st order
-  # grating observations
-  # 89- 91  I3    ---     Ngu      (ngu) Number of 1st order grating positions
-  # used
-  # 93- 98  F6.1  mas/yr  pmRA     ?(pmr) Proper motion RA*cosDec
-  # (from 2MASS) (7)
+  # 85- 87  I3    ---     Ngt      (ngt) Total number of 1st order grating observations
+  # 89- 91  I3    ---     Ngu      (ngu) Number of 1st order grating positions used
+  # 93- 98  F6.1  mas/yr  pmRA     ?(pmr) Proper motion RA*cosDec (from 2MASS) (7)
   # 100-105  F6.1  mas/yr  pmDE     ?(pmd) Proper motion in Declination (7)
   # 106-109  F4.1  mas/yr  e_pm     ?(pme) Proper motion error per coordinate (8)
   # 112-113  I2    ---     mf2      [1/11] Match flag URAT with 2MASS (9)
   # 115-116  I2    ---     mfa      [1/11] Match flag URAT with APASS (9)
   # 118  A1    ---     G        [-] "-" if there is no match with GSC2.4 (14)
   # --------------------------------------------------------------------------------
-  #   120-129  I10   ---     2Mkey    ?(id2) unique 2MASS star identification number
+  # 120-129  I10   ---     2Mkey    ?(id2) unique 2MASS star identification number
   # 131-136  F6.3  mag     Jmag     ?(jmag) 2MASS J-band magnitude
   # 138-142  F5.3  mag   e_Jmag     ?(ejmag) Error on Jmag
   # 144-145  A2    ---   q_Jmag     [0,58]? J-band quality-confusion flag (10)
@@ -1243,7 +1589,7 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE, is_hip = TR
   # 170-174  F5.3  mag   e_Kmag     ?(ekmag) Error on Ks-band magnitude (10)
   # 176-177  A2   ---    q_Kmag     [0,58]? Ks-band quality-confusion flag (10)
   # --------------------------------------------------------------------------------
-  #   179-181  I3    ---     Nn       (ann) Number of APASS observation nights (12)
+  # 179-181  I3    ---     Nn       (ann) Number of APASS observation nights (12)
   # 183-185  I3    ---     No       (ano) Number of APASS observations (12)
   # 187-192  F6.3  mag     Bmag     ?(abm) APASS B-band magnitude (11)
   # 194-198  F5.3  mag   e_Bmag     ?(ebm) Error on Bmag
@@ -1275,6 +1621,15 @@ read_ucac4 <- function(path, start = 1, n = Inf, is_tyc_only = TRUE, is_hip = TR
     return(res)
   }
     
+  read_urat1 <- function(path)
+  {
+    
+    types <- "cdd_____________________________dddddddddd";
+    var_names <- c("URAT1_id", RA, DE, apass_v, apass_v_err, apass_b, apass_b_err,apass_g, apass_g_err,apass_r, apass_r_err,apass_i, apass_i_err);
+    
+    
+  }
+  
   
 # ===================================================================================================
 #        TGAS Alternative distance
