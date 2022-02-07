@@ -648,6 +648,11 @@ var_names <- c("source_id","ref_epoch","RA","ra_error","DE","dec_error","gPx","p
     cat("readed: ", readed, "\n")
     readed_all <- readed_all + readed
     cat("Total read:", readed_all, "\n")
+    # исключены:
+    # звезды с относительной ошибкой параллакса больше 50%
+    # с параллаксов меньше 0.1
+    # решение содержит все астрометрические параметры 
+    # звезда - кратная система
     data <- data %>% filter(duplicated==FALSE) %>% filter((params==31) || (params==63) || (params==95)) %>% filter(parallax_over_error>0) %>% filter(parallax_over_error > 2) %>% filter(gPx>0.1)  
     filtred <- nrow(data)
     cat("filtred:", filtred, "\n")

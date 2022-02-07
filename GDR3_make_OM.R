@@ -1,6 +1,6 @@
 ### =======================================================
 ### -------------------------------------------------------
-
+###  по шаровым слоям
 GDR3_calc_OM_cond <- function(data, lclass = 3, population = "ALL", 
                               type = 0, model = 1, 
                               use = c(TRUE, TRUE, FALSE), dist_type = "GAIA_PX", filter_dist = "GAIA_PX", 
@@ -11,7 +11,7 @@ GDR3_calc_OM_cond <- function(data, lclass = 3, population = "ALL",
   #APASS photometry
   
   conditions <- list();
-  
+  conditions$Time <- Sys.time();
   conditions$Dist_Type <- dist_type;
   conditions$Filter_Dist <- filter_dist;
   #data <- GDR3_calc_distance(data, conditions$Filter_Dist)
@@ -114,14 +114,14 @@ GDR3_calc_OM_cond <- function(data, lclass = 3, population = "ALL",
 
 
 #============================================================================
-
+# модель ОМ, по шаровым слоям, отдельно для ГП и КГ, и отдельно для разного звездного населения Галактики
 GDR3_make_OM_solutions_R <- function(data, filter_dist = "GAIA_PX", name = "R", ph = "APASS", path = "/Catalogues/Gaia/")
 {
   
   # тут надо бы сначала применить фотометрию
   #data <- GDR3_calc_LClass(data, dist_ = filter_dist)
   
-  if (!dir.exists(paste0(path, "Solutions")))
+  if (!dir.exists(paste0(path, "Solutions")))"/Catalogues/Gaia/"
     dir.create(paste0(path, "Solutions"))
   saveto_ <- paste0(path, "Solutions/solution_",name,"_",Sys.Date(), "_", filter_dist, "_", ph)
   if (!dir.exists(saveto_)) 
@@ -129,19 +129,19 @@ GDR3_make_OM_solutions_R <- function(data, filter_dist = "GAIA_PX", name = "R", 
   
   solutions <- list();
   
-  # cat("Red Giants processing", "\n")
-  # saveto_2 <- paste0(saveto_, "/RG_ALL")
-  # if (!dir.exists(saveto_2)) 
-  #   dir.create(saveto_2)
-  # solutions$RG_All <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL", type = 1, model = 1, dist_type = "RGEO", filter_dist = filter_dist, saveto = paste0(saveto_2, "/"))
-  # solutions$RG_All$Name <- "Red Giants"
-  # 
-  # cat("Main Sequence processing", "\n")
-  # saveto_2 <- paste0(saveto_, "/MS_ALL")
-  # if (!dir.exists(saveto_2)) 
-  #   dir.create(saveto_2)
-  # solutions$MS_All <-  GDR3_calc_OM_cond(data, lclass = 5, population = "ALL", type = 1, model = 1, dist_type = "RGEO", filter_dist = filter_dist, saveto = paste0(saveto_2, "/"))
-  # solutions$MS_All$Name <- "Main Sequence"
+  cat("Red Giants processing", "\n")
+  saveto_2 <- paste0(saveto_, "/RG_ALL")
+  if (!dir.exists(saveto_2))
+    dir.create(saveto_2)
+  solutions$RG_All <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL", type = 1, model = 1, dist_type = "RGEO", filter_dist = filter_dist, saveto = paste0(saveto_2, "/"))
+  solutions$RG_All$Name <- "Red Giants"
+
+  cat("Main Sequence processing", "\n")
+  saveto_2 <- paste0(saveto_, "/MS_ALL")
+  if (!dir.exists(saveto_2))
+    dir.create(saveto_2)
+  solutions$MS_All <-  GDR3_calc_OM_cond(data, lclass = 5, population = "ALL", type = 1, model = 1, dist_type = "RGEO", filter_dist = filter_dist, saveto = paste0(saveto_2, "/"))
+  solutions$MS_All$Name <- "Main Sequence"
   
   cat("Red Giants Disk processing", "\n")
   saveto_2 <- paste0(saveto_, "/RG_DISK")
@@ -195,10 +195,28 @@ GDR3_make_OM_solutions_R <- function(data, filter_dist = "GAIA_PX", name = "R", 
   
   cat("Export solutions...", "\n")
   export_all_solution(solutions)
-  cat("Export kinematics...", "\n")
+  cat("Draw kinematics...", "\n")
   draw_all_kinematic(solutions, saveto = saveto_)
-  cat("Export physics...", "\n")
+  cat("Draw physics...", "\n")
   draw_physics(solutions, saveto = saveto_)
+  
+  cat("Draw O-M...", "\n")
+  draw_all_OM_sol_comp(solutions = solutions, 
+                       ylims  = matrix(data = c(0, 20, 1,
+                                                0, 35, 1, 
+                                                0, 15, 1, 
+                                                -2, 10, 1, 
+                                                -5, 2, 1, 
+                                                -25, -5, 1, 
+                                                -5, 5, 1, 
+                                                -8, 5, 1, 
+                                                5, 30, 1, 
+                                                -10, 3, 1, 
+                                                -10, 5, 1), nrow = 3),
+                       xlims = c(0, 3, 0.2),
+                       xpar = 4, 
+                       xtitle = "R", 
+                       saveto = paste0(saveto_, "/"))
   
   #g <- tgas_draw_HR_facet(solutions$SG_ALL, M_lim = c(-2, -10), BV_lim = c(-1, 3))
   #ggsave(file = paste0(saveto_, "SG_HR_all.png"), plot = g, width = 15, height = 12)
@@ -224,7 +242,7 @@ GDR3_make_OM_solutions_R <- function(data, filter_dist = "GAIA_PX", name = "R", 
 
 
 #================================================================
-
+# расширенная модель Оорта, отдельно для звезд ГП и КГ, по сфере и по полусферам, шаровыми слоями
 GDR3_make_Oort_solutions <- function(data, dist_type = "GAIA_PX", filter_dist = "GAIA_PX", name = "", path = "/Catalogues/Gaia/")
 {
   
@@ -245,40 +263,43 @@ GDR3_make_Oort_solutions <- function(data, dist_type = "GAIA_PX", filter_dist = 
   
   cat("Red Giants processing", "\n")
   saveto_3 <- paste0(saveto_2, "/RG_ALL")
-  if (!dir.exists(saveto_3)) 
+  if (!dir.exists(saveto_3))
     dir.create(saveto_3)
-  solutions$RG_All <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL", 
-                                         model = 2, type = 2, 
-                                         use = c(TRUE, FALSE, FALSE),
-                                         dist_type = dist_type, filter_dist = filter_dist, 
+  solutions$RG_All <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL",
+                                         model = 2, type = 2,
+                                         use = c(TRUE, TRUE, FALSE),
+                                         g_b = c(-Inf, Inf),
+                                         dist_type = dist_type, filter_dist = filter_dist,
                                          saveto = paste0(saveto_3, "/"))
   solutions$RG_All$Name <- "Red Giants"
-  
+   
   cat("Main Sequence processing", "\n")
   saveto_3 <- paste0(saveto_2, "/MS_ALL")
   if (!dir.exists(saveto_3)) 
     dir.create(saveto_3)
   solutions$MS_All <-  GDR3_calc_OM_cond(data, lclass = 5, population = "ALL", 
                                          model = 2, type = 2, 
-                                         use = c(TRUE, FALSE, FALSE),
+                                         g_b = c(-Inf, Inf),
+                                         use = c(TRUE, TRUE, FALSE),
                                          dist_type = dist_type, filter_dist = filter_dist, 
                                          saveto = paste0(saveto_3, "/"))
   solutions$MS_All$Name <- "Main Sequence"
   
+  
   # --------------------------------------
   
   saveto_2 <- paste0(saveto_, "/north_hemisphere")
-  if (!dir.exists(saveto_2)) 
+  if (!dir.exists(saveto_2))
     dir.create(saveto_2)
-  
+   
   cat("Red Giants processing North", "\n")
   saveto_3 <- paste0(saveto_2, "/RG_North")
-  if (!dir.exists(saveto_3)) 
+  if (!dir.exists(saveto_3))
     dir.create(saveto_3)
-  solutions$RG_North <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL", 
-                                           model = 2, type = 3, 
-                                           use = c(TRUE, FALSE, FALSE),
-                                           dist_type = dist_type, filter_dist = filter_dist, 
+  solutions$RG_North <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL",
+                                           model = 2, type = 3,
+                                           use = c(TRUE, TRUE, FALSE),
+                                           dist_type = dist_type, filter_dist = filter_dist,
                                            g_b = c(0, Inf),
                                            saveto = paste0(saveto_3, "/"))
   solutions$RG_North$Name <- "Red Giants North"
@@ -289,7 +310,7 @@ GDR3_make_Oort_solutions <- function(data, dist_type = "GAIA_PX", filter_dist = 
     dir.create(saveto_3)
   solutions$MS_North <-  GDR3_calc_OM_cond(data, lclass = 5, population = "ALL", 
                                            model = 2, type = 3, 
-                                           use = c(TRUE, FALSE, FALSE),
+                                           use = c(TRUE, TRUE, FALSE),
                                            dist_type = dist_type, filter_dist = filter_dist, 
                                            g_b = c(0, Inf),
                                            saveto = paste0(saveto_3, "/"))
@@ -303,12 +324,12 @@ GDR3_make_Oort_solutions <- function(data, dist_type = "GAIA_PX", filter_dist = 
     dir.create(saveto_2)
   cat("Red Giants processing", "\n")
   saveto_3 <- paste0(saveto_2, "/RG_South")
-  if (!dir.exists(saveto_3)) 
+  if (!dir.exists(saveto_3))
     dir.create(saveto_3)
-  solutions$RG_South <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL", 
-                                           model = 2, type = 3, 
-                                           use = c(TRUE, FALSE, FALSE),
-                                           dist_type = dist_type, filter_dist = filter_dist, 
+  solutions$RG_South <-  GDR3_calc_OM_cond(data, lclass = 3, population = "ALL",
+                                           model = 2, type = 3,
+                                           use = c(TRUE, TRUE, FALSE),
+                                           dist_type = dist_type, filter_dist = filter_dist,
                                            g_b = c(-Inf, 0),
                                            saveto = paste0(saveto_3, "/"))
   solutions$RG_South$Name <- "Red Giants South"
@@ -319,7 +340,7 @@ GDR3_make_Oort_solutions <- function(data, dist_type = "GAIA_PX", filter_dist = 
     dir.create(saveto_3)
   solutions$MS_South <-  GDR3_calc_OM_cond(data, lclass = 5, population = "ALL", 
                                            model = 2, type = 3, 
-                                           use = c(TRUE, FALSE, FALSE),
+                                           use = c(TRUE, TRUE, FALSE),
                                            dist_type = dist_type, filter_dist = filter_dist, 
                                            g_b = c(-Inf, 0),
                                            saveto = paste0(saveto_3, "/"))
@@ -331,8 +352,8 @@ GDR3_make_Oort_solutions <- function(data, dist_type = "GAIA_PX", filter_dist = 
   cat("Calc weited parameters...", "\n")
   solutions <- calc_all_weighted(solutions)
   
-  # cat("Export solutions...", "\n")
-  # export_all_solution(solutions)
+  cat("Export solutions...", "\n")
+  export_all_solution(solutions)
   # cat("Export kinematics...", "\n")
   # draw_all_kinematic(solutions, saveto = saveto_, xlim = c(-0.5, 1.6, 0.1), xpar = 9)
   # cat("Export physics...", "\n")
@@ -348,6 +369,7 @@ GDR3_make_Oort_solutions_bv <- function(data, filter_dist = "RGEO", name = "Hemi
   
   
   conditions <- list();
+  conditions$Date <- Sys.time();
   conditions$Src <- "TGAS";
   conditions$Filter_Dist <- filter_dist;
   conditions$use <- c(TRUE, TRUE, FALSE);
@@ -413,6 +435,43 @@ GDR3_make_Oort_solutions_bv <- function(data, filter_dist = "RGEO", name = "Hemi
   solutions_bv$MS_Sph$Name <- paste("1. Main sequence, Sphere", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
   gc()
+  
+  # ----------------------------  Whole Sphere, Main Sequence ------------------------------  
+  # 
+  # conditions$LClass <- 5
+  # conditions$KinModel <- 2
+  # conditions$KinModelType <- 3
+  # conditions$g_B <- c(-Inf, Inf)
+  # conditions$BV <- matrix(0, nrow = 19, ncol = 2)
+  # conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
+  # conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
+  # 
+  # saveto_2 <- paste0(saveto_, "/MS_SPHERE_TEXT_",filter_dist, "-", conditions$Dist_Type)
+  # if (!dir.exists(saveto_2)) 
+  #   dir.create(saveto_2)
+  # 
+  # conditions$SaveTo <- paste0(saveto_2, "/")
+  # 
+  # solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
+  #                                    z_lim = conditions$Z, 
+  #                                    e_px = conditions$e_Px, 
+  #                                    bv = conditions$BV, 
+  #                                    Mg = conditions$MG,
+  #                                    px_type = "DIST",
+  #                                    distance = conditions$distance_,
+  #                                    save = conditions$SaveTo,
+  #                                    type = conditions$KinModelType, model = conditions$KinModel,
+  #                                    dist_type = conditions$Dist_Type, use = conditions$use,
+  #                                    g_b = conditions$g_B, 
+  #                                    lclass = conditions$LClass)
+  # 
+  # solution_bv$Conditions <- conditions
+  # 
+  # solution_bv <- process_solution(solution_bv)
+  # solutions_bv$MS_Sph_Test <- solution_bv
+  # solutions_bv$MS_Sph_Test$Name <- paste("1. Main sequence, Sphere Test", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  # 
+  # gc()
   
   # -------------------------- North Hemisphere, Main Sequence --------------------------------
   
@@ -493,7 +552,7 @@ GDR3_make_Oort_solutions_bv <- function(data, filter_dist = "RGEO", name = "Hemi
   gc()
   
   # -------------------------- Sphere, Red Giants --------------------------------
-  
+
   conditions$LClass <- 3
   conditions$KinModel <- 2
   conditions$KinModelType <- 2
@@ -501,38 +560,38 @@ GDR3_make_Oort_solutions_bv <- function(data, filter_dist = "RGEO", name = "Hemi
   conditions$BV <- matrix(0, nrow = 5, ncol = 2)
   conditions$BV[,1] <- c(0.84, 1.03, 1.45, 1.57, 1.8)
   conditions$BV[,2] <- c(1.03, 1.45, 1.57, 1.8, 2.5)
-  
+
   saveto_2 <- paste0(saveto_, "/RG_SPHERE_",filter_dist, "-", conditions$Dist_Type)
-  if (!dir.exists(saveto_2)) 
+  if (!dir.exists(saveto_2))
     dir.create(saveto_2)
-  
+
   conditions$SaveTo <- paste0(saveto_2, "/")
-  
+
   solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
-                                     z_lim = conditions$Z, 
-                                     e_px = conditions$e_Px, 
-                                     bv = conditions$BV, 
+                                     z_lim = conditions$Z,
+                                     e_px = conditions$e_Px,
+                                     bv = conditions$BV,
                                      Mg = conditions$MG,
                                      px_type = "DIST",
                                      distance = conditions$distance_,
                                      save = conditions$SaveTo,
                                      type = conditions$KinModelType, model = conditions$KinModel,
                                      dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B, 
+                                     g_b = conditions$g_B,
                                      lclass = conditions$LClass)
-  
+
   solution_bv$Conditions <- conditions
-  
+
   solution_bv <- process_solution(solution_bv)
   solutions_bv$RG_Sphere <- solution_bv
   solutions_bv$RG_Sphere$Name <- paste("4. Reg Giants, Sphere", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  
+
   rm(solution_bv)
-  
+
   gc()
-  
+
   # -------------------------- North Hemisphere, Red Giants --------------------------------
-  
+
   conditions$LClass <- 3
   conditions$KinModel <- 2
   conditions$KinModelType <- 3
@@ -540,38 +599,38 @@ GDR3_make_Oort_solutions_bv <- function(data, filter_dist = "RGEO", name = "Hemi
   conditions$BV <- matrix(0, nrow = 5, ncol = 2)
   conditions$BV[,1] <- c(0.84, 1.03, 1.45, 1.57, 1.8)
   conditions$BV[,2] <- c(1.03, 1.45, 1.57, 1.8, 2.5)
-  
+
   saveto_2 <- paste0(saveto_, "/RG_NORTH_",filter_dist, "-", conditions$Dist_Type)
-  if (!dir.exists(saveto_2)) 
+  if (!dir.exists(saveto_2))
     dir.create(saveto_2)
-  
+
   conditions$SaveTo <- paste0(saveto_2, "/")
-  
+
   solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
-                                     z_lim = conditions$Z, 
-                                     e_px = conditions$e_Px, 
-                                     bv = conditions$BV, 
+                                     z_lim = conditions$Z,
+                                     e_px = conditions$e_Px,
+                                     bv = conditions$BV,
                                      Mg = conditions$MG,
                                      px_type = "DIST",
                                      distance = conditions$distance_,
                                      save = conditions$SaveTo,
                                      type = conditions$KinModelType, model = conditions$KinModel,
                                      dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B, 
+                                     g_b = conditions$g_B,
                                      lclass = conditions$LClass)
-  
+
   solution_bv$Conditions <- conditions
-  
+
   solution_bv <- process_solution(solution_bv)
   solutions_bv$RG_North <- solution_bv
   solutions_bv$RG_North$Name <- paste("5. Red Giants, North Hemisphere", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  
+
   rm(solution_bv)
-  
+
   gc()
-  
+
   # -------------------------- South Hemisphere, Red Giants --------------------------------
-  
+
   conditions$LClass <- 3
   conditions$KinModel <- 2
   conditions$KinModelType <- 3
@@ -579,88 +638,98 @@ GDR3_make_Oort_solutions_bv <- function(data, filter_dist = "RGEO", name = "Hemi
   conditions$BV <- matrix(0, nrow = 5, ncol = 2)
   conditions$BV[,1] <- c(0.84, 1.03, 1.45, 1.57, 1.8)
   conditions$BV[,2] <- c(1.03, 1.45, 1.57, 1.8, 2.5)
-  
+
   saveto_2 <- paste0(saveto_, "/RG_SOUTH_",filter_dist, "-", conditions$Dist_Type)
-  if (!dir.exists(saveto_2)) 
+  if (!dir.exists(saveto_2))
     dir.create(saveto_2)
-  
+
   conditions$SaveTo <- paste0(saveto_2, "/")
-  
+
   solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
-                                     z_lim = conditions$Z, 
-                                     e_px = conditions$e_Px, 
-                                     bv = conditions$BV, 
+                                     z_lim = conditions$Z,
+                                     e_px = conditions$e_Px,
+                                     bv = conditions$BV,
                                      Mg = conditions$MG,
                                      px_type = "DIST",
                                      distance = conditions$distance_,
                                      save = conditions$SaveTo,
                                      type = conditions$KinModelType, model = conditions$KinModel,
                                      dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B, 
+                                     g_b = conditions$g_B,
                                      lclass = conditions$LClass)
-  
+
   solution_bv$Conditions <- conditions
-  
+
   solution_bv <- process_solution(solution_bv)
   solutions_bv$RG_South <- solution_bv
   solutions_bv$RG_South$Name <- paste("6. Red Giants, South Hemisphere", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  
+
   rm(solution_bv)
-  
+
   gc()
-  
-  
+
+
   cat("Export solutions...", "\n")
   export_all_solution(solutions_bv)
-  
+
   # ----------------------------------------------------------
   # g <- draw_OortParameter(solutions_bv, parameter = 1,
-  #                    title = "Oort`s parameter A", 
-  #                    x_lim = c(-0.5, 1.6, 0.1), 
-  #                    y_lim = c(6, 24, 2), 
+  #                    title = "Oort`s parameter A",
+  #                    x_lim = c(-0.5, 1.6, 0.1),
+  #                    y_lim = c(6, 24, 2),
   #                    clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                    x_par = 9, 
+  #                    x_par = 9,
   #                    x_title = "B-V")
   # ggsave(paste0("solutions/",filter_dist,"_OL_A.png"), plot = g, width = 10, height = 5)
   # ggsave(paste0("solutions/",filter_dist,"_OL_A.eps"), plot = g, width = 10, height = 5)
-  # 
+  #
   # g <- draw_OortParameter(solutions_bv, parameter = 2,
-  #                         title = "Oort`s parameter B", 
-  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-22, -5, 2), 
+  #                         title = "Oort`s parameter B",
+  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-22, -5, 2),
   #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                         x_par = 9, 
+  #                         x_par = 9,
   #                         x_title = "B-V")
   # ggsave(paste0("solutions/",filter_dist,"_OL_B.png"), plot = g, width = 10, height = 5)
   # ggsave(paste0("solutions/",filter_dist,"_OL_B.eps"), plot = g, width = 10, height = 5)
-  # 
+  #
   # g <- draw_OortParameter(solutions_bv, parameter = 3,
-  #                         title = "Oort`s parameter C", 
-  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2), 
+  #                         title = "Oort`s parameter C",
+  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2),
   #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                         x_par = 9, 
+  #                         x_par = 9,
   #                         x_title = "B-V")
   # ggsave(paste0("solutions/",filter_dist,"_OL_C.png"), plot = g, width = 10, height = 5)
   # ggsave(paste0("solutions/",filter_dist,"_OL_C.eps"), plot = g, width = 10, height = 5)
-  # 
+  #
   # g <- draw_OortParameter(solutions_bv, parameter = 4,
-  #                         title = "Oort`s parameter K", 
-  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2), 
+  #                         title = "Oort`s parameter K",
+  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2),
   #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                         x_par = 9, 
+  #                         x_par = 9,
   #                         x_title = "B-V")
   # ggsave(paste0("solutions/",filter_dist,"_OL_K.png"), plot = g, width = 10, height = 5)
   # ggsave(paste0("solutions/",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
   
   draw_all_OM_sol_comp(solutions = solutions_bv, 
-                       ylims  = matrix(data = c(0, 20, 0, 35, 0, 15, -2, 10, -5, 2, -25, -5, -5, 5, -8, 5 , 5, 30, -10, 3, -10, 5), nrow = 2),
+                       ylims  = matrix(data = c(0, 20, 2, 
+                                                0, 50, 2, 
+                                                0, 15, 1,  
+                                                -20, -5, 2, 
+                                                5, 20, 1, 
+                                                -7, 2, 1, 
+                                                -20, 20, 2, 
+                                                -10, 10, 2, 
+                                                -60, 60, 5, 
+                                                -10, 10, 2, 
+                                                -10, 5, 2), nrow = 3),
                        xlims = c(-0.5, 1.6, 0.1),
                        xpar = 9, 
                        xtitle = "B-V", 
                        saveto = paste0(saveto_, "/"))
   cat("Export kinematics...", "\n")
-  draw_all_kinematic(solutions_bv, saveto = saveto_, xlim = c(-0.5, 1.6, 0.1), xpar = 9)
+  draw_all_kinematic(solutions_bv, saveto = saveto_, xlim = c(-0.2, 1.6, 0.2), xpar = 9, x_title = "B-V", src = "Gaia EDR3")
   cat("Export physics...", "\n")
-  draw_physics(solutions_bv, saveto = saveto_, x_lim = c(-0.5, 1.6, 0.1), x_par = 9)
+  draw_physics(solutions_bv, saveto = saveto_, x_lim = c(-0.2, 1.6, 0.2), x_par = 9,  x_title = "B-V", src = "Gaia EDR3")
   
   return(solutions_bv)
   
@@ -737,6 +806,7 @@ GDR3_make_OM_solutions_bv <- function(data, filter_dist = "GAIA_PX", name = "BV"
   solutions_bv$MS_ALL_Rpi <- solution_bv
   solutions_bv$MS_ALL_Rpi$Name <- paste("1. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
+  rm(solution_bv)
   gc()
   
   # ----------------------------------------------------------
@@ -765,76 +835,92 @@ GDR3_make_OM_solutions_bv <- function(data, filter_dist = "GAIA_PX", name = "BV"
   solutions_bv$MS_ALL_Rgeo <- solution_bv
   solutions_bv$MS_ALL_Rgeo$Name <- paste("2. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
+  rm(solution_bv)
   gc()
   
   # ----------------------------------------------------------
   
-  # conditions$Dist_Type <- "RPGEO"
-  # 
-  # 
-  # saveto_2 <- paste0(saveto_, "/MS_ALL_",filter_dist, "-", conditions$Dist_Type)
-  # if (!dir.exists(saveto_2))
-  #   dir.create(saveto_2)
-  # 
-  # conditions$SaveTo <- paste0(saveto_2, "/")
-  # 
-  # solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
-  #                                    z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
-  #                                    px_type = "DIST", 
-  #                                    distance = conditions$distance_,
-  #                                    save = conditions$SaveTo,
-  #                                    type = conditions$KinModelType, model = conditions$KinModel,
-  #                                    dist_type = conditions$Dist_Type, use = conditions$use,
-  #                                    g_b = conditions$g_B,
-  #                                    lclass = conditions$LClass)
-  # solution_bv$Conditions <- conditions
-  # 
-  # solution_bv <- process_solution(solution_bv)
-  # solutions_bv$MS_ALL_Rpgeo <- solution_bv
-  # solutions_bv$MS_ALL_Rpgeo$Name <- paste("3. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  # 
-  # gc()
+  conditions$Dist_Type <- "RPGEO"
+
+
+  saveto_2 <- paste0(saveto_, "/MS_ALL_",filter_dist, "-", conditions$Dist_Type)
+  if (!dir.exists(saveto_2))
+    dir.create(saveto_2)
+
+  conditions$SaveTo <- paste0(saveto_2, "/")
+
+  solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
+                                     z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
+                                     px_type = "DIST",
+                                     distance = conditions$distance_,
+                                     save = conditions$SaveTo,
+                                     type = conditions$KinModelType, model = conditions$KinModel,
+                                     dist_type = conditions$Dist_Type, use = conditions$use,
+                                     g_b = conditions$g_B,
+                                     lclass = conditions$LClass)
+  solution_bv$Conditions <- conditions
+
+  solution_bv <- process_solution(solution_bv)
+  solutions_bv$MS_ALL_Rpgeo <- solution_bv
+  solutions_bv$MS_ALL_Rpgeo$Name <- paste("3. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  
+  rm(solution_bv)
+  gc()
   
   # ----------------------------------------------------------
-  # g <- draw_OortParameter(solutions_bv, parameter = 1,
-  #                    title = "Oort`s parameter A", 
-  #                    x_lim = c(-0.5, 1.6, 0.1), 
-  #                    y_lim = c(6, 24, 2), 
-  #                    clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                    x_par = 9, 
-  #                    x_title = "B-V")
-  # ggsave(paste0("solutions/",filter_dist,"_OL_A.png"), plot = g, width = 10, height = 5)
-  # ggsave(paste0("solutions/",filter_dist,"_OL_A.eps"), plot = g, width = 10, height = 5)
-  # 
-  # g <- draw_OortParameter(solutions_bv, parameter = 2,
-  #                         title = "Oort`s parameter B", 
-  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-22, -5, 2), 
-  #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                         x_par = 9, 
-  #                         x_title = "B-V")
-  # ggsave(paste0("solutions/",filter_dist,"_OL_B.png"), plot = g, width = 10, height = 5)
-  # ggsave(paste0("solutions/",filter_dist,"_OL_B.eps"), plot = g, width = 10, height = 5)
-  # 
-  # g <- draw_OortParameter(solutions_bv, parameter = 3,
-  #                         title = "Oort`s parameter C", 
-  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2), 
-  #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                         x_par = 9, 
-  #                         x_title = "B-V")
-  # ggsave(paste0("solutions/",filter_dist,"_OL_C.png"), plot = g, width = 10, height = 5)
-  # ggsave(paste0("solutions/",filter_dist,"_OL_C.eps"), plot = g, width = 10, height = 5)
-  # 
-  # g <- draw_OortParameter(solutions_bv, parameter = 4,
-  #                         title = "Oort`s parameter K", 
-  #                         x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2), 
-  #                         clr = c("blue", "green4", "brown", "black", "red", "orange"),
-  #                         x_par = 9, 
-  #                         x_title = "B-V")
-  # ggsave(paste0("solutions/",filter_dist,"_OL_K.png"), plot = g, width = 10, height = 5)
-  # ggsave(paste0("solutions/",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
+  
+  
+  saveRDS(solutions_bv, file = paste0(saveto_, name, ".RDS"))
+  
+  g <- draw_OortParameter(solutions_bv, parameter = 1,
+                     title = "Oort`s parameter A",
+                     x_lim = c(-0.5, 1.6, 0.1),
+                     y_lim = c(6, 24, 2),
+                     clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                     x_par = 9,
+                     x_title = "B-V")
+  ggsave(paste0(saveto_,"/","_OL_A.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_,"/","_OL_A.eps"), plot = g, width = 10, height = 5)
+
+  g <- draw_OortParameter(solutions_bv, parameter = 2,
+                          title = "Oort`s parameter B",
+                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-22, -5, 2),
+                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                          x_par = 9,
+                          x_title = "B-V")
+  ggsave(paste0(saveto_,"/","_OL_B.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_,"/","_OL_B.eps"), plot = g, width = 10, height = 5)
+
+  g <- draw_OortParameter(solutions_bv, parameter = 3,
+                          title = "Oort`s parameter C",
+                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2),
+                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                          x_par = 9,
+                          x_title = "B-V")
+  ggsave(paste0(saveto_, "/","_OL_C.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/","_OL_C.eps"), plot = g, width = 10, height = 5)
+
+  g <- draw_OortParameter(solutions_bv, parameter = 4,
+                          title = "Oort`s parameter K",
+                          x_lim = c(-0.5, 1.6, 0.1), y_lim = c(-10, 6, 2),
+                          clr = c("blue", "green4", "brown", "black", "red", "orange"),
+                          x_par = 9,
+                          x_title = "B-V")
+  ggsave(paste0(saveto_,"/","_OL_K.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_,"/","_OL_K.eps"), plot = g, width = 10, height = 5)
   
   draw_all_OM_sol_comp(solutions = solutions_bv, 
-                            ylims  = matrix(data = c(0, 20, 0, 35, 0, 15, -2, 10, -5, 2, -25, -5, -5, 5, -8, 5 , 5, 30, -10, 3, -10, 5), nrow = 2),
+                            ylims  = matrix(data = c(0, 20, 1, 
+                                                     0, 35, 1, 
+                                                     0, 15, 1, 
+                                                     -2, 10, 1, 
+                                                     -5, 2, 1, 
+                                                     -25, -5, 1, 
+                                                     -5, 5, 1, 
+                                                     -8, 5, 1, 
+                                                     5, 30, 1, 
+                                                     -10, 3, 1, 
+                                                     -10, 5, 1), nrow =3),
                             xlims = c(-0.5, 1.6, 0.1),
                             xpar = 9, 
                             xtitle = "B-V", 
@@ -866,13 +952,13 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
   conditions$KinModelType <- 1
   conditions$g_B <- c(-Inf, Inf)
   
-  conditions$BV <- matrix(0, nrow = 7, ncol = 2)
-  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
-  conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
+  # conditions$BV <- matrix(0, nrow = 7, ncol = 2)
+  # conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.30, 0.58, 0.85, 1.42)
+  # conditions$BV[,2] <- c(-0.30, 0.00, 0.30, 0.58, 0.85, 1.42, Inf)
   
-  #conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
-  #conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
-  #conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
+  conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
+  conditions$BV[,1] <- c(-Inf, -0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52,  0.58, 0.61, 0.65, 0.69, 0.75,  0.85, 1.16, 1.42)
+  conditions$BV[,2] <- c(-0.30, 0.00, 0.10, 0.20, 0.30, 0.34, 0.37, 0.42, 0.47, 0.52, 0.58, 0.61, 0.65, 0.69, 0.75, 0.85, 1.16, 1.42, Inf)
   
   # conditions$BV <- matrix(0, nrow = 19, ncol = 2) 
   # conditions$BV[,1] <- c(-Inf, seq(-0.3, 1.4, 0.1))
@@ -882,11 +968,12 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
   conditions$MG <- c(-Inf, Inf)
   conditions$e_Px <- Inf
   conditions$distance_ <- c(0, Inf)
-  conditions$LClass <- 5
+
   
   # ----------------------------------------------------------  
   
-  conditions$Dist_Type <- "GAIA_PX"
+  conditions$Dist_Type <- "RGEO"
+  conditions$LClass <- 5
   
   if (!dir.exists(paste0(path, "Solutions")))
     dir.create(paste0(path, "Solutions"))
@@ -906,6 +993,7 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
                                      e_px = conditions$e_Px, 
                                      bv = conditions$BV, 
                                      Mg = conditions$MG,
+                                     lclass = conditions$LClass,
                                      px_type = "DIST",
                                      distance = distance_,
                                      save = conditions$SaveTo,
@@ -918,46 +1006,50 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
   solutions_bv$MS_ALL_Rpi <- solution_bv
   solutions_bv$MS_ALL_Rpi$Name <- paste("1. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
   
+  rm(solution_bv)
   gc()
   
   # ----------------------------------------------------------  
-  conditions$Dist_Type <- "RGEO"
-  
-  saveto_ <- paste0(path, "Solutions/solution_",name,"_",Sys.Date(), "_", filter_dist, "-", conditions$Dist_Type, "_Bottlinger", conditions$KinModel)
-  if (!dir.exists(saveto_)) 
-    dir.create(saveto_)
-  
-  saveto_2 <- paste0(saveto_, "/MS_ALL")
-  if (!dir.exists(saveto_2)) 
-    dir.create(saveto_2)
-  
-  conditions$SaveTo <- paste0(saveto_2, "/")
-  
-  solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
-                                     z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
-                                     px_type = "DIST", distance = distance_,
-                                     save = conditions$SaveTo,
-                                     type = conditions$KinModelType, model = conditions$KinModel,
-                                     dist_type = conditions$Dist_Type, use = conditions$use,
-                                     g_b = conditions$g_B)
-  solution_bv$Conditions <- conditions
-  
-  solution_bv <- process_solution(solution_bv)
-  solutions_bv$MS_ALL_Rgeo <- solution_bv
-  solutions_bv$MS_ALL_Rgeo$Name <- paste("2. Main sequence", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
-  #solutions_bv$MS_ALL_Rgeo$Name <- "Main sequence Rpi-rMoMW"
-  
-  gc()
-  # ----------------------------------------------------------    
-  
-  # conditions$Dist_Type <- "RPGEO"
+  # conditions$Dist_Type <- "RGEO"
+  # conditions$LClass <- 3
   # 
   # saveto_ <- paste0(path, "Solutions/solution_",name,"_",Sys.Date(), "_", filter_dist, "-", conditions$Dist_Type, "_Bottlinger", conditions$KinModel)
   # if (!dir.exists(saveto_)) 
   #   dir.create(saveto_)
   # 
-  # saveto_2 <- paste0(saveto_, "/MS_ALL")
+  # saveto_2 <- paste0(saveto_, "/RG_ALL")
   # if (!dir.exists(saveto_2)) 
+  #   dir.create(saveto_2)
+  # 
+  # conditions$SaveTo <- paste0(saveto_2, "/")
+  # 
+  # solution_bv  <- GDR3_calc_OM_seq_2(data, src_ = conditions$Src,
+  #                                    z_lim = conditions$Z, e_px = conditions$e_Px, bv = conditions$BV, Mg = conditions$MG,
+  #                                    px_type = "DIST", distance = distance_,
+  #                                    lclass = conditions$LClass,
+  #                                    save = conditions$SaveTo,
+  #                                    type = conditions$KinModelType, model = conditions$KinModel,
+  #                                    dist_type = conditions$Dist_Type, use = conditions$use,
+  #                                    g_b = conditions$g_B)
+  # solution_bv$Conditions <- conditions
+  # 
+  # solution_bv <- process_solution(solution_bv)
+  # solutions_bv$MS_ALL_Rgeo <- solution_bv
+  # solutions_bv$MS_ALL_Rgeo$Name <- paste("2. Red Giants", solution_bv$Conditions$Filter_Dist, solution_bv$Conditions$Dist_Type)
+  # #solutions_bv$MS_ALL_Rgeo$Name <- "Main sequence Rpi-rMoMW"
+  # 
+  # rm(solution_bv)
+  # gc()
+  # ----------------------------------------------------------    
+  
+  # conditions$Dist_Type <- "RPGEO"
+  # 
+  # saveto_ <- paste0(path, "Solutions/solution_",name,"_",Sys.Date(), "_", filter_dist, "-", conditions$Dist_Type, "_Bottlinger", conditions$KinModel)
+  # if (!dir.exists(saveto_))
+  #   dir.create(saveto_)
+  # 
+  # saveto_2 <- paste0(saveto_, "/MS_ALL")
+  # if (!dir.exists(saveto_2))
   #   dir.create(saveto_2)
   # 
   # conditions$SaveTo <- paste0(saveto_2, "/")
@@ -977,15 +1069,17 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
   # 
   # gc()
   # ----------------------------------------------------------    
-  
+
+  saveRDS(solutions_bv, file = paste0(saveto_, name, ".RDS"))
+    
   g <- draw_OortParameter(solutions_bv, parameter = 1,
                           title = "Oort`s parameter A", 
                           x_lim = c(-0.5, 1.6, 0.1), y_lim = c(6, 24, 2), 
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
-  ggsave(paste0(path, "Solutions/Bottlinger_",filter_dist,"_OL_A.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(path, "Solutions/Bottlinger_",filter_dist,"_OL_A.eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/Bottlinger_OL_A.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/Bottlinger_OL_A.eps"), plot = g, width = 10, height = 5)
   
   g <- draw_OortParameter(solutions_bv, parameter = 2,
                           title = "Oort`s parameter B", 
@@ -993,8 +1087,8 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
-  ggsave(paste0(path, "Solutions/Bottlinger_",filter_dist,"_OL_B.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(path, "Solutions/Bottlinger_",filter_dist,"_OL_B.eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/Bottlinger_OL_B.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/Bottlinger_OL_B.eps"), plot = g, width = 10, height = 5)
   
   g <- draw_OortParameter(solutions_bv, parameter = 4,
                           title = "Oort`s parameter K", 
@@ -1002,15 +1096,23 @@ GDR3_make_bottlinger_solutions_bv <- function(data, filter_dist = "GAIA_PX", nam
                           clr = c("blue", "green4", "brown", "black", "red", "orange"),
                           x_par = 9, 
                           x_title = "B-V")
-  ggsave(paste0(path, "Solutions/Bottlinger_",filter_dist,"_OL_K.png"), plot = g, width = 10, height = 5)
-  ggsave(paste0(path, "Solutions/Bottlinger_",filter_dist,"_OL_K.eps"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/Bottlinger_OL_K.png"), plot = g, width = 10, height = 5)
+  ggsave(paste0(saveto_, "/Bottlinger_OL_K.eps"), plot = g, width = 10, height = 5)
   
   tgas_draw_all_OM_sol_comp(solutions = solutions_bv, 
-                            ylims  = matrix(data = c(-5, 25, 0, 25, 0, 15, 15, 35, -10, 0, -7, 10, -10, 5, 5, 25, -20, -5), nrow = 2),
+                            ylims  = matrix(data = c(-5, 25, 1,
+                                                     0, 25, 1, 
+                                                     0, 15, 1, 
+                                                     15, 35, 1, 
+                                                     -10, 0, 1, 
+                                                     -7, 10, 1, 
+                                                     -10, 5, 1, 
+                                                     5, 25, 1, 
+                                                     -20, -5, 1), nrow = 3),
                             xlims = c(-0.5, 1.6, 0.1),
                             xpar = 9, 
                             xtitle = "B-V", 
-                            saveto = paste0(path,"Solutions/", filter_dist,"_"))
+                            saveto = paste0(saveto_,"/Bottlinger_", filter_dist,"_"))
   
   return(solutions_bv)
   

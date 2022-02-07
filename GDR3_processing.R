@@ -104,6 +104,7 @@ GDR3_filter <- function(data,                     #  catalog (data frame)
   #print(e_px)
   #cat(px, "\n")
   #cat(r_lim, "\n")
+  cat(g_b)
   
   data <- data %>% filter(!is.na(B_V) & !is.na(M)) %>%
    filter( (gPx > px[1]) & (gPx <= px[2])) %>%  #mas
@@ -113,7 +114,7 @@ GDR3_filter <- function(data,                     #  catalog (data frame)
    filter( LClass_apass %in% lclass) %>%
    filter( (parallax_error/gPx) < e_px ) %>%
    filter( (abs(z)>=z_lim[1]) & (abs(z)<z_lim[2])) %>% #kpc
-   filter( (gb>=g_b[1]) & (gb<g_b[2]))  #grad
+   filter( (gb>g_b[1]) & (gb<=g_b[2]))  #grad
   
   # setkey(data, B_V, M, R, LClass_apass)
   # data <- data[!is.na(data$B_V) & !is.na(data$M),][data$LClass_apass %in% LClass,][(data$gPx > px[1]) & (data$gPx <= px[2]),][(data$R>r_lim[1]) & (data$R<=r_lim[2]),][(data$B_V>bv_lim[1]) & (data$B_V<=bv_lim[2]),][(data$M>Mg[1]) & (data$M<Mg[2]),][(data$parallax_error/data$gPx) < e_px,][(abs(data$z)>=z_lim[1]) & (abs(data$z)<z_lim[2]),][(data$gb>=g_b[1]) & (data$gb<g_b[2]),]
@@ -165,7 +166,7 @@ GDR3_ph_saturation_correction <- function(data)
 ### -------------------------------------------------------
 
 GDR3_calc_OM_seq_2 <- function(data, src_ = "TGAS", px_type = "DIST", distance = c(1, 1000), save = NULL, type = 1, model = 1, bv = c(-Inf, Inf),  
-                               dist_type = "GAIA_PX", use = c(TRUE, TRUE, FALSE), lclass = c(0,1,2,3,4,5), ...)
+                               dist_type = "GAIA_PX", use = c(TRUE, TRUE, FALSE), lclass = c(0,1,2,3,4,5), g_b = c(-Inf, Inf), z_lim = c(-Inf, Inf), ...)
 {
   distance <- matrix(distance, ncol = 2)
   bv <- matrix(bv, ncol = 2)
@@ -177,7 +178,7 @@ GDR3_calc_OM_seq_2 <- function(data, src_ = "TGAS", px_type = "DIST", distance =
   sol <- matrix(0, q, 3)
   colnames(sol) <- c("X", "Y", "Z")
   oort <- matrix(0, q, 6)
-  oort_err <- matrix(0, q, 6)
+  oort_err <- matrix(0, q, 6) 
   
   solution <- list();
   
@@ -215,7 +216,8 @@ GDR3_calc_OM_seq_2 <- function(data, src_ = "TGAS", px_type = "DIST", distance =
       cat("dist", dist_, "\n")
       cat("lclass", lclass, "\n")
       cat("px", px_, "\n")
-      sample <- GDR3_filter(data, px = px_, bv_lim = bvl, r_lim = dist_, lclass = lclass, ...);
+      cat("g_b", g_b, "\n")
+      sample <- GDR3_filter(data, px = px_, bv_lim = bvl, r_lim = dist_, lclass = lclass, g_b = g_b, z_lim = z_lim);
       
       if (nrow(sample)<12)
       {
